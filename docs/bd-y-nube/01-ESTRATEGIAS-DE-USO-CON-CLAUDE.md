@@ -80,8 +80,8 @@ Reglas para esta subserie:
 
 ```
 Estrategia 1 (estándares propios)      ← base, sin dependencias  → carpeta shared/
-Estrategia 3 (importar colecciones)    ← acelera la 1            → protocolo
-Estrategia 4 (biblioteca por cloud)    ← caso particular de la 1
+Estrategia 3 (importar colecciones)    ← acelera la 1            → protocolo doc 05
+Estrategia 4 (biblioteca por cloud)    ← caso particular de la 1 → doc 04
 Estrategia 2 (trío skill+MCP+hook)     ← eleva garantías          → skills de riesgo alto
 Estrategia 5 (disciplina MCP)          ← limita el costo de la 2  → regla transversal
 ```
@@ -102,3 +102,5 @@ Estrategia 5 (disciplina MCP)          ← limita el costo de la 2  → regla tr
 | [10 MCP servers para bases de datos (InfoWorld)](https://www.infoworld.com/article/4181843/10-mcp-servers-to-connect-llms-with-databases.html) · [MCP Toolbox (googleapis)](https://github.com/googleapis/mcp-toolbox) | Estrategia 5: oferta de MCPs de datos |
 
 ---
+
+*Siguiente: [Skills de Bases de Datos](./02-SKILLS-BASES-DE-DATOS.md)*
