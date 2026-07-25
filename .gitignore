@@ -4,6 +4,10 @@
 .claude/vault-dirty.json
 .claude/settings.local.json
 
+# CLAUDE.md es un artefacto de INSTANCIA (lo genera project-onboard), no
+# fuente del setup: la plantilla versionada es setup/memory-instructions.md.
+CLAUDE.md
+
 # ── Ruido de sistema / Python ───────────────────────────────────────
 __pycache__/
 *.pyc

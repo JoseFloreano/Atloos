@@ -55,11 +55,14 @@
       "Bash(rmdir /c/Users/jlflo/OneDrive/Documentos/Mis_Documentos/Proyectos/Coding/Python/Otros/ClaudeSetup/.claude)",
       "Bash(py -c \"import json,os; d=json.load\\(open\\(os.path.expanduser\\('~/.claude/skills/_onedrive-sync.json'\\)\\)\\); s=sorted\\(d['skills']\\); print\\(len\\(s\\),'skills:'\\); [print\\(' ',x\\) for x in s]\")",
       "Bash(xargs -n1 basename)",
-      "Read(//c/Users/jlflo/OneDrive/DevSetup/claude-skills/_build/dev-skills/skills//**)"
+      "Read(//c/Users/jlflo/OneDrive/DevSetup/claude-skills/_build/dev-skills/skills//**)",
+      "Read(//c/Users/jlflo/OneDrive/DevSetup/ObsidianVault/templates/**)",
+      "PowerShell(& \"c:\\\\Users\\\\jlflo\\\\OneDrive\\\\Documentos\\\\Mis_Documentos\\\\Proyectos\\\\Coding\\\\Python\\\\Otros\\\\ClaudeSetup\\\\setup\\\\sync-hooks.ps1\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\jlflo\\.claude\\projects\\c--Users-jlflo-OneDrive-Documentos-Mis-Documentos-Proyectos-Coding-Python-Otros-ClaudeSetup\\memory",
-      "c:\\Users\\jlflo\\OneDrive\\DevSetup\\ObsidianVault"
+      "c:\\Users\\jlflo\\OneDrive\\DevSetup\\ObsidianVault",
+      "c:\\Users\\jlflo\\OneDrive\\DevSetup\\ObsidianVault\\10-Projects\\claude-setup"
     ]
   }
 }

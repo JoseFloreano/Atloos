@@ -34,9 +34,19 @@ otra laptop.
    - ¿Plan de Superpowers completado sin cosechar? → `design-doc-harvest`.
    - ¿Decisión tomada hoy sin ADR? → `adr-writer`.
    - ¿Bug no-obvio resuelto sin registrar? → `memory-keeper`.
-4. *(Solo Claude Code)* Si existe `.claude/vault-dirty.json` en el repo,
+4. **Grafos (si están montados)** — complementan al vault, no lo reemplazan:
+   - *Graphiti* (memoria temporal): las cosechas del paso 3 (`adr-writer`/
+     `memory-keeper`) ya escriben los episodios al grafo. Es **asíncrono**
+     (~25s): no esperes confirmación ni lo busques al instante. Si Graphiti no
+     está montado, omite en silencio (el vault es la fuente primaria).
+   - *Graphify* (estructura del código, local/Claude Code): si hoy cambió la
+     estructura (módulos nuevos, movidos, renombrados), ofrece regenerar
+     `10-Projects/<proyecto>/codebase-map.md` con `graphify .` — es un snapshot
+     y driftea. No lo fuerces en cambios menores. En Cowork, déjalo para la
+     próxima sesión de Code.
+5. *(Solo Claude Code)* Si existe `.claude/vault-dirty.json` en el repo,
    bórralo — el cierre manual deja el flag del hook en cero.
-5. **Verifica y despide**: confirma qué se actualizó y responde con el
+6. **Verifica y despide**: confirma qué se actualizó y responde con el
    "próximo paso" anotado — así la sesión termina con el arranque de la
    siguiente ya escrito.
 

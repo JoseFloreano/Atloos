@@ -188,6 +188,14 @@ if (Test-Path $syncSkills) {
     catch { Write-Warn "sync-skills falló: $($_.Exception.Message). Córrelo manualmente." }
 } else { Write-Warn "sync-skills.ps1 no encontrado junto a este script." }
 
+# ── 5c. Instalar/cablear hooks de Claude Code (enforcement anti-drift) ────
+Write-Header "Instalando hooks"
+$syncHooks = Join-Path $PSScriptRoot "sync-hooks.ps1"
+if (Test-Path $syncHooks) {
+    try { & $syncHooks }
+    catch { Write-Warn "sync-hooks falló: $($_.Exception.Message). Córrelo manualmente." }
+} else { Write-Warn "sync-hooks.ps1 no encontrado junto a este script." }
+
 # ── 6. Restaurar backup (fix A3: SOLO via restore-graph, AOF-safe) ────────
 Write-Header "Verificando backups"
 $stackUp = $false

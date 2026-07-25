@@ -13,6 +13,13 @@ settings.json). El hook recibe JSON por stdin; exit 2 = bloquear con mensaje.
 import json
 import sys
 
+# Windows: la consola usa cp1252/cp850 y los acentos llegarían corruptos a
+# Claude (mojibake). Forzamos UTF-8 en stderr; fail-open si no se puede.
+try:
+    sys.stderr.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 FORBIDDEN_IDS = {"", "main", "default", "<project-name>"}
 
 

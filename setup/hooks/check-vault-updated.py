@@ -21,6 +21,13 @@ import os
 import re
 import sys
 
+# Windows: la consola usa cp1252/cp850 y los acentos llegarían corruptos a
+# Claude (mojibake). Forzamos UTF-8 en stderr; fail-open si no se puede.
+try:
+    sys.stderr.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 
 def find_vault_project(project_name: str):
     """Busca 10-Projects/<name>/_PROJECT.md bajo OneDrive o el home (modo local)."""

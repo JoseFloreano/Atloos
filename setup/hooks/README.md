@@ -21,14 +21,28 @@ Requiere Python 3 en el PATH (`python3` en macOS/Linux, `python` en Windows).
 
 ## Instalación
 
+### La forma fácil (Windows) — `sync-hooks.ps1`
+
+```powershell
+.\sync-hooks.ps1
+```
+
+Copia los `.py` a `~/.claude/hooks/` (y a cada `~/.claude-*/hooks/` en multi-cuenta)
+y **cablea `settings.json` de forma idempotente** (con backup). Elige `py` como
+intérprete automáticamente (en Windows `python` suele ser el stub del Store). El
+bootstrap `setup-new-machine.ps1` ya lo invoca. Corre este script tras editar
+cualquier hook — no hay sync automático como el de las skills.
+
+### Manual (para entender el cableado, o en macOS/Linux)
+
 1. Copia el script a tu config de Claude Code (y a tu repo de dotfiles):
 
    ```bash
    mkdir -p ~/.claude/hooks && cp validate-graphiti-group-id.py ~/.claude/hooks/
    ```
 
-2. Fusiona esto en `~/.claude/settings.json` (ajusta `python3`→`python` en Windows
-   y `~` a tu ruta absoluta si tu shell no la expande):
+2. Fusiona esto en `~/.claude/settings.json` (ajusta `python3`→`python`/`py` en
+   Windows y `~` a tu ruta absoluta si tu shell no la expande):
 
    ```json
    {
