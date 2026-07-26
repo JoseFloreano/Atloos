@@ -95,8 +95,24 @@ def main() -> None:
     if not project_md:
         sys.exit(0)  # proyecto no enganchado al vault — nada que exigir
 
+    # Satisface el hook: _PROJECT.md actualizado O una nota de sesión propia
+    # (sessions/*.md) actualizada — esto último es la vía multi-agente (doc 12):
+    # con 2+ agentes en el mismo proyecto, cada uno escribe SOLO su nota de
+    # sesión y session-close consolida; exigir _PROJECT.md a todos convertía
+    # a este hook en fuente de contención sobre un solo archivo.
+    last_edit = float(state.get("last_code_edit", 0))
     try:
-        if os.path.getmtime(project_md) >= float(state.get("last_code_edit", 0)):
+        satisfied = os.path.getmtime(project_md) >= last_edit
+        if not satisfied:
+            sessions_dir = os.path.join(os.path.dirname(project_md), "sessions")
+            if os.path.isdir(sessions_dir):
+                for fn in os.listdir(sessions_dir):
+                    fp = os.path.join(sessions_dir, fn)
+                    if fn.endswith(".md") and os.path.isfile(fp) \
+                            and os.path.getmtime(fp) >= last_edit:
+                        satisfied = True
+                        break
+        if satisfied:
             os.remove(flag_path)  # el vault ya se actualizó después del código
             sys.exit(0)
     except OSError:
@@ -112,9 +128,11 @@ def main() -> None:
 
     print(
         f"Esta sesión modificó código pero el vault quedó desfasado. Antes de "
-        f"terminar: actualiza SOLO la sección de Pendientes/Estado de "
-        f"10-Projects/{name}/_PROJECT.md (2-5 líneas: qué quedó hecho, qué quedó "
-        f"pendiente). Nada más — el cierre completo es de la skill session-close.",
+        f"terminar, UNA de dos: (a) actualiza SOLO Pendientes/Estado de "
+        f"10-Projects/{name}/_PROJECT.md (2-5 líneas), o (b) si hay OTROS "
+        f"agentes trabajando este proyecto, escribe tu avance en "
+        f"10-Projects/{name}/sessions/<fecha>-<tu-tarea>.md y NO toques "
+        f"_PROJECT.md (session-close consolida). Nada más.",
         file=sys.stderr,
     )
     sys.exit(2)

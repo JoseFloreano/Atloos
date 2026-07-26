@@ -22,6 +22,11 @@ otra laptop.
 
 ## Pasos
 
+0. **Consolidación multi-agente (si hoy trabajaron 2+ agentes el proyecto)**:
+   lee las notas `sessions/YYYY-MM-DD-*.md` de HOY, fusiona sus avances y
+   pendientes en los pasos 1-3, y marca cada nota consolidada añadiendo
+   `> consolidado en _PROJECT.md` al final. Las notas se conservan (historial);
+   _PROJECT.md tiene UN solo escritor: este cierre.
 1. **`_PROJECT.md` del proyecto activo** — actualiza tres secciones, corto:
    - *Estado actual*: 2-4 líneas de dónde quedó el proyecto HOY.
    - *Pendientes*: lo que quedó abierto (checkboxes), borrando lo ya cerrado.

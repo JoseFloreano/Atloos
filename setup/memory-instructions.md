@@ -1,9 +1,10 @@
-<!-- Snippet para el CLAUDE.md de cada proyecto (Claude Code). ~230 tokens (H4).
+<!-- Snippet para el CLAUDE.md de cada proyecto (Claude Code). ~300 tokens (H4).
      Gemelo Cowork: cowork-project-instructions.md
      ⚠ COPIA SINCRONIZADA de skills/claude-code/project-onboard/references/
        memory-snippet.md (la skill lo pega automáticamente) — editar ambas a la vez.
-     Detalle de qué/cómo guardar: skill `memory-keeper` (se carga sola al guardar).
-     Enforcement determinista: hooks/validate-graphiti-group-id.py -->
+     NOTA: este archivo regresó a la v1 en un pull (2026-07-26, tercera
+     divergencia detectada) — restaurado. El detalle de Graphiti (formato de
+     episodios, qué guardar) vive en la skill memory-keeper, no aquí. -->
 
 ## Active Project: `<project-name>`   ← reemplazar al copiar
 
@@ -17,11 +18,18 @@
    Other projects' folders are OFF-LIMITS unless the user explicitly asks.
 4. Memory from another project seems relevant → say so and ask; never import silently.
 5. Stored fact contradicts current code/user → trust the present, update the memory.
+6. **Multi-agent** (2+ sesiones en este proyecto a la vez): escribe SOLO en tu
+   nota `10-Projects/<project-name>/sessions/YYYY-MM-DD-<tu-tarea>.md` (avance
+   y pendientes ahí); NO edites `_PROJECT.md` a mitad de trabajo — solo
+   `session-close` lo consolida (un archivo = un escritor).
+7. Si `Edit` falla con "File has been modified since read": re-lee y reintenta
+   UNA vez; si falla de nuevo hay otro escritor activo — PARA y avisa. NUNCA
+   crees un archivo copia/variante (`X 2.md`, `-v2`, `(copia)`).
 
-At session start: `search_facts("recent decisions and known issues", group_ids=["<project-name>", "dev-global"])`, then read `10-Projects/<project-name>/_PROJECT.md`.
+At session start: `search_facts("recent decisions and known issues", group_ids=["<project-name>", "dev-global"])`, then read `10-Projects/<project-name>/_PROJECT.md` (y `codebase-map.md` si existe).
 
-After completing each coding task, BEFORE reporting it done: update Pendientes/Estado in `10-Projects/<project-name>/_PROJECT.md` if they changed (2-5 lines — a Stop hook enforces this once per session). Full close ritual → say "cerramos" (`session-close` skill).
+After completing each coding task, BEFORE reporting it done: update Pendientes/Estado — en `_PROJECT.md` (2-5 líneas) si trabajas solo, o en TU nota de sesión si hay multi-agente (regla 6). El hook Stop acepta ambas. Cierre completo → "cerramos" (`session-close`).
 
-When saving decisions/bugs/conventions → use the `memory-keeper` skill (format & criteria live there). Architecture decisions → `adr-writer` skill.
+When saving decisions/bugs/conventions → `memory-keeper` skill. Architecture decisions → `adr-writer` skill.
 
 If the `graphiti-memory` MCP is unavailable, skip Graphiti silently — the vault is the primary record.
