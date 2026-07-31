@@ -42,6 +42,7 @@ La serie original: por qué esta arquitectura de memoria y no otra.
 | [11 · Testing y debugging](./skills/11-SKILLS-TESTING-Y-DEBUGGING.md) | Qué adoptar, qué duplica Superpowers, backlog propio |
 | [13 · IA agéntica](./skills/13-SKILLS-IA-AGENTICA.md) | Diseño agéntico, tokens, meta-skills, benchmarks de modelos + 5 skills propias |
 | [15 · APIs y despliegue](./skills/15-SKILLS-APIS-Y-DESPLIEGUE.md) | api-design, api-evolution (oasdiff) y deploy-planner con cuestionario |
+| [16 · Python: clases, desarrollo y API design](./skills/16-SKILLS-PYTHON-Y-DESARROLLO.md) | python-conventions, python-api-design + plugin astral (uv/ruff/ty) |
 
 ### 📁 [`ecosistema/`](./ecosistema/) — Evaluaciones de herramientas externas
 
