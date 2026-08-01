@@ -4,7 +4,8 @@
 > **Estado:** propuesta aprobada para implementar; **no** aprobada como fase
 > (eso requiere auditoría externa tras las pruebas)
 > **Contexto previo:** `00-DISENO-TELEGRAM-BRIDGE.md` §2 · `ADR-20260801-puente-telegram`
-> **Continuación futura:** `03-RFD-T3-T4-DESARROLLO-PARALELO.md`
+> **Continuación futura:** `03-RFD-T3-T4-DESARROLLO-PARALELO.md` (T5) ·
+> `05-RFD-T4-CONTINUAR-DESDE-AVISO.md` (T4)
 > **Método:** brainstorming de Superpowers (spec previa al plan de implementación).
 >
 > **Qué cambió en v2:** se mantienen §3 (opción A), C0, C3 y C8. Se reescriben
@@ -42,7 +43,7 @@ byte. Es la decisión estructural de esta versión.
 
 **No objetivos:** aprobación por cada acción del agente (rechazada: hace
 inusable el trabajo real), `--dangerously-skip-permissions`, y el desarrollo
-**paralelo** de varias conversaciones a la vez (RFD 03, horizonte T3/T4).
+**paralelo** de varias conversaciones a la vez (RFD 03, horizonte T3/T5).
 
 ## 3. Caso central A: arquitectura de las aprobaciones *(sin cambios en v2)*
 
