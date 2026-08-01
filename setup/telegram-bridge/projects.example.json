@@ -1,5 +1,18 @@
 {
-  "_comentario": "Copia este archivo a projects.json y pon TUS rutas. projects.json esta en .gitignore: contiene rutas de tu maquina (anti-patron S5). El nombre de cada clave es lo que escribes en /p <nombre>; usa el mismo nombre que la carpeta del vault (10-Projects/<nombre>) para que la memoria case.",
-  "claude-setup": "C:\\Users\\TU_USUARIO\\ruta\\al\\ClaudeSetup",
-  "mi-otro-proyecto": "C:\\Users\\TU_USUARIO\\ruta\\al\\otro-repo"
+  "_comentario": "Copia a projects.json y pon TUS rutas. projects.json esta gitignorado: contiene rutas de tu maquina (anti-patron S5). La clave es lo que escribes en /p <nombre>; usa el mismo nombre que la carpeta del vault (10-Projects/<nombre>) para que la memoria case.",
+  "_formato": "Cada proyecto es {path, test}. 'test' es el comando que corre /test DENTRO del worktree; sin el, /test avisa y /merge queda bloqueado (no hay verde posible). Se acepta tambien el formato viejo 'nombre': 'ruta' (sin tests).",
+
+  "mi-repo-python": {
+    "path": "C:\\Users\\TU_USUARIO\\ruta\\al\\repo",
+    "test": "py -m pytest -q"
+  },
+  "mi-app-flutter": {
+    "path": "C:\\Users\\TU_USUARIO\\ruta\\a\\la\\app",
+    "test": "flutter test"
+  },
+  "mi-proyecto-node": {
+    "path": "C:\\Users\\TU_USUARIO\\ruta\\al\\proyecto",
+    "test": "npm test"
+  },
+  "formato-viejo-sin-tests": "C:\\Users\\TU_USUARIO\\otro\\repo"
 }

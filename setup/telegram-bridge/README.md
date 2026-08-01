@@ -145,7 +145,11 @@ Debe imprimir `Daemon en marcha (long polling)`. Los eventos van a
 | `/new` | Empieza conversación nueva (la anterior queda en `/chats`) |
 | `/chats` | Lista las conversaciones guardadas del proyecto, numeradas |
 | `/chat <n>` | Retoma la conversación n |
-| `/status` | Proyecto, conversación, si hay invocación en vuelo, modo |
+| `/model [m]` | Ver o cambiar modelo (`opus`, `sonnet`, `haiku`, `fable`, `default`) |
+| `/status` | Proyecto, conversación, modo, rama, si hay invocación en vuelo |
+
+Los de **escritura** (`/write`, `/diff`, `/commit`, `/test`, `/push`, `/merge`,
+`/done`) están en la sección T2, más abajo.
 
 ## Comportamiento que conviene conocer
 
@@ -185,6 +189,82 @@ Register-ScheduledTask -TaskName "TelegramDaemon" -Action $a -Trigger $t
 
 Para pararlo: `Stop-ScheduledTask -TaskName TelegramDaemon` (o cierra la ventana).
 El arranque 24/7 con `systemd` llega cuando exista la mini PC — no lo montes aquí.
+
+---
+
+# Fase T2 — Modo escritura (`/write`)
+
+Desarrollo real desde el móvil. Diseño completo: `docs/telegram/02-RFD-T2-MODO-ESCRITURA.md`.
+
+## La idea en una frase
+
+**El bot nunca escribe en tu árbol de trabajo.** Al hacer `/write on`, la
+conversación recibe **su propia rama y su propio worktree**, fuera de OneDrive:
+
+```
+Tu repo (OneDrive)              Worktree del bot (LOCAL)
+main + tus cambios sin          %LOCALAPPDATA%\claude-tg-worktrees\
+commitear ← intactos              <proyecto>\<fecha>-<slug>\  ← rama tg/<fecha>-<slug>
+```
+
+Puedes estar editando en la laptop mientras el bot desarrolla: no se ven.
+
+**1 conversación = 1 rama = 1 worktree.** `/new` en escritura abre rama nueva;
+`/chat <n>` retoma la suya; `/chats` muestra cuál es la de cada una.
+
+## Comandos de escritura
+
+| Comando | Qué hace | Botón |
+|---|---|---|
+| `/write on` \| `off` | Activa/desactiva el modo. Crea la rama y el worktree la primera vez | — |
+| `/diff` | Resumen de cambios; el diff completo llega como adjunto si es largo | — |
+| `/commit [mensaje]` | Commitea en la rama. Sin mensaje, el agente propone uno | — |
+| `/test` | Corre el comando de test del proyecto dentro del worktree | — |
+| `/push` | Publica la rama; con `gh`, crea/actualiza el PR y manda el link | — |
+| `/merge` | Integra en `main` (squash) | **Sí** |
+| `/done` | Quita worktree, borra la rama y archiva la conversación | — |
+
+## Las tres reglas que gobiernan T2
+
+1. **Los git ops los ejecuta el daemon, nunca el agente.** El agente puede
+   editar y correr tests; `git commit`, `push` y `merge` están **denegados**
+   para él. Si lo intenta, verás `🔒 N acción(es) bloqueada(s)`. Así ninguna
+   inyección de prompt puede publicar nada.
+2. **Botón solo para `/merge`**, que es lo único que toca `main`. Caduca a los
+   5 minutos.
+3. **`/merge` exige tests en verde** posteriores al último commit. Si commiteas
+   después de un `/test`, el verde caduca y hay que repetirlo.
+
+## Durante tareas largas
+
+- **Timeout de 90 minutos** en escritura (10 en lectura).
+- **Checkpoint cada 30 minutos** con el tiempo transcurrido y la última etapa:
+  el agente va anotando su avance en `.tg/progress.md` (excluido de los commits).
+- `/chat` y `/p` responden `⏳` mientras hay una invocación en curso — cambiar
+  de conversación a mitad de vuelo entregaría la respuesta a la equivocada. El
+  desarrollo **paralelo** es una idea futura (RFD 03), no está en T2.
+
+## Configurar los tests (necesario para `/merge`)
+
+En `projects.json`, cada proyecto declara su comando:
+
+```json
+{
+  "mi-repo": { "path": "C:\\ruta\\al\\repo", "test": "py -m pytest -q" }
+}
+```
+
+Sin `test` declarado, `/test` avisa y **`/merge` queda bloqueado** (no hay verde
+posible). Se acepta el formato viejo (`"nombre": "ruta"`), sin tests.
+
+## Recuperación
+
+- ¿El bot hizo un desastre? `/done` sin mergear: se borra la rama y el worktree.
+  Tu `main` y tu árbol nunca supieron que existió.
+- `/done` **se niega** si quedan cambios sin commitear en archivos trackeados
+  (no te hace perder trabajo). La basura de los tests (`__pycache__`) no cuenta.
+- Si el daemon muere con worktrees vivos, al arrancar **reconcilia** contra
+  `git worktree list` y reporta discrepancias — nunca borra por su cuenta.
 
 ## Seguridad de T1 (lo que NO se negocia)
 
