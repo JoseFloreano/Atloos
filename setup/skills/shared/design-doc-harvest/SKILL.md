@@ -24,10 +24,25 @@ lo durable vive en el vault. Esta skill cierra el pipeline
 
 ## Pasos
 
-1. **Localiza los docs del trabajo terminado**: `docs/superpowers/specs/*.md` y
-   `docs/superpowers/plans/*.md` (o la ruta que fije el CLAUDE.md). Si hay varios
-   features mezclados, lista y confirma con el usuario CUÁLES corresponden a lo
-   ya implementado.
+1. **Localiza los docs del trabajo terminado**: `docs/superpowers/specs/*.md`,
+   `docs/superpowers/plans/*.md` y los **RFDs** de `docs/**/*RFD*.md` (o la ruta
+   que fije el CLAUDE.md).
+
+   Un RFD se cosecha según su estado:
+
+   | Estado del RFD | Qué se hace |
+   |---|---|
+   | Propuesta abierta / en discusión | se queda |
+   | Aprobado pero **no** implementado | se queda |
+   | Implementado **y con las condiciones de auditoría cerradas** | cosecha → ADR → `git rm` |
+   | Abandonado | se borra sin ADR, con confirmación |
+
+   "Auditado" significa **condiciones de auditoría cerradas**, no "hubo
+   auditoría". Un RFD con la auditoría aprobada *con condiciones* pendientes NO
+   se cosecha.
+
+   Si hay varios features mezclados, lista y confirma con el usuario CUÁLES
+   corresponden a lo ya implementado.
 2. **Verifica que está completado de verdad**: los checkboxes del plan están
    marcados o el usuario lo confirma. Un plan a medias NO se cosecha — se queda.
 3. **Destila lo durable** (esto es lo que sobrevive; el resto es andamiaje):
@@ -41,7 +56,21 @@ lo durable vive en el vault. Esta skill cierra el pipeline
 4. **Registra con `adr-writer`** (un ADR por decisión mayor, no un mega-ADR).
    En cada ADR incluye: referencia al commit/PR de la implementación, y la nota
    "docs de trabajo cosechados y borrados — historia completa en git: <sha>".
-5. **Borra los docs cosechados** — SOLO después de que el/los ADR existen y el
+
+   **Si la decisión ya tiene ADR, la cosecha lo enriquece — no crea otro.**
+   Dos ADRs sobre el mismo asunto reproducen en la capa durable la divergencia
+   que la cosecha venía a eliminar.
+5. **Redirige las referencias entrantes.** "Git conserva la historia" es cierto
+   para el contenido y falso para los enlaces:
+
+   ```bash
+   grep -rl -E "RFD NN|NN-RFD" docs/
+   ```
+
+   Actualiza cada cita para que apunte al ADR resultante. Solo cuando el grep
+   deje de devolver referencias huérfanas se borra el archivo. (Precedente: el
+   RFD 02 lo citaban 9 documentos.)
+6. **Borra los docs cosechados** — SOLO después de que el/los ADR existen y el
    usuario aprobó la lista exacta de archivos:
    ```bash
    git rm docs/superpowers/specs/<...>.md docs/superpowers/plans/<...>.md
@@ -49,7 +78,7 @@ lo durable vive en el vault. Esta skill cierra el pipeline
    ```
    Borrar es seguro: ambos archivos fueron commiteados por Superpowers y git
    conserva la historia; el ADR apunta al sha.
-6. **Verifica**: ADR(s) en `10-Projects/<proyecto>/ADRs/` con wikilink en
+7. **Verifica**: ADR(s) en `10-Projects/<proyecto>/ADRs/` con wikilink en
    `_PROJECT.md`; `docs/superpowers/` sin restos del feature; commit de limpieza
    hecho.
 
