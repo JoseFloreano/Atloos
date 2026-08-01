@@ -80,6 +80,44 @@ defensa principal contra alucinaciones cross-proyecto. El snippet
 implementan la misma regla en ambos productos; reemplaza `<project-name>` al
 copiarlos.
 
+## Registro de secretos
+
+**UN `.env` por servicio, a propósito.** No es desorden: `docker --env-file`
+inyecta el archivo ENTERO en el contenedor, así que un `.env` único le daría al
+MCP server el token de Telegram y al bot las API keys del LLM. Además cada
+servicio tiene su ciclo de vida y su rotación. En el server Debian esto mapea
+1:1 a `EnvironmentFile=` de systemd, una unit por servicio
+(`ADR-20260801-os-servidor-24-7`).
+
+Lo que sí hace falta es **un solo sitio donde saber dónde vive cada secreto**.
+Esta tabla es ese sitio.
+
+| Archivo | Ruta Windows | Ruta futura (Debian) | Llaves | Quién lo consume | Cómo rotar |
+|---|---|---|---|---|---|
+| `graphiti/.env` | `%LOCALAPPDATA%\graphiti\.env`<br>*(Unix: `~/.local/share/graphiti/.env`)* | `/etc/claude-setup/graphiti.env` | `DEEPSEEK_API_KEY`, `OPENAI_API_KEY` (embedder, obligatoria), `GOOGLE_API_KEY`/`GROQ_API_KEY`/`ANTHROPIC_API_KEY` (rutas alternativas), `FALKORDB_PASSWORD` | `docker compose --env-file` → MCP server + FalkorDB | DeepSeek: platform.deepseek.com → API keys → crear nueva y borrar la vieja. OpenAI: platform.openai.com → API keys → revoke. Gemini: aistudio.google.com. Groq: console.groq.com. `FALKORDB_PASSWORD`: la eliges tú; cámbiala y reinicia el contenedor |
+| `claude-telegram/.env` | `%LOCALAPPDATA%\claude-telegram\.env`<br>*(Unix: `~/.config/claude-telegram/.env`)* | `/etc/claude-setup/telegram.env` | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_ALLOWED_USER_ID` | `notify_telegram.py` (T0) y `tg_daemon.py` (T1) | Token: **@BotFather → `/revoke`** invalida el viejo al instante y da uno nuevo. `TELEGRAM_CHAT_ID` y `TELEGRAM_ALLOWED_USER_ID` **no son secretos rotables** — son identificadores tuyos; si cambian, se editan a mano |
+| `deepseek/.env` ⚠ **transitorio** | `%LOCALAPPDATA%\deepseek\.env` | *(no llega al server)* | `DEEPSEEK_API_KEY` | Nada en producción: solo el sondeo del doc 08 §9-§10 | Igual que arriba. **Al activar Graphiti, mover la key a `graphiti/.env` y borrar este archivo** — existe solo porque el bootstrap aún no había generado el `.env` de Graphiti |
+
+**Toda pieza nueva que necesite un secreto añade su fila aquí en el MISMO PR que
+la crea.** Un secreto sin fila es un secreto que nadie sabrá rotar.
+
+### Las 2 reglas
+
+1. **JAMÁS fusionar todo en un `.env` único** — radio de explosión: una fuga
+   entrega todos los servicios a la vez, y `--env-file` de Docker mete el
+   archivo completo en cada contenedor (el bot no tiene por qué ver tus API keys).
+2. **JAMÁS dentro de OneDrive ni de git** — un secreto en OneDrive se replica a
+   la nube y a cada laptop; en git queda en el historial para siempre
+   (anti-patrón S5, hallazgo A4 de la auditoría). Por eso todas las rutas de
+   arriba son de disco local.
+
+> ⚠ **Excepción tolerada, NO recomendada:** `notify_telegram.py` busca su `.env`
+> en 3 sitios por orden — `%LOCALAPPDATA%\claude-telegram\`, luego
+> `~/.config/claude-telegram/`, y como último recurso **junto al script**
+> (`setup/telegram-bridge/.env`), que está **dentro de OneDrive**. Se acepta por
+> comodidad y `.gitignore` lo cubre, pero OneDrive lo replicaría igual. Usa la
+> primera ruta salvo que tengas una razón concreta.
+
 ---
 
 # Graphiti + FalkorDB — Memoria temporal

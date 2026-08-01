@@ -166,6 +166,62 @@ if (($envContent -match "(?m)^FALKORDB_DATA_PATH=.*OneDrive") -and -not $ForceOn
     Write-Err "FALKORDB_DATA_PATH apunta a OneDrive — prohibido (H2)."; exit 1
 }
 
+# ── 4b. Esqueletos de .env por servicio (registro en setup/README.md) ─────
+# UN .env POR SERVICIO a propósito: `docker --env-file` inyecta el archivo
+# ENTERO en el contenedor, así que un .env único le daría al MCP las
+# credenciales del bot y viceversa. Aquí solo se crean los ESQUELETOS.
+#
+# REGLA CRÍTICA: si el archivo ya existe NO se toca — ni se sobreescribe ni se
+# "completa". Este bootstrap se re-corre en laptops que YA tienen secretos
+# reales dentro; rozarlos sería destruirlos.
+Write-Header "Esqueletos de .env por servicio"
+
+$SecretFiles = @(
+    @{ Name = "graphiti"
+       Path = "$GraphitiLocal\.env"
+       Body = @"
+# Esqueleto creado por setup-new-machine.ps1. Rellena y guarda.
+# Registro de secretos (rutas, quién lo consume, cómo rotar): setup/README.md
+# NUNCA muevas este archivo a OneDrive ni lo versiones (anti-patrón S5 / fix A4).
+LLM_PROVIDER=openai
+DEEPSEEK_API_KEY=
+DEEPSEEK_API_URL=https://api.deepseek.com/v1
+OPENAI_API_KEY=
+MODEL_NAME=deepseek-chat
+SMALL_MODEL_NAME=deepseek-chat
+LLM_STRUCTURED_OUTPUT_MODE=json_object
+FALKORDB_PASSWORD=
+SEMAPHORE_LIMIT=3
+"@ }
+    @{ Name = "claude-telegram"
+       Path = "$env:LOCALAPPDATA\claude-telegram\.env"
+       Body = @"
+# Esqueleto creado por setup-new-machine.ps1. Rellena y guarda.
+# Registro de secretos (rutas, quién lo consume, cómo rotar): setup/README.md
+# Token: @BotFather. Rotar = /revoke (invalida el viejo al instante).
+# NUNCA muevas este archivo a OneDrive ni lo versiones (anti-patrón S5 / fix A4).
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+TELEGRAM_ALLOWED_USER_ID=
+"@ }
+)
+
+foreach ($s in $SecretFiles) {
+    $dir = Split-Path $s.Path -Parent
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    if (Test-Path $s.Path) {
+        Write-Info "$($s.Name): .env ya existe — NO se toca ($($s.Path))"
+    } else {
+        # Sin BOM: estos .env los leen Python y docker --env-file, no PowerShell.
+        [System.IO.File]::WriteAllText($s.Path, $s.Body, (New-Object System.Text.UTF8Encoding($false)))
+        # Permisos: solo el usuario actual (equivalente de chmod 600)
+        try { icacls $s.Path /inheritance:r /grant:r "$($env:USERNAME):(R,W)" | Out-Null }
+        catch { Write-Warn "No se pudo restringir la ACL de $($s.Path) — hazlo a mano." }
+        Write-OK "$($s.Name): esqueleto creado en $($s.Path)"
+        Write-Warn "$($s.Name): rellena sus llaves — ver 'Registro de secretos' en setup/README.md"
+    }
+}
+
 # ── 5. Agregar Graphiti al MCP de Claude Code ────────────────────────────
 Write-Header "Configurando MCP"
 try {

@@ -163,6 +163,61 @@ if grep -qE "^FALKORDB_DATA_PATH=.*OneDrive" "${ENV_FILE}" && [ -z "${FORCE_ONED
   exit 1
 fi
 
+# ── 4b. Esqueletos de .env por servicio (registro en setup/README.md) ─────
+# UN .env POR SERVICIO a propósito: `docker --env-file` inyecta el archivo
+# ENTERO en el contenedor, así que un .env único le daría al MCP las
+# credenciales del bot y viceversa. En Debian esto mapea 1:1 a EnvironmentFile=
+# de systemd, una unit por servicio (ADR-20260801-os-servidor-24-7).
+#
+# REGLA CRÍTICA: si el archivo ya existe NO se toca — ni se sobreescribe ni se
+# "completa". Este bootstrap se re-corre en máquinas que YA tienen secretos
+# reales dentro; rozarlos sería destruirlos.
+header "Esqueletos de .env por servicio"
+
+TELEGRAM_ENV="${HOME}/.config/claude-telegram/.env"
+
+# graphiti: normalmente ya lo creó el paso 4; este bloque es la red de seguridad.
+mkdir -p "$(dirname "${ENV_FILE}")"
+if [ -f "${ENV_FILE}" ]; then
+  info "graphiti: .env ya existe — NO se toca (${ENV_FILE})"
+else
+  cat > "${ENV_FILE}" << 'ENVSKEL'
+# Esqueleto creado por setup-new-machine.sh. Rellena y guarda.
+# Registro de secretos (rutas, quién lo consume, cómo rotar): setup/README.md
+# NUNCA muevas este archivo a OneDrive ni lo versiones (anti-patrón S5 / fix A4).
+LLM_PROVIDER=openai
+DEEPSEEK_API_KEY=
+DEEPSEEK_API_URL=https://api.deepseek.com/v1
+OPENAI_API_KEY=
+MODEL_NAME=deepseek-chat
+SMALL_MODEL_NAME=deepseek-chat
+LLM_STRUCTURED_OUTPUT_MODE=json_object
+FALKORDB_PASSWORD=
+SEMAPHORE_LIMIT=3
+ENVSKEL
+  chmod 600 "${ENV_FILE}"
+  ok "graphiti: esqueleto creado en ${ENV_FILE}"
+  warn "graphiti: rellena sus llaves — ver 'Registro de secretos' en setup/README.md"
+fi
+
+mkdir -p "$(dirname "${TELEGRAM_ENV}")"
+if [ -f "${TELEGRAM_ENV}" ]; then
+  info "claude-telegram: .env ya existe — NO se toca (${TELEGRAM_ENV})"
+else
+  cat > "${TELEGRAM_ENV}" << 'ENVSKEL'
+# Esqueleto creado por setup-new-machine.sh. Rellena y guarda.
+# Registro de secretos (rutas, quién lo consume, cómo rotar): setup/README.md
+# Token: @BotFather. Rotar = /revoke (invalida el viejo al instante).
+# NUNCA muevas este archivo a OneDrive ni lo versiones (anti-patrón S5 / fix A4).
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+TELEGRAM_ALLOWED_USER_ID=
+ENVSKEL
+  chmod 600 "${TELEGRAM_ENV}"
+  ok "claude-telegram: esqueleto creado en ${TELEGRAM_ENV}"
+  warn "claude-telegram: rellena sus llaves — ver 'Registro de secretos' en setup/README.md"
+fi
+
 # ── 5. Agregar Graphiti al MCP de Claude Code ────────────────────────────
 header "Configurando MCP en Claude Code"
 if command -v claude >/dev/null 2>&1; then

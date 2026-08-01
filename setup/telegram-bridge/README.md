@@ -89,6 +89,118 @@ termine"** y la skill `notify-telegram` hace el resto.
 
 ---
 
+---
+
+# Fase T1 — Chat desde Telegram (`tg_daemon.py`)
+
+Escribirle al bot y que **Claude Code responda leyendo el repo que elijas**.
+Long polling saliente: sigue sin haber URL pública ni túnel.
+
+> **T1 es SOLO LECTURA.** El bot lee y conversa; no edita, no ejecuta comandos.
+> `/write on`, triage con modelo barato y botones inline llegan en T2.
+
+## Requisitos
+
+```bash
+py -m pip install "python-telegram-bot>=21"
+```
+
+Más el `.env` de arriba con **una clave nueva**:
+
+```
+TELEGRAM_ALLOWED_USER_ID=987654321
+```
+
+Es tu `user_id` de Telegram (en chat privado coincide con el `chat_id` del paso 2;
+si falta, el daemon usa `TELEGRAM_CHAT_ID`). **Sin allowlist el daemon no arranca**:
+cualquiera puede escribirle a un bot porque su username es público.
+
+## Configurar los proyectos
+
+```bash
+cp projects.example.json projects.json    # PowerShell: Copy-Item
+notepad projects.json
+```
+
+Mapea `nombre → ruta absoluta del repo`. El nombre es lo que escribes en
+`/p <nombre>`; **usa el mismo que la carpeta del vault** (`10-Projects/<nombre>`)
+para que la memoria del proyecto case. `projects.json` está en `.gitignore`
+(contiene rutas de tu máquina).
+
+## Arrancar
+
+```bash
+py tg_daemon.py        # Ctrl+C para parar
+```
+
+Debe imprimir `Daemon en marcha (long polling)`. Los eventos van a
+`logs/daemon-YYYYMM.log` (sin contenidos de mensajes ni token).
+
+## Comandos
+
+| Comando | Qué hace |
+|---|---|
+| `/p <proyecto>` | Activa un proyecto. Sin argumento o con nombre inexistente → lista |
+| *(mensaje normal)* | Consulta al proyecto activo. Sin proyecto → error + lista |
+| `/new` | Empieza conversación nueva (la anterior queda en `/chats`) |
+| `/chats` | Lista las conversaciones guardadas del proyecto, numeradas |
+| `/chat <n>` | Retoma la conversación n |
+| `/status` | Proyecto, conversación, si hay invocación en vuelo, modo |
+
+## Comportamiento que conviene conocer
+
+- **Una invocación por chat**: si escribes mientras trabaja, responde `⏳` en vez
+  de encolar (dos `--resume` concurrentes entrelazan el transcript).
+- **TTL de 24 h**: tras un día sin actividad en un proyecto, el siguiente mensaje
+  abre sesión nueva y lo avisa. Un `--resume` eterno arrastra contexto que se
+  paga en cada turno; la continuidad durable la da el vault, no el transcript.
+- **Los mensajes enviados con el daemon apagado SE PIERDEN.** Al arrancar usa
+  `drop_pending_updates=True`, así que Telegram descarta la cola acumulada. Es
+  **a propósito**: sin eso, al reiniciar el bot te contestaría de golpe a
+  mensajes de hace horas — invocando a Claude por cada uno — y responder a
+  preguntas viejas fuera de contexto es peor que no responder. Si no estás
+  seguro de si está vivo, mándale `/status`: si no contesta, no está corriendo.
+- **Timeout de 10 min** por consulta: si se pasa, mata el proceso y te avisa.
+- **Máx. 15 turnos** por mensaje.
+- **Respuestas largas**: >4096 caracteres → resumen + `.md` adjunto (misma
+  política que T0, código compartido).
+- Si Claude intenta algo fuera de lectura, el mensaje incluye
+  `🔒 N acción(es) bloqueada(s)` — es el modo lectura mordiendo, no un error.
+
+## Dejarlo corriendo en Windows
+
+Por ahora, **una ventana de terminal** abierta con `py tg_daemon.py` es
+suficiente y lo más fácil de depurar (el polling muere al cerrarla o apagar el
+equipo — asumido para v1).
+
+Si prefieres que arranque solo al iniciar sesión, Task Scheduler básico:
+
+```powershell
+$py  = (Get-Command py).Source
+$dir = "<ruta>\setup\telegram-bridge"
+$a = New-ScheduledTaskAction -Execute $py -Argument "tg_daemon.py" -WorkingDirectory $dir
+$t = New-ScheduledTaskTrigger -AtLogOn
+Register-ScheduledTask -TaskName "TelegramDaemon" -Action $a -Trigger $t
+```
+
+Para pararlo: `Stop-ScheduledTask -TaskName TelegramDaemon` (o cierra la ventana).
+El arranque 24/7 con `systemd` llega cuando exista la mini PC — no lo montes aquí.
+
+## Seguridad de T1 (lo que NO se negocia)
+
+1. **Allowlist primero**: cualquier `user_id` distinto se descarta en silencio,
+   antes de procesar nada. No respondemos ni "no autorizado": eso confirmaría
+   que el bot existe. El intento sí queda en el log.
+2. **Solo lectura real**: `--allowedTools Read,Grep,Glob` + `--permission-mode
+   dontAsk` (deniega en vez de preguntar; en headless una pregunta colgaría el
+   proceso). **Nunca** `--dangerously-skip-permissions`.
+3. **`CLAUDE_TG_BOT=1`** en el entorno de cada invocación: el hook anti-drift
+   `check-vault-updated.py` sale en silencio (no hay humano que cierre el vault).
+4. Los logs guardan eventos y longitudes, **no** el contenido de los mensajes ni
+   el token.
+
+---
+
 ## Detalles de implementación
 
 - **Texto plano, sin `parse_mode`** — decisión deliberada. Los resúmenes traen

@@ -1,0 +1,5 @@
+{
+  "_comentario": "Copia este archivo a projects.json y pon TUS rutas. projects.json esta en .gitignore: contiene rutas de tu maquina (anti-patron S5). El nombre de cada clave es lo que escribes en /p <nombre>; usa el mismo nombre que la carpeta del vault (10-Projects/<nombre>) para que la memoria case.",
+  "claude-setup": "C:\\Users\\TU_USUARIO\\ruta\\al\\ClaudeSetup",
+  "mi-otro-proyecto": "C:\\Users\\TU_USUARIO\\ruta\\al\\otro-repo"
+}
