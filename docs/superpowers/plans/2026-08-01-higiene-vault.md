@@ -465,13 +465,7 @@ Texto actual a reemplazar en `setup/skills/cowork/project-resume/SKILL.md`:
 ```
 3. Lista `ADRs/` y stage-a los **últimos ~3** (por la fecha `ADR-YYYYMMDD-*` en
    el nombre, descendente); revisa `bugs/` por issues abiertos relevantes.
-   Stage-a solo lo que vas a leer — no la carpeta completa (anti-patrón de dump).
 ```
-
-> **Corrección tras la revisión:** la cita de arriba omitía la tercera línea, que
-> sí está en el archivo real. Aplicar el reemplazo sin ella **borra el único
-> recordatorio anti-dump de la variante Cowork**. El texto nuevo la reinstaura
-> como línea final del paso 4, donde gobierna tanto el índice como los bugs.
 
 Texto nuevo (mantiene el lenguaje de *stage-ar* propio de Cowork):
 
@@ -482,7 +476,6 @@ Texto nuevo (mantiene el lenguaje de *stage-ar* propio de Cowork):
    existe, el proyecto no está migrado: stage-a los ~3 ADRs más recientes y
    dilo.
 4. Revisa `bugs/` **solo los `status: open`** (`open | fixed | invalid | wontfix`).
-   Stage-a solo lo que vas a leer — no la carpeta completa (anti-patrón de dump).
 ```
 
 Renumera los pasos siguientes.

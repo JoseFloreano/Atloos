@@ -38,7 +38,6 @@ Cowork. **Solo lectura** — no escribe memoria ni commitea nada en este paso.
    existe, el proyecto no está migrado: stage-a los ~3 ADRs más recientes y
    dilo.
 4. Revisa `bugs/` **solo los `status: open`** (`open | fixed | invalid | wontfix`).
-   Stage-a solo lo que vas a leer — no la carpeta completa (anti-patrón de dump).
 5. *(Solo si graphiti-memory está disponible)* `search_facts("recent decisions
    and known issues", group_ids=["<nombre>", "dev-global"])`.
 6. **Resume al usuario** en pocas líneas: estado actual, decisiones clave, bugs
