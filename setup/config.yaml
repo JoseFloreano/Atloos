@@ -7,25 +7,67 @@
 transport: http   # Claude Code soporta HTTP nativamente.
                   # Claude Desktop necesita mcp-remote como proxy.
 
-# ── LLM (se sobreescribe con env vars del docker-compose) ──────────────
+# ── LLM: DeepSeek (doc 08 §7 + §9, prueba de extracción del 2026-08-01) ──
+# ⚠ TRAMPA DOCUMENTADA (doc 08 §3): LLM y embedder comparten por defecto
+#   ${OPENAI_API_URL}/${OPENAI_API_KEY}. Apuntar esa única variable a DeepSeek
+#   ROMPE los embeddings (DeepSeek no ofrece embeddings). Por eso las variables
+#   van SEPARADAS aquí: DEEPSEEK_* para el LLM, OPENAI_* fijo para el embedder.
 llm:
-  provider: "openai"           # Más estable para structured output JSON
-  model: "gpt-4.1-mini"        # Barato, rápido, suficiente para extracción
-  small_model: "gpt-4.1-nano"  # Para operaciones internas de menor complejidad
+  # 'deepseek-chat' y NO 'deepseek-v4-flash': el alias sigue vivo y responde en
+  # NO-THINKING (verificado 08-01; 0 reasoning tokens en 47 llamadas reales).
+  # A secas, v4-flash arranca CON thinking y multiplica el gasto 2-5×. Como el
+  # config.yaml no admite extra_body, el alias es la única vía no-thinking aquí.
+  # ⚠ El alias está deprecado (2026-07-24) y no aparece en /v1/models: si algún
+  #   día devuelve 404, plan B = subclase de OpenAIGenericClient con
+  #   extra_body={"thinking":{"type":"disabled"}} (doc 08 §2).
+  model: ${MODEL_NAME:deepseek-chat}
+  small_model: ${SMALL_MODEL_NAME:deepseek-chat}
   temperature: 0.1             # Bajo → extracción determinista y consistente
+  # CRÍTICO: DeepSeek solo soporta json_object, NO json_schema. Con json_schema
+  # la extracción falla con schemas incorrectos e ingestas rotas.
+  structured_output_mode: ${LLM_STRUCTURED_OUTPUT_MODE:json_object}
+  providers:
+    openai:
+      api_key: ${DEEPSEEK_API_KEY}
+      api_url: ${DEEPSEEK_API_URL:https://api.deepseek.com/v1}
+  # Ruta anterior (OpenAI), si se revierte:
+  #   model: gpt-4.1-mini / small_model: gpt-4.1-nano
+  #   structured_output_mode: json_schema
+  #   providers.openai.api_key: ${OPENAI_API_KEY}
+  #   providers.openai.api_url: https://api.openai.com/v1
 
 # ── Embeddings ─────────────────────────────────────────────────────────
-# ⚠ El embedder es INDEPENDIENTE del llm de arriba: si usas la ruta gratis
-#   (gemini/groq) y dejas el embedder en openai, igual te pedirá esa key.
+# ⚠ El embedder es INDEPENDIENTE del llm de arriba y NO puede ir a DeepSeek.
+#   Su URL queda FIJA en api.openai.com aunque el LLM apunte a otro sitio.
 embedder:
-  provider: "openai"
-  model: "text-embedding-3-small"   # 1536 dims, barato, buena calidad semántica
+  model: ${EMBEDDER_MODEL:text-embedding-3-small}   # 1536 dims, ~$0.02-0.05/mes
+  providers:
+    openai:
+      api_key: ${OPENAI_API_KEY}
+      api_url: https://api.openai.com/v1
   # Alternativa GRATIS con la misma key de Gemini (ruta 2 del .env.example):
   # provider: "gemini"
   # model: "text-embedding-004"
   # Alternativa 100% local (sin key, sin red; corre en el server MCP):
   # provider: "sentence_transformers"
   # model: "all-MiniLM-L6-v2"       # 384 dims, sin costo, OK para uso personal
+
+# ── Reranker / cross-encoder: DECISIÓN = NO RERANKEAR ──────────────────
+# El reranker NO puede ser DeepSeek: OpenAIRerankerClient usa `logit_bias` con
+# IDs del tokenizer de OpenAI, que en el de DeepSeek apuntan a tokens
+# arbitrarios (doc 08 §3). Y `CrossEncoderFactory` HEREDA el provider del LLM,
+# así que sin intervención se iría a DeepSeek solo y fallaría en silencio.
+#
+# Elegido: **sin reranker**. Solo afecta a las BÚSQUEDAS, no a `add_episode`,
+# y a escala personal el rerankeo no aporta lo que cuesta. Alternativa si la
+# calidad de retrieval decepciona: `BGERerankerClient` LOCAL (gratis, pero mete
+# torch en la imagen del MCP). Lo que NO se hace nunca: dejar que caiga a
+# DeepSeek.
+#
+# ⚠ PENDIENTE DE VERIFICAR al desplegar el MCP server: no está confirmado que
+#   su config.yaml exponga una clave para esto — puede requerir tocar
+#   `factories.py`. Verificar que el cross-encoder resultante NO apunta a
+#   api.deepseek.com antes de dar por buena la primera búsqueda.
 
 # ── Base de datos ──────────────────────────────────────────────────────
 database:

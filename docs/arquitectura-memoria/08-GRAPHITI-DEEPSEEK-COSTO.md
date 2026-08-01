@@ -104,14 +104,125 @@ embedder:
 
 ## 8. Plan de adopción propuesto
 
-1. `curl` a api.deepseek.com probando si `deepseek-chat` responde (define la vía no-thinking).
-2. **A/B con 5-10 episodios reales** (mismos episodios, config actual vs DeepSeek): comparar entidades/aristas extraídas y fallos de schema. No hay benchmarks publicados de calidad — el A/B es la única evidencia que cuenta (H10).
+1. ✅ **HECHO 2026-08-01 (§9)**: `deepseek-chat` responde y es no-thinking → vía (a), sin subclase.
+2. ⚠ **PARCIAL 2026-08-01 (§10)** — hecho sin brazo de control (no hay key de OpenAI). **A/B con 5-10 episodios reales** (mismos episodios, config actual vs DeepSeek): comparar entidades/aristas extraídas y fallos de schema. No hay benchmarks publicados de calidad — el A/B es la única evidencia que cuenta (H10).
 3. Si pasa: cambiar el config.yaml del MCP (variables separadas), registrar ADR, y monitorear `prompt_cache_hit_tokens` + episodios fallidos la primera semana.
 4. Si `deepseek-chat` murió y no queremos subclase: posponer — con thinking el ahorro (~$0-4/mes) no paga la fricción.
 
+## 9. Sondeo del §8.1 — ejecutado el 2026-08-01 (key propia, 4 llamadas reales)
+
+**El alias `deepseek-chat` NO murió, y responde en no-thinking.** Es la vía (a)
+del §8.1: la que no necesita subclase. Resultados crudos:
+
+| Prueba | Status | Modelo devuelto | Thinking |
+|---|---|---|---|
+| `GET /v1/models` | 200 | solo `deepseek-v4-flash` y `deepseek-v4-pro` — los alias **no se listan** | — |
+| `deepseek-chat` | 200 | `deepseek-v4-flash` | **NO-thinking limpio** (sin `reasoning_content`, sin `reasoning_tokens`) |
+| `deepseek-v4-flash` a secas | 200 | `deepseek-v4-flash` | **THINKING ON**: 62 reasoning tokens + `reasoning_content` de 266 chars |
+| `deepseek-v4-flash` + `thinking:{type:disabled}` | 200 | `deepseek-v4-flash` | NO-thinking — **la API acepta el parámetro** |
+| ídem + `response_format: json_object` | 200 | `deepseek-v4-flash` | NO-thinking, JSON válido |
+
+**Matiz 2 confirmado y cuantificado**: en el MISMO prompt, thinking ON no solo
+añadió 62 tokens de razonamiento — infló el prompt de **35 → 114 tokens**
+(~79 de preámbulo inyectado). Sobre 4-8 llamadas/episodio es justo el 2-5× que
+anticipaba la palanca 1 del §5.
+
+**Por qué importa el alias para el MCP server**: `config.yaml` no tiene dónde
+meter un `extra_body`, así que `model: deepseek-chat` es la **única** vía
+zero-code a no-thinking en modo MCP. En modo librería hay dos.
+
+⚠ **Reservas** (van al ADR si se adopta):
+- El alias está **deprecado desde el 2026-07-24 y no aparece en `/v1/models`**.
+  Funciona hoy; puede desaparecer sin aviso. Plan B ya identificado: subclase de
+  ~10 líneas o `thinking:{type:disabled}` en modo librería.
+- `prompt_cache_hit_tokens` salió **0 en las 4** llamadas — esperable con
+  prompts de juguete sin prefijo repetido. **No dice nada** sobre la fracción
+  cacheable del §6: eso solo se mide con los prompts reales de Graphiti (A/B).
+
+**Re-verificar** (el alias puede morir): POST a `api.deepseek.com/v1/chat/completions`
+con `{"model":"deepseek-chat",...}` y mirar si la respuesta trae
+`message.reasoning_content` o `usage.completion_tokens_details.reasoning_tokens`.
+La key vive en `%LOCALAPPDATA%\deepseek\.env` (fuera de git y de OneDrive);
+leerla del archivo, nunca pasarla por la línea de comandos.
+
+## 10. Prueba de extracción del §8.2 — ejecutada el 2026-08-01
+
+⚠ **NO es el A/B completo: falta el brazo de control.** No hay key de OpenAI en
+la máquina, así que se midió DeepSeek en **absoluto**, sin línea base. **H10
+sigue sin satisfacerse**: nada de lo de abajo dice "mejor o peor que OpenAI",
+solo "funciona / no funciona" y a qué precio.
+
+**Montaje**: `graphiti-core` 0.29.3 como librería en venv aislado · LLM
+`deepseek-chat` · `structured_output_mode=json_object` · embedder **local**
+(fastembed ONNX bge-small, 384 dims — NO el `text-embedding-3-small` de
+producción) · **sin reranker** · FalkorDB en contenedor **efímero**
+(`docker run --rm`, sin volumen) · group_id desechable `ab-deepseek` · 8
+episodios reales del vault (2 ADRs, 2 bugs, 2 convenciones, 2 features).
+
+| Episodio | Entidades | Aristas | Llamadas | in | out | cache hit |
+|---|---|---|---|---|---|---|
+| adr-graphiti-pospuesto | 9 | 8 | 2 | 3.388 | 1.002 | 1.280 |
+| adr-vault-git-separate | 5 | 3 | 6 | 8.346 | 654 | 1.280 |
+| bug-bom-powershell | 4 | 2 | 6 | 9.316 | 700 | 1.280 |
+| bug-elseif-invalid | 4 | 3 | 8 | 10.789 | 809 | 1.536 |
+| convencion-interprete-hooks | 9 | **0** | 4 | 8.463 | 900 | 2.304 |
+| convencion-bom-ps1 | **1** | **0** | 3 | 6.508 | 75 | 2.304 |
+| telegram-t0 | 9 | 9 | 12 | 18.371 | 1.442 | 3.200 |
+| hook-precompact | 3 | 2 | 6 | 10.766 | 400 | 2.816 |
+| **TOTAL** | **44** | **27** | **47** | **75.947** | **5.982** | **16.000** |
+
+**Los números que importan:**
+- **0 episodios fallidos, 0 reintentos de schema** en 8/8. El matiz 1 (json_object
+  degradado, "may occasionally return empty content") **no se manifestó**.
+- **0 reasoning tokens en las 47 llamadas** → no-thinking confirmado bajo carga
+  real, no solo en prompts de juguete.
+- **Caché: 21,1% del input** (16.000/75.947). Por debajo del 25-35% estimado en
+  el §5 palanca 2, pero del mismo orden. Crece por episodio (1.280 → 3.200): el
+  prefijo se calienta, así que en régimen sería mayor.
+- **5,9 llamadas/episodio de media** — dentro del "4-8 típico" del §5.
+- **Costo medido: $0,00126/episodio → ~$0,25/mes a 200 episodios/mes.** Es la
+  MITAD de la estimación optimista del §6 ($0,40-0,60) y **~24× más barato que
+  los ~$6 de gpt-5.4-mini**. (El input real por episodio, ~9,5K, resultó menor
+  que los 24K supuestos.)
+
+**Calidad a ojo — bien:** entidades correctas y específicas (`Graphiti`,
+`FalkorDB`, `backup-graph.ps1`, `@floreanoclaudebot`), **sin hechos inventados**
+en ninguna de las 27 aristas; nombres de relación informativos
+(`REJECTED_FOR_USE_WITH`, `AVOIDS_SYNC_WITH`, `HAD_LOST_BOM_IN`); y el **dedup
+cross-episodio funciona** (`git`, `OneDrive`, `BOM`, `sync-hooks.ps1` se
+reutilizan como el mismo nodo).
+
+**Calidad a ojo — mal (3 defectos reales):**
+1. **Idioma inconsistente**: 4 de 8 episodios produjeron summaries y hechos en
+   **inglés** pese a que todo el corpus está en español. Inaceptable para un
+   vault en español si se repite.
+2. **Sobre-fragmentación**: `convencion-interprete-hooks` sacó **9 entidades de
+   una convención de 2 frases**, con ruido (`convencion`, `comando python`
+   duplicando `python`, `interprete de los hooks de Claude Code`) y **0 aristas**.
+3. **Pérdida de contenido por dedup**: `convencion-bom-ps1` sacó **1 entidad y 0
+   aristas** — el contenido real (`.ps1` CON BOM, `plugin.json` SIN BOM) **no
+   quedó en el grafo**: se fusionó con un nodo previo cuyo summary habla de otra
+   cosa. En una corrida anterior, ese mismo episodio sin nodos previos sí
+   extrajo las 3 entidades correctas.
+
+⚠ **Sin brazo de control no se puede atribuir**: los 3 defectos pueden ser de
+DeepSeek o del pipeline de Graphiti. Solo el A/B con OpenAI lo separaría.
+
+**Veredicto: ADOPTAR CON RESERVAS** — viable y baratísimo, con los 3 defectos
+anotados para vigilancia. Ver `ADR-20260801-deepseek-extraccion-graphiti`.
+
+**Bugs de terceros encontrados de paso** (backend **Kuzu**, que en 0.29.3 sale
+DEPRECADO — "upstream no longer maintained"): (1) `add_episode` evalúa
+`group_id != self.driver._database` y `KuzuDriver` nunca inicializa `_database`
+→ `AttributeError` con **cualquier** group_id explícito; (2) `Table
+RelatesToNode_ doesn't have an index with name edge_name_and_fact` al guardar
+aristas → 6 de 8 episodios fallaron. **No usar Kuzu.** Además, `falkordb` 1.6.2
+solo funciona con `redis` **7.x** (con 6.x falta `redis.driver_info`; con 8.x
+peta por `himport_registry`).
+
 ## Fuentes
 
-getzep/graphiti v0.29.3 (README, openai_generic_client.py, node_operations.py, bulk_utils.py, prompts/, mcp_server/) · api-docs.deepseek.com (pricing, json_mode, function_calling, thinking_mode, kv_cache, api reference, news V4, rate limits) · help.getzep.com (configuration, adding-episodes) · issues #1007/#912/#1204/#1193 · fuentes terciarias marcadas (morphllm, pricepertoken, deepseek.ai no-oficial). **No verificable:** issues "deepseek" por búsqueda full-text; calidad de extracción vs OpenAI; fracción cacheable exacta; billing de reasoning tokens V4 en doc oficial; vida del alias deepseek-chat.
+getzep/graphiti v0.29.3 (README, openai_generic_client.py, node_operations.py, bulk_utils.py, prompts/, mcp_server/) · api-docs.deepseek.com (pricing, json_mode, function_calling, thinking_mode, kv_cache, api reference, news V4, rate limits) · help.getzep.com (configuration, adding-episodes) · issues #1007/#912/#1204/#1193 · fuentes terciarias marcadas (morphllm, pricepertoken, deepseek.ai no-oficial). **No verificable:** issues "deepseek" por búsqueda full-text; calidad de extracción vs OpenAI; fracción cacheable exacta; billing de reasoning tokens V4 en doc oficial. ~~vida del alias deepseek-chat~~ → **verificada el 2026-08-01, ver §9**.
 
 ---
 
