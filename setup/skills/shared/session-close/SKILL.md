@@ -43,7 +43,7 @@ otra laptop.
    - ¿Decisión tomada hoy sin ADR? → `adr-writer`.
    - ¿Bug no-obvio resuelto sin registrar? → `memory-keeper`.
 5. **Grafos (si están montados)** — complementan al vault, no lo reemplazan:
-   - *Graphiti* (memoria temporal): las cosechas del paso 3 (`adr-writer`/
+   - *Graphiti* (memoria temporal): las cosechas del paso 4 (`adr-writer`/
      `memory-keeper`) ya escriben los episodios al grafo. Es **asíncrono**
      (~25s): no esperes confirmación ni lo busques al instante. Si Graphiti no
      está montado, omite en silencio (el vault es la fuente primaria).
