@@ -13,6 +13,7 @@ productos en `docs/cowork-y-multiagente/08-COWORK-VS-CLAUDE-CODE.md`.
 | **Enforcement del aislamiento** (garantía determinista, no solo instrucciones) | `hooks/validate-graphiti-group-id.py` + `hooks/README.md` | Claude Code |
 | **Graphiti + FalkorDB** (memoria temporal, resto de este README) | `docker-compose.yml`, `config.yaml`, `.env.example`, `backup-graph.ps1/.sh`, `restore-graph.ps1/.sh` | Claude Code (Cowork solo vía puente del desktop app) |
 | **Bootstrap laptop nueva** | `setup-new-machine.ps1/.sh` (incluye sync de skills y tareas programadas de backup) | Ambos |
+| **Tareas programadas** (patrón "heartbeat barato") | `templates/scheduled-task-prompt.md` | Ambos |
 
 ### Skills: el flujo corto
 
@@ -22,6 +23,15 @@ OneDrive/DevSetup/claude-skills/{shared,claude-code,cowork}   ← fuente de verd
   → y empaqueta _build/dev-skills.zip                          ← subir 1 vez a Cowork
 Skill nueva: carpeta + SKILL.md + re-correr sync. Detalles: skills/README.md
 ```
+
+### Tareas programadas: siempre con gate sin LLM
+
+Todo scheduled task periódico (Cowork o cron con `claude -p`) se escribe con
+`templates/scheduled-task-prompt.md`: **gate barato antes del modelo** (si no
+hay nada que hacer, Claude no se invoca), sesión fresca por corrida y
+convención "nada que reportar → responde solo `OK`". Sin eso, una tarea horaria
+paga contexto completo para decir "no hay nada". Origen: R1 del doc
+`ecosistema/16-AHORRO-TOKENS-ROBADO-DE-HERMES-OPENCLAW.md`.
 
 ### Modo single-laptop (sin OneDrive)
 

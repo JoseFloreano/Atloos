@@ -22,11 +22,6 @@ otra laptop.
 
 ## Pasos
 
-0. **Consolidación multi-agente (si hoy trabajaron 2+ agentes el proyecto)**:
-   lee las notas `sessions/YYYY-MM-DD-*.md` de HOY, fusiona sus avances y
-   pendientes en los pasos 1-3, y marca cada nota consolidada añadiendo
-   `> consolidado en _PROJECT.md` al final. Las notas se conservan (historial);
-   _PROJECT.md tiene UN solo escritor: este cierre.
 1. **`_PROJECT.md` del proyecto activo** — actualiza tres secciones, corto:
    - *Estado actual*: 2-4 líneas de dónde quedó el proyecto HOY.
    - *Pendientes*: lo que quedó abierto (checkboxes), borrando lo ya cerrado.
@@ -44,11 +39,13 @@ otra laptop.
      `memory-keeper`) ya escriben los episodios al grafo. Es **asíncrono**
      (~25s): no esperes confirmación ni lo busques al instante. Si Graphiti no
      está montado, omite en silencio (el vault es la fuente primaria).
-   - *Graphify* (estructura del código, local/Claude Code): si hoy cambió la
-     estructura (módulos nuevos, movidos, renombrados), ofrece regenerar
-     `10-Projects/<proyecto>/codebase-map.md` con `graphify .` — es un snapshot
-     y driftea. No lo fuerces en cambios menores. En Cowork, déjalo para la
-     próxima sesión de Code.
+   - *Graphify* (estructura del código, local/Claude Code): el
+     `codebase-map.md` se regenera SOLO con el hook git post-commit
+     (`setup/hooks/git-post-commit-graph-report.sh`) — aquí NO se regenera
+     nada. Única verificación: si hoy hubo cambios estructurales y el repo
+     no tiene el hook (`.git/hooks/post-commit`), ofrece instalarlo
+     (cp + chmod); un `graphify .` manual vale solo como parche de esta vez.
+     En Cowork omite (es toolchain local).
 5. *(Solo Claude Code)* Si existe `.claude/vault-dirty.json` en el repo,
    bórralo — el cierre manual deja el flag del hook en cero.
 6. **Verifica y despide**: confirma qué se actualizó y responde con el

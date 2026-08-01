@@ -40,7 +40,13 @@ e invisible — se caza con revisiones periódicas, no en caliente.)
 5. **Solo si el usuario aprueba**: aplica las actualizaciones propuestas
    (respetando el aislamiento — un proyecto a la vez) y commitea de vuelta
    los archivos editados a la carpeta conectada.
-6. Cierra sugiriendo la causa si hay patrón: si el mismo proyecto driftea
+6. **Poda de skills** (mismo ciclo quincenal): ¿qué skills no se han disparado
+   este mes? Heurística gratis: pregunta al usuario cuáles recuerda haber usado
+   y revisa el `git log` de `claude-skills/` buscando skills sin ediciones ni
+   menciones. Las que nadie usa → candidatas a poda o fusión con `skill-forge`
+   (decide él, no tú). **NUNCA un pase LLM automático sobre el catálogo
+   completo** — lección del Curator de Hermes: 91M tokens quemados (doc 16 §R7).
+7. Cierra sugiriendo la causa si hay patrón: si el mismo proyecto driftea
    repetidamente, el hook/ritual no está corriendo en esa laptop — revisarlo.
 
 ## Qué NO hacer

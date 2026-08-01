@@ -8,6 +8,13 @@
 # fuente del setup: la plantilla versionada es setup/memory-instructions.md.
 CLAUDE.md
 
+# ── Secretos: NUNCA versionar ni sincronizar (anti-patrón S5) ───────
+# Tokens del puente Telegram y cualquier otro .env local.
+.env
+*.env
+!.env.example
+setup/telegram-bridge/.env
+
 # ── Ruido de sistema / Python ───────────────────────────────────────
 __pycache__/
 *.pyc

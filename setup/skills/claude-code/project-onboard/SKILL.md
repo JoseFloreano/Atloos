@@ -18,9 +18,9 @@ aislamiento activo.
 
 ## Requisitos
 
-- Vault en `DevSetup/ObsidianVault/`, bajo OneDrive (multi-laptop) o bajo el
-  home / `%USERPROFILE%` (single-laptop) — usa la raíz que exista. Si no hay
-  vault en ninguna de las dos, PARA y avisa: falta montar el vault.
+- Vault en `OneDrive/DevSetup/ObsidianVault/` (Windows:
+  `%USERPROFILE%\OneDrive\DevSetup\ObsidianVault`). Si no existe, PARA y avisa:
+  falta montar el vault.
 - MCP `graphiti-memory` — **opcional**: si no está, omite el paso 6 sin avisar error.
 
 ## Pasos
@@ -33,18 +33,7 @@ aislamiento activo.
 3. Crea en el vault `10-Projects/<nombre>/` con subcarpetas `ADRs/`, `bugs/`, `sessions/`.
 4. Crea `10-Projects/<nombre>/_PROJECT.md` copiando `templates/project-note.md`
    del vault; rellena `title`, `project`, `created`/`updated` (hoy) y el stack.
-   Mantenlo corto. Si el template no existe aún, NO pares: crea un `_PROJECT.md`
-   mínimo (frontmatter con `title/project/created/status: active` + secciones
-   "Estado actual", "Decisiones clave", "Pendientes") y avisa que falta el template.
-4b. **(Opcional — ofrécelo en proyectos medianos/grandes)** Genera el mapa del
-   codebase en `10-Projects/<nombre>/codebase-map.md`. Ruta barata SIEMPRE
-   primero: si Graphify está disponible, corre `graphify .` y sintetiza el mapa
-   desde `graphify-out/GRAPH_REPORT.md` — NO leas el codebase completo, el
-   reporte AST ya trae la estructura gratis (H5). Sin Graphify: explora con
-   subagents y AVISA el costo en tokens antes de empezar. Contenido del mapa:
-   módulos y su responsabilidad, puntos de entrada, dependencias clave,
-   wikilinks a ADRs relevantes. Es markdown navegable en el vault — no un
-   grafo paralelo que driftee.
+   Mantenlo corto.
 5. Añade las reglas de memoria al `CLAUDE.md` del proyecto (créalo si no existe):
    pega el contenido de `references/memory-snippet.md` reemplazando **todas** las
    apariciones de `<project-name>` por el nombre real. Si ya hay una sección
@@ -52,7 +41,11 @@ aislamiento activo.
 6. *(Solo si graphiti-memory está disponible)* copia la plantilla `.graphiti.json`
    a la raíz del proyecto ajustando `project_id`/`group_id` al nombre. Si Graphiti
    no está montado, omite este paso.
-7. **Verifica**: existe `10-Projects/<nombre>/_PROJECT.md`; el `CLAUDE.md` del
+7. *(Opcional — si el repo usará Graphify)* instala el hook git post-commit que
+   mantiene `codebase-map.md` fresco en el vault:
+   `cp setup/hooks/git-post-commit-graph-report.sh .git/hooks/post-commit` +
+   `chmod +x` (ver `hooks/README.md`). Sin Graphify, omite sin avisar.
+8. **Verifica**: existe `10-Projects/<nombre>/_PROJECT.md`; el `CLAUDE.md` del
    proyecto contiene el snippet y NO queda ningún `<project-name>` sin reemplazar.
 
 ## Referencias

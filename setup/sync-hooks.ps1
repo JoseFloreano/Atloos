@@ -32,6 +32,7 @@ $HookMap = @(
     @{ File = "validate-graphiti-group-id.py"; Event = "PreToolUse";  Matcher = "mcp__graphiti" }
     @{ File = "mark-code-dirty.py";            Event = "PostToolUse"; Matcher = "Write|Edit|MultiEdit" }
     @{ File = "check-vault-updated.py";        Event = "Stop";        Matcher = $null }
+    @{ File = "memory-flush.py";               Event = "PreCompact";  Matcher = $null }
 )
 
 if (-not $HooksSource) { $HooksSource = Join-Path $PSScriptRoot "hooks" }
