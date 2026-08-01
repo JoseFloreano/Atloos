@@ -15,6 +15,13 @@ CLAUDE.md
 !.env.example
 setup/telegram-bridge/.env
 
+# Puente Telegram T1: estado y config con rutas de ESTA máquina.
+# Las plantillas (*.example.json) SÍ se versionan.
+setup/telegram-bridge/projects.json
+setup/telegram-bridge/state.json
+setup/telegram-bridge/state.json.tmp
+setup/telegram-bridge/logs/
+
 # ── Ruido de sistema / Python ───────────────────────────────────────
 __pycache__/
 *.pyc

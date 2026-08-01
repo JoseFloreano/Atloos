@@ -16,16 +16,20 @@ Credenciales (NUNCA hardcodeadas, NUNCA en OneDrive/skills — anti-patrón S5):
     con fallback a un `.env` (KEY=VALUE) junto a este script.
     El entorno GANA sobre el .env. El token jamás se imprime ni se loggea.
 
-Formato: TEXTO PLANO a propósito (sin parse_mode). Decisión documentada en el
-README: los resúmenes traen código, `<`, `>`, `&` y markdown; con parse_mode
-un solo carácter mal escapado devuelve HTTP 400 y el aviso NUNCA llega. En
-texto plano Telegram renderiza literal y no hay nada que escapar.
+Formato: HTML (subconjunto de Telegram) con escapado total previo, y **fallback
+automático a texto plano** si la API devuelve 400. El markdown de Claude
+(`**negrita**`, `## títulos`, ``` bloques ```) se convierte a lo que Telegram
+entiende; los encabezados pasan a negrita y las viñetas a `•` porque Telegram
+no tiene ni encabezados ni listas. El principio se mantiene: el formato es un
+lujo, que el mensaje LLEGUE no es negociable.
 
 Salida: 0 = enviado | 1 = error de uso/configuración | 2 = fallo de red/API.
 """
 import argparse
+import html as html_mod
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -120,6 +124,122 @@ def redact(text: str, token: str) -> str:
     return text.replace(token, "<TOKEN-OCULTO>") if token else text
 
 
+TABLE_RE = re.compile(
+    r"(?m)^[^\n]*\|[^\n]*\n[ \t]*\|?[\s:|-]*-[\s:|-]*\|[\s:|-]*\n(?:[^\n]*\|[^\n]*(?:\n|$))*")
+
+TABLE_MAX_WIDTH = 42       # ancho cómodo en pantalla de móvil
+
+
+def _render_table(block: str) -> tuple:
+    """Tabla markdown → texto legible en Telegram (que no soporta tablas).
+
+    Estrecha  → columnas alineadas en monoespaciado (`<pre>`).
+    Ancha     → una entrada por fila con `campo: valor` (en móvil lee mejor
+                que una tabla que obliga a hacer scroll horizontal).
+    Devuelve (texto, usar_pre).
+    """
+    rows = []
+    for line in block.strip().splitlines():
+        line = line.strip()
+        if not line or "|" not in line:
+            continue
+        if re.fullmatch(r"\|?[\s:|-]+\|?", line):      # fila separadora
+            continue
+        rows.append([c.strip() for c in line.strip("|").split("|")])
+    if not rows:
+        return block, False
+
+    ncols = max(len(r) for r in rows)
+    rows = [r + [""] * (ncols - len(r)) for r in rows]
+    widths = [max(len(r[i]) for r in rows) for i in range(ncols)]
+    total = sum(widths) + 2 * (ncols - 1)
+
+    if total <= TABLE_MAX_WIDTH:
+        # Ya va en monoespaciado: los backticks solo serían ruido visual
+        rows = [[c.replace("`", "") for c in r] for r in rows]
+        widths = [max(len(r[i]) for r in rows) for i in range(ncols)]
+        total = sum(widths) + 2 * (ncols - 1)
+        out = []
+        for idx, row in enumerate(rows):
+            out.append("  ".join(c.ljust(widths[i]) for i, c in enumerate(row)).rstrip())
+            if idx == 0:
+                out.append("─" * total)
+        return "\n".join(out), True
+
+    header, out = rows[0], []
+    for row in rows[1:]:
+        out.append(f"▸ {row[0]}")
+        for i in range(1, ncols):
+            if row[i]:
+                label = header[i] if header[i] else f"col{i + 1}"
+                out.append(f"   {label}: {row[i]}")
+        out.append("")
+    return "\n".join(out).rstrip(), False
+
+
+def md_to_telegram_html(text: str) -> str:
+    """Markdown de Claude → el subconjunto HTML que acepta Telegram.
+
+    Telegram NO tiene encabezados ni listas: los encabezados se vuelven negrita
+    y las viñetas `-` se vuelven `•`. Orden crítico: los bloques de código se
+    apartan ANTES de escapar (su contenido no debe interpretarse), y TODO se
+    escapa antes de insertar nuestras propias etiquetas — así el `<b>` que
+    venga en el texto del usuario nunca es HTML activo.
+    """
+    blocks = []
+
+    def _stash(match):
+        blocks.append(match.group(1))
+        return f"\x00B{len(blocks) - 1}\x00"
+
+    # 1. Apartar bloques ``` ``` (incluye el caso sin cierre por truncado)
+    text = re.sub(r"```[\w+-]*\n?(.*?)```", _stash, text, flags=re.S)
+    text = re.sub(r"```[\w+-]*\n?(.*)$", _stash, text, flags=re.S)
+
+    # 1b. Apartar tablas ya renderizadas (Telegram no soporta tablas)
+    tables = []
+
+    def _stash_table(match):
+        tables.append(_render_table(match.group(0)))
+        return f"\x00T{len(tables) - 1}\x00"
+
+    text = TABLE_RE.sub(_stash_table, text)
+
+    # 2. Escapar TODO lo que quede
+    text = html_mod.escape(text, quote=False)
+
+    # 3. Subconjunto soportado
+    text = re.sub(r"`([^`\n]+)`", r"<code>\1</code>", text)          # código inline
+    text = re.sub(r"\*\*([^\n*]+?)\*\*", r"<b>\1</b>", text)          # negrita
+    text = re.sub(r"(?m)^\s{0,3}#{1,6}\s+(.+?)\s*$", r"<b>\1</b>", text)   # encabezados
+    text = re.sub(r"(?m)^(\s*)[-*+]\s+", r"\1• ", text)               # viñetas
+    text = re.sub(r"(?m)^\s*(?:---+|===+|\*\*\*+)\s*$", "──────────", text)  # separadores
+
+    # 4. Devolver tablas y bloques (escapando su contenido al insertarlos)
+    for i, (rendered, use_pre) in enumerate(tables):
+        safe = html_mod.escape(rendered, quote=False)
+        if not use_pre:
+            # Formato vertical: es texto normal, así que sí admite <code>/<b>
+            safe = re.sub(r"`([^`\n]+)`", r"<code>\1</code>", safe)
+            safe = re.sub(r"\*\*([^\n*]+?)\*\*", r"<b>\1</b>", safe)
+        text = text.replace(f"\x00T{i}\x00", f"<pre>{safe}</pre>" if use_pre else safe)
+    for i, block in enumerate(blocks):
+        text = text.replace(f"\x00B{i}\x00",
+                            f"<pre>{html_mod.escape(block.strip(), quote=False)}</pre>")
+    return text
+
+
+def strip_markdown(text: str) -> str:
+    """Texto plano legible (fallback): quita el marcado en vez de mostrarlo crudo."""
+    text = TABLE_RE.sub(lambda m: _render_table(m.group(0))[0], text)
+    text = re.sub(r"```[\w+-]*\n?", "", text)
+    text = re.sub(r"\*\*([^\n*]+?)\*\*", r"\1", text)
+    text = re.sub(r"`([^`\n]+)`", r"\1", text)
+    text = re.sub(r"(?m)^\s{0,3}#{1,6}\s+(.+?)\s*$", r"\1", text)
+    text = re.sub(r"(?m)^(\s*)[-*+]\s+", r"\1• ", text)
+    return text
+
+
 def encode_multipart(fields: dict, filename: str, content: bytes) -> tuple:
     """multipart/form-data a mano (solo stdlib, sin requests)."""
     boundary = "----notifyTelegram" + datetime.now().strftime("%Y%m%d%H%M%S%f")
@@ -139,7 +259,17 @@ def encode_multipart(fields: dict, filename: str, content: bytes) -> tuple:
 
 
 # ── Llamada a la API (timeout + reintento único) ──────────────────────────
-def api_call(token: str, method: str, body: bytes, content_type: str) -> dict:
+class TelegramHTTPError(Exception):
+    """Error HTTP no transitorio; permite reaccionar en vez de abortar."""
+
+    def __init__(self, code: int, detail: str):
+        super().__init__(f"HTTP {code}: {detail}")
+        self.code = code
+        self.detail = detail
+
+
+def api_call(token: str, method: str, body: bytes, content_type: str,
+             raise_http: bool = False) -> dict:
     """POST con timeout y UN reintento ante 429/5xx, respetando Retry-After."""
     url = f"https://api.telegram.org/bot{token}/{method}"
 
@@ -167,6 +297,8 @@ def api_call(token: str, method: str, body: bytes, content_type: str) -> dict:
                       file=sys.stderr)
                 time.sleep(wait)
                 continue
+            if raise_http:
+                raise TelegramHTTPError(exc.code, redact(detail or str(exc.reason), token))
             die(redact(f"HTTP {exc.code} en {method}: {detail or exc.reason}", token), 2)
 
         except urllib.error.URLError as exc:
@@ -192,12 +324,33 @@ def check_ok(result: dict, token: str, method: str) -> None:
                    f"{result.get('description', result)}", token), 2)
 
 
-def send_message(token: str, chat_id: str, text: str) -> None:
-    body = urllib.parse.urlencode({
-        "chat_id": chat_id,
-        "text": text,
-        "disable_web_page_preview": "true",
-    }).encode("utf-8")
+def _message_body(chat_id: str, text: str, parse_mode: str = "") -> bytes:
+    fields = {"chat_id": chat_id, "text": text, "disable_web_page_preview": "true"}
+    if parse_mode:
+        fields["parse_mode"] = parse_mode
+    return urllib.parse.urlencode(fields).encode("utf-8")
+
+
+def send_message(token: str, chat_id: str, text: str, rich: bool = True) -> None:
+    """Envía con formato (HTML) y, si Telegram lo rechaza, reenvía en plano.
+
+    El formato es un lujo; que el mensaje LLEGUE no es negociable. Un 400 por
+    entidades mal formadas degrada a texto plano en vez de perder el aviso.
+    """
+    if rich:
+        try:
+            body = _message_body(chat_id, md_to_telegram_html(text), "HTML")
+            check_ok(api_call(token, "sendMessage", body,
+                              "application/x-www-form-urlencoded", raise_http=True),
+                     token, "sendMessage")
+            return
+        except TelegramHTTPError as exc:
+            if exc.code != 400:
+                die(redact(f"HTTP {exc.code} en sendMessage: {exc.detail}", token), 2)
+            print(f"[notify-telegram] HTML rechazado ({exc.detail}); envío en texto plano",
+                  file=sys.stderr)
+
+    body = _message_body(chat_id, strip_markdown(text) if rich else text)
     check_ok(api_call(token, "sendMessage", body,
                       "application/x-www-form-urlencoded"), token, "sendMessage")
 

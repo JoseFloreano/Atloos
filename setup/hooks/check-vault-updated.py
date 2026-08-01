@@ -46,6 +46,12 @@ def find_vault_project(project_name: str):
 
 
 def main() -> None:
+    # Sesión del daemon de Telegram (ADR puente-telegram §7): no hay un humano
+    # al otro lado para "cerrar el vault", y bloquear colgaría la respuesta del
+    # bot. El cierre queda para las sesiones normales en la laptop.
+    if os.environ.get("CLAUDE_TG_BOT"):
+        sys.exit(0)
+
     try:
         data = json.load(sys.stdin)
     except Exception:
