@@ -931,7 +931,7 @@ async def cmd_done(update, context):
 # ── Invocación de Claude Code ─────────────────────────────────────────────
 async def run_claude(prompt: str, cwd: str, session_id, model: str = "",
                      write_mode: bool = False, timeout: int = READ_TIMEOUT,
-                     tracker=None) -> dict:
+                     tracker=None, repo_path: str = "") -> dict:
     """`claude -p` headless en el cwd dado. Devuelve el evento `result`.
 
     Usa `stream-json` (que **exige `--verbose`** con `-p`, verificado) para
@@ -943,10 +943,23 @@ async def run_claude(prompt: str, cwd: str, session_id, model: str = "",
     permisos: validado en T1, donde denegó una escritura real.
     """
     exe = shutil.which("claude") or "claude"
+    # ⚠ El modo de permisos NO es cosmético: decide si existe frontera de
+    # directorio. Verificado el 2026-08-01 con un canario fuera del worktree:
+    #   dontAsk     → escribe DENTRO y FUERA del cwd (sin frontera)
+    #   acceptEdits → escribe dentro, DENIEGA fuera
+    # En lectura `dontAsk` es correcto (deniega toda escritura, validado en T1);
+    # en escritura sería un agujero en el aislamiento que T2 promete.
+    mode = "acceptEdits" if write_mode else "dontAsk"
+    deny = DENY_TOOLS
+    if write_mode and repo_path:
+        # Segunda barrera explícita sobre el repo del usuario: el worktree vive
+        # en %LOCALAPPDATA%, así que esto no estorba al trabajo legítimo.
+        deny += f",Write({repo_path}\\**),Edit({repo_path}\\**)"
+
     cmd = [exe, "-p", prompt, "--output-format", "stream-json", "--verbose",
            "--allowedTools", WRITE_TOOLS if write_mode else READ_TOOLS,
-           "--disallowedTools", DENY_TOOLS,
-           "--permission-mode", "dontAsk",
+           "--disallowedTools", deny,
+           "--permission-mode", mode,
            "--max-turns", MAX_TURNS_WRITE if write_mode else MAX_TURNS]
     if session_id:
         cmd += ["--resume", session_id]
@@ -1123,7 +1136,8 @@ async def on_message(update, context):
             data = await run_claude(prompt, cwd, session_id, cs["model"],
                                     write_mode=write_mode,
                                     timeout=WRITE_TIMEOUT if write_mode else READ_TIMEOUT,
-                                    tracker=tracker)
+                                    tracker=tracker,
+                                    repo_path=projects[project]["path"])
         except RuntimeError as exc:
             log.error("invocación fallida: %s", exc)
             tracker.finished = True

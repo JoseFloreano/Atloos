@@ -52,7 +52,7 @@ el Agent SDK de Python (`can_use_tool`) permite interceptar cada llamada.
 
 | | **A. Flags del CLI** *(elegida)* | **B. Agent SDK** | **C. Hook PreToolUse** |
 |---|---|---|---|
-| Cómo | `--allowedTools` ampliado por modo con `--permission-mode dontAsk`; los git ops los ejecuta el daemon | `claude-agent-sdk` intercepta cada tool y la reenvía como botón | Hook que bloquea `Bash(git commit\|push)` con `CLAUDE_TG_BOT=1` |
+| Cómo | `--allowedTools` ampliado por modo + `--permission-mode` por modo (ver C0); los git ops los ejecuta el daemon | `claude-agent-sdk` intercepta cada tool y la reenvía como botón | Hook que bloquea `Bash(git commit\|push)` con `CLAUDE_TG_BOT=1` |
 | Granularidad | Por comando del daemon | Por acción del agente | Por acción, pero **solo bloquea** |
 | Cambio sobre T1 | Pequeño (núcleo probado intacto) | Reescritura del núcleo | Media (pieza nueva) |
 | Dependencias | Ninguna | `claude-agent-sdk` 0.2.128 | Ninguna |
@@ -113,23 +113,47 @@ deja pagado el paralelismo futuro del RFD 03 sin haberlo buscado.
 
 ## 5. Casos de diseño
 
-### C0. Mecanismo de permisos: `allowedTools` como lista blanca única *(sin cambios)*
+### C0. Permisos: lista blanca **y frontera de directorio** *(CORREGIDO 2026-08-01)*
 
-T1 lo dejó **validado empíricamente**: con `--allowedTools "Read,Grep,Glob"` y
-`--permission-mode dontAsk`, una petición de escribir un archivo se denegó
-(`permission_denials: 1`) y el archivo no se creó.
+> 🚨 **Esta sección estaba equivocada y produjo un agujero de aislamiento real.**
+> Decía: "T2 **no usa** `acceptEdits`: mantiene `dontAsk`". Con eso, el agente
+> podía escribir **en cualquier parte del disco**, incluido el árbol del usuario
+> — justo lo que este RFD promete impedir. Canario y evidencia en
+> [[2026-08-01-telegram-t2]].
 
-Por eso T2 **no usa `--permission-mode acceptEdits`**: mantiene `dontAsk` y se
-limita a **ampliar la lista** en modo auto. Un solo mecanismo, ya probado.
+**El error de razonamiento.** T1 mostró que con `--allowedTools "Read,Grep,Glob"`
+y `dontAsk` una escritura se denegaba (`permission_denials: 1`), y se concluyó
+que "`dontAsk` era la barrera". **Falso**: se denegó porque `Write` no estaba en
+la lista blanca, no por el modo. Al ampliar la lista en modo auto, el mismo flag
+dejó de proteger nada. La evidencia era correcta; la extrapolación no.
 
-| Modo | `--allowedTools` |
+**Verificado el 2026-08-01** (mismo prompt, escribir dentro y fuera del cwd):
+
+| `--permission-mode` | Dentro del cwd | Fuera del cwd |
+|---|---|---|
+| `dontAsk` | sí | 🚨 **sí — no hay frontera de directorio** |
+| `acceptEdits` | sí | ✅ **denegado** |
+
+**Son dos mecanismos ortogonales y hacen falta los dos:**
+
+| Qué limita | Mecanismo |
 |---|---|
-| Lectura (defecto) | `Read,Grep,Glob` |
-| Auto | `Read,Grep,Glob,Edit,Write` + lista blanca de Bash (C3) |
+| **Qué herramientas** puede usar | `--allowedTools` (lista blanca) |
+| **Dónde** puede escribir | `--permission-mode acceptEdits` (frontera = cwd) |
 
-`--disallowedTools` se añade como segunda barrera para `git commit`/`push`:
-redundante con la lista blanca, pero barato ante una ampliación futura por
-descuido.
+| Modo | `--allowedTools` | `--permission-mode` |
+|---|---|---|
+| Lectura (defecto) | `Read,Grep,Glob` | `dontAsk` — correcto aquí: sin `Write` no hay nada que acotar |
+| Auto | `Read,Grep,Glob,Edit,Write` + Bash de C3 | **`acceptEdits`** |
+
+`--disallowedTools` es la **segunda barrera**: `git commit`/`push`/`merge`, y
+además `Write(<repo>\**),Edit(<repo>\**)` con la ruta real del proyecto (el
+worktree vive en `%LOCALAPPDATA%`, así que no estorba al trabajo legítimo).
+
+**Lección que aplica a todo el RFD:** probar que algo *no ocurre por defecto* no
+es probar que *no puede ocurrir*. Las pruebas a-h pasaban con el agujero abierto
+porque ninguna intentó escribir fuera. Toda promesa de aislamiento necesita un
+canario que intente violarla.
 
 ### C1. Conmutación de modo (O2)
 
@@ -280,8 +304,13 @@ systemd, **desarrollo paralelo** (RFD 03).
 ## 8. Criterios de éxito
 
 1. En modo lectura, T2 se comporta **exactamente** como T1 (sin regresiones).
-2. **Aislamiento:** un archivo modificado y sin commitear en la laptop queda
-   byte-idéntico tras un desarrollo completo del bot (hash antes/después).
+2. **Aislamiento (pasivo):** un archivo modificado y sin commitear en la laptop
+   queda byte-idéntico tras un desarrollo completo del bot (hash antes/después).
+2b. **Aislamiento (activo) — CANARIO OBLIGATORIO:** se le pide explícitamente al
+   agente, en modo escritura, que edite un archivo FUERA del worktree (ruta
+   absoluta del repo del usuario). Debe **fallar**, y el archivo quedar
+   byte-idéntico. Sin esta prueba el criterio 2 no significa nada: solo
+   demuestra que no lo hace cuando nadie se lo pide.
 3. El worktree tiene `CLAUDE.md` y el agente ve las Memory Rules.
 4. `/commit` funciona sin botón; el commit queda en `tg/*` y `main` no se mueve.
 5. `/merge` deshabilitado sin `/test` verde; con verde + botón → squash en
