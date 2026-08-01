@@ -15,6 +15,30 @@ import sys
 import time
 
 
+def _norm(path: str) -> str:
+    """Ruta comparable: absoluta, resuelta y sin diferencias de mayúsculas.
+
+    `realpath` neutraliza symlinks y los nombres 8.3 de Windows (RUNNER~1);
+    `normcase` evita que `c:\\...` y `C:\\...` — ambas formas llegan según de
+    dónde venga la ruta — se lean como sitios distintos.
+    """
+    try:
+        path = os.path.realpath(path)
+    except Exception:
+        path = os.path.abspath(path)
+    return os.path.normcase(os.path.normpath(path))
+
+
+def is_inside(file_path: str, project_dir: str) -> bool:
+    """True si file_path cae dentro de project_dir."""
+    p, root = _norm(file_path), _norm(project_dir)
+    try:
+        return os.path.commonpath([p, root]) == root
+    except ValueError:
+        # Unidades distintas en Windows (C: vs Z:): con seguridad, fuera.
+        return False
+
+
 def main() -> None:
     try:
         data = json.load(sys.stdin)
@@ -31,6 +55,14 @@ def main() -> None:
         sys.exit(0)
 
     project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    # ...y solo el código de ESTE proyecto. Sin esto, cualquier archivo no-.md
+    # escrito fuera del repo (un commit-msg.txt del scratchpad, otro repo de las
+    # working dirs adicionales) sellaba el flag y el hook Stop pedía actualizar
+    # un vault que ya estaba al día. Un aviso que salta cuando no toca es ruido,
+    # y el ruido entrena a ignorarlo.
+    if not is_inside(fp, project_dir):
+        sys.exit(0)
+
     flag_dir = os.path.join(project_dir, ".claude")
     flag_path = os.path.join(flag_dir, "vault-dirty.json")
     session = data.get("session_id", "")

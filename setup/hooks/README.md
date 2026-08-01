@@ -14,7 +14,7 @@ de ejecutarse** y Claude recibe el motivo para autocorregirse.
 | Hook | Evento | Qué garantiza |
 |------|--------|---------------|
 | `validate-graphiti-group-id.py` | PreToolUse sobre `mcp__graphiti*` | Ningún `add_episode` sin `group_id` válido; ninguna búsqueda sin `group_ids`. Bloquea `main`, vacío y placeholders |
-| `mark-code-dirty.py` | PostToolUse sobre `Write\|Edit\|MultiEdit` | Marca flag cuando la sesión edita CÓDIGO (los .md no cuentan) — insumo del siguiente |
+| `mark-code-dirty.py` | PostToolUse sobre `Write\|Edit\|MultiEdit` | Marca flag cuando la sesión edita CÓDIGO **de este proyecto** — insumo del siguiente. No cuentan: los `.md`, ni nada fuera de `CLAUDE_PROJECT_DIR` (scratchpad, otras working dirs, otro repo). Esa segunda condición faltaba y provocaba falsos positivos en los 3 hooks anti-drift: un `commit-msg.txt` temporal sellaba el flag y el hook Stop exigía actualizar un vault que ya estaba al día |
 | `check-vault-updated.py` | Stop | Anti-drift del vault: si hubo código editado y `_PROJECT.md` no se actualizó después, bloquea el cierre (exit 2) pidiendo SOLO pendientes/estado. **Una vez por sesión**, respeta `stop_hook_active`, silencio total en proyectos sin onboarding. Sale en silencio si `CLAUDE_TG_BOT=1` (sesiones del daemon de Telegram: no hay humano para cerrar el vault y bloquear colgaría la respuesta del bot — ADR puente-telegram §7). El cierre completo es de la skill `session-close` |
 | `memory-flush.py` | PreCompact (`manual` y `auto`) | Anti-drift en la compactación (R5 del doc 16): con el mismo flag, si el vault sigue desfasado **pausa la compactación una vez** y pide volcar pendientes/decisiones antes de que el contexto se resuma. Sin flag → silencio. PreCompact **no admite `additionalContext`**: su único canal hacia Claude es exit 2, que en este evento significa "blocks compaction" — de ahí la pausa. Marca `precompact_flushed` para no repetirla (una auto-compactación bloqueada en bucle ahogaría la sesión) |
 
@@ -114,6 +114,23 @@ cualquier hook — no hay sync automático como el de las skills.
 
 > Añade `.claude/vault-dirty.json` al `.gitignore` de tus proyectos (es estado
 > de sesión local, no se versiona).
+
+## Pruebas
+
+Arneses de contrato en `tests/` (solo stdlib; usan proyecto temporal + vault
+falso, nunca tocan el vault real). `sync-hooks.ps1` no los copia: solo instala
+los `.py` de la raíz de `hooks/`.
+
+```powershell
+py setup\hooks\tests\test-mark-code-dirty.py    # 12 casos
+py setup\hooks\tests\test-memory-flush.py       # 11 casos
+```
+
+Córrelos ante **cualquier** cambio en el sistema anti-drift: los tres hooks
+comparten el flag `.claude/vault-dirty.json`, así que un cambio en uno puede
+romper a los otros dos. Ojo al probar a mano en PowerShell: canalizar el payload
+JSON con `|` a `py` no siempre entrega bien stdin y el hook parece "no hacer
+nada" (fail-open); usa los arneses o bash.
 
 ## Diseño
 
