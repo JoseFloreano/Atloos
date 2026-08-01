@@ -385,6 +385,19 @@ async def commit_all(worktree: str, message: str) -> dict:
             "subject": await git(["log", "-1", "--pretty=%s"], worktree)}
 
 
+async def remote_head(worktree: str, branch: str) -> str:
+    """SHA de la punta de la rama EN EL REMOTO, o "" si no se puede saber.
+
+    Sirve para confirmar que lo que se va a mergear es exactamente lo que se
+    probó en local: un PR desactualizado integra menos de lo que crees.
+    """
+    rc, out, _ = await run(["git", "ls-remote", "origin", f"refs/heads/{branch}"],
+                           worktree, timeout=60)
+    if rc != 0 or not out.strip():
+        return ""
+    return out.split()[0]
+
+
 async def push_branch(worktree: str, branch: str) -> dict:
     """Publica la rama. Requiere remoto configurado."""
     if not await has_remote(worktree):
@@ -410,6 +423,42 @@ async def ensure_pr(worktree: str, branch: str, base: str, title: str) -> dict:
         return {"pr": False, "reason": (err or out)[:200]}
     url = next((l for l in out.splitlines() if l.startswith("http")), out.strip())
     return {"pr": True, "url": url, "created": True}
+
+
+async def pull_base(worktree: str, base: str) -> dict:
+    """Trae `base` (main) a la rama del worktree, con rebase.
+
+    Cierra el gap del RFD 02 C4: una conversación larga trabaja días sobre un
+    `main` viejo y llega al `/merge` con más conflicto del necesario.
+
+    Rebase y no merge, porque la rama es desechable y su historia se aplasta al
+    integrar: un merge commit ahí solo añade ruido. Si hay conflicto se aborta
+    y se deja la rama como estaba — resolverlo desde el móvil no es realista.
+    """
+    if not await is_clean(worktree):
+        return {"ok": False, "reason": "hay cambios sin commitear; haz /commit primero"}
+
+    antes = await head_sha(worktree)
+    if await has_remote(worktree):
+        rc, _, err = await run(["git", "fetch", "origin", base], worktree, timeout=180)
+        if rc != 0:
+            return {"ok": False, "reason": f"no pude traer el remoto: {err[:150]}"}
+        objetivo = f"origin/{base}"
+    else:
+        objetivo = base
+
+    detras = await git(["rev-list", "--count", f"HEAD..{objetivo}"], worktree, check=False)
+    if detras.strip() in ("", "0"):
+        return {"ok": True, "sin_cambios": True, "detras": 0}
+
+    rc, out, err = await run(["git", "rebase", objetivo], worktree, timeout=180)
+    if rc != 0:
+        await run(["git", "rebase", "--abort"], worktree)
+        return {"ok": False, "conflicto": True, "detras": int(detras),
+                "reason": f"{(err or out)[:200]}\n\nLa rama quedó intacta. "
+                          f"Resuélvelo en la laptop o pide los cambios en otra rama."}
+    return {"ok": True, "detras": int(detras), "antes": antes,
+            "ahora": await head_sha(worktree)}
 
 
 async def merge_squash(repo: str, branch: str, base: str, message: str,

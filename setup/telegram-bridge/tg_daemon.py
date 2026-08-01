@@ -109,6 +109,20 @@ WRITE_PREAMBLE = (
     "del usuario.]\n\n"
 )
 
+# El canal de salida es el CHAT, no el disco. Sin esto el agente interpreta
+# "mándame un resumen en un md" como "crea el archivo" (patrón de sesión de
+# escritorio) y el usuario nunca lo ve: el daemon entrega respuestas, no vigila
+# el disco. Observado el 2026-08-01 (bug §11 del RFD 06/T4).
+DELIVERY_RULE = (
+    "[Cómo se entrega lo que produces: el usuario te lee por Telegram, así que "
+    "**el canal de salida es tu respuesta**, no el sistema de archivos. Si te "
+    "piden un resumen, un informe o \"mándame X en un md\", **ponlo en la "
+    "respuesta**: el puente ya lo entrega como mensaje, y si pasa de 4096 "
+    "caracteres lo adjunta solo como archivo .md — no tienes que crear nada. "
+    "Crea archivos únicamente cuando formen parte del trabajo en el repo (código, "
+    "documentación que se va a commitear), nunca para \"entregar\" algo.]\n\n"
+)
+
 SECRET_DENIES = ""      # se calcula en main() (rutas de ESTA máquina)
 BOT_PROFILE_DIR = ""    # perfil de skills del bot (C2); vacío = config normal
 
@@ -812,6 +826,50 @@ async def cmd_push(update, context):
         INFLIGHT.pop(chat_id, None)
 
 
+async def cmd_pull(update, context):
+    """Trae `main` a la rama de la conversación (gap del RFD 02 C4)."""
+    cfg, projects, state = (context.bot_data[k] for k in ("cfg", "projects", "state"))
+    if not guard(update, cfg):
+        return
+    chat_id = update.effective_chat.id
+    if (msg := busy(chat_id)):
+        await reply(cfg, chat_id, msg)
+        return
+    project, ps = need_project(cfg, state, chat_id, projects)
+    if not project:
+        await reply(cfg, chat_id, "No hay proyecto activo.")
+        return
+    _, conv = current_conv(ps)
+    if not conv or not conv.get("worktree"):
+        await reply(cfg, chat_id, "Esta conversación no tiene rama de trabajo. /write on")
+        return
+
+    INFLIGHT[chat_id] = now_ts()
+    try:
+        base = await gitops.default_branch(projects[project]["path"])
+        await reply(cfg, chat_id, f"⬇️ Trayendo `{base}` a `{conv['branch']}`…")
+        r = await gitops.pull_base(conv["worktree"], base)
+        if not r["ok"]:
+            await reply(cfg, chat_id, f"❌ {r['reason']}")
+            return
+        if r.get("sin_cambios"):
+            await reply(cfg, chat_id, f"✅ Ya estabas al día con `{base}`.")
+            return
+        # La rama cambió de base: el verde anterior ya no vale
+        conv["test_ok_sha"] = None
+        save_state(state)
+        log.info("pull: %s rebasada sobre %s (%s commits)", conv["branch"], base, r["detras"])
+        await reply(cfg, chat_id,
+                    f"✅ Rebasada sobre `{base}` ({r['detras']} commit(s) nuevos).\n"
+                    f"`{r['antes']}` → `{r['ahora']}`\n\n"
+                    f"⚠️ El verde de /test caducó al cambiar la base: "
+                    f"vuelve a correr /test antes de /merge.")
+    except gitops.GitError as exc:
+        await reply(cfg, chat_id, f"❌ {exc}")
+    finally:
+        INFLIGHT.pop(chat_id, None)
+
+
 async def cmd_merge(update, context):
     """Lo único que toca main ⇒ botón + verde de tests obligatorio."""
     cfg, projects, state = (context.bot_data[k] for k in ("cfg", "projects", "state"))
@@ -917,13 +975,30 @@ async def on_callback(update, context):
 
         # Ruta preferente: vía PR. El merge ocurre en el remoto y NO toca el
         # árbol del usuario — que casi siempre tiene cambios sin commitear, así
-        # que la ruta local sería inutilizable en la práctica. Si hay remoto,
-        # publicamos aquí mismo aunque no se haya hecho /push.
-        if not pr_url and await gitops.has_remote(repo):
-            await reply(cfg, chat_id, "Publicando la rama para integrarla vía PR "
-                                      "(así no se toca tu árbol de trabajo)…")
+        # que la ruta local sería inutilizable en la práctica.
+        #
+        # ⚠ SIEMPRE se publica antes de mergear, aunque el PR ya exista. Sin
+        # esto, un commit hecho DESPUÉS del último /push se queda fuera del PR
+        # y el merge integra solo una parte diciendo "✅ Integrado" (observado
+        # el 2026-08-01: rama con 2 commits, PR con 1). Además invalidaría el
+        # verde de /test, medido sobre el HEAD local.
+        if await gitops.has_remote(repo):
+            await reply(cfg, chat_id, "Publicando la rama antes de integrarla "
+                                      "(así el PR lleva todos los commits)…")
             pushed = await gitops.push_branch(conv["worktree"], conv["branch"])
-            if pushed.get("pushed"):
+            if not pushed.get("pushed"):
+                await reply(cfg, chat_id, f"❌ No pude publicar la rama: "
+                                          f"{pushed.get('reason')}\nNo integro a medias.")
+                return
+            # El remoto debe quedar EXACTAMENTE en el HEAD que validó /test
+            remoto = await gitops.remote_head(conv["worktree"], conv["branch"])
+            if remoto and not head_ahora.startswith(remoto[:len(head_ahora)]) \
+                    and not remoto.startswith(head_ahora):
+                await reply(cfg, chat_id, f"❌ El remoto quedó en `{remoto[:7]}` y el "
+                                          f"local en `{head_ahora}`. No integro con esa "
+                                          f"discrepancia — vuelve a intentarlo.")
+                return
+            if not pr_url:
                 pr = await gitops.ensure_pr(conv["worktree"], conv["branch"], base,
                                             conv["label"][:70] or conv["branch"])
                 if pr.get("pr"):
@@ -1244,6 +1319,10 @@ async def on_message(update, context):
         prompt = text
         if write_mode:
             prompt = WRITE_PREAMBLE.format(branch=conv["branch"]) + text
+        # La regla de entrega aplica en AMBOS modos: en lectura también puede
+        # caer en "creo el archivo" si el proyecto tiene permiso de escritura
+        # por otra vía, y sobre todo evita que prometa archivos que no verás.
+        prompt = DELIVERY_RULE + prompt
         # C1b — solo en el PRIMER mensaje de la conversación: después ya vive en
         # el transcript y repetirlo sería pagar el mismo contexto cada turno.
         if not session_id:
@@ -1382,7 +1461,7 @@ def main() -> None:
                      ("new", cmd_new), ("chats", cmd_chats), ("chat", cmd_chat),
                      ("model", cmd_model), ("status", cmd_status), ("progress", cmd_progress),
                      ("write", cmd_write), ("diff", cmd_diff), ("test", cmd_test),
-                     ("commit", cmd_commit), ("push", cmd_push), ("merge", cmd_merge),
+                     ("commit", cmd_commit), ("push", cmd_push), ("pull", cmd_pull), ("merge", cmd_merge),
                      ("done", cmd_done)):
         app.add_handler(CommandHandler(name, fn))
     app.add_handler(CallbackQueryHandler(on_callback))
