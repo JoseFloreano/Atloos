@@ -42,6 +42,63 @@ invocarlas manualmente ni configurar nada más.
 > **La descripción ES el trigger.** Una skill con mala descripción no se usa nunca.
 > Ver reglas en `_template/SKILL.md`.
 
+## El cuarto consumidor: el perfil `bot` (puente Telegram)
+
+Las sesiones del daemon de Telegram **no son un cuarto directorio**, sino un
+**subconjunto** de `shared/` + `claude-code/`. Cada `description` entra al
+contexto en *cada* invocación, así que cargar las 29 cuesta tokens en tareas
+donde muchas no aplican jamás (RFD `docs/telegram/05-RFD-T3-MEMORIA-Y-TOKENS.md`).
+
+**Criterio de inclusión.** Entra si sirve para *leer o escribir código desde un
+worktree aislado*. Queda fuera si:
+
+- **toca el vault** — en el bot la memoria la escribe el daemon, no el agente;
+- **necesita herramientas fuera de la lista blanca** de Bash del bot;
+- **no tiene sentido en ese contexto** (notificar por Telegram desde Telegram,
+  dar de alta proyectos, cerrar sesiones, mantener el propio setup).
+
+### Registro
+
+| Skill | Categoría | Bot | Por qué |
+|---|---|:---:|---|
+| adr-writer | shared | ✗ | Escribe en el vault (lo hace el daemon) |
+| agentic-system-design | shared | ✓ | Diseño de sistemas al implementar |
+| api-design | shared | ✓ | Desarrollo |
+| authn-authz-review | shared | ✓ | Revisión, solo lectura |
+| context-engineering | shared | ✓ | Diseño de prompts/agentes |
+| data-quality-gates | shared | ✓ | Desarrollo con datos |
+| deploy-planner | shared | ✗ | Entrevista larga; mal encaje en móvil |
+| design-doc-harvest | shared | ✗ | Cosecha al vault |
+| memory-keeper | shared | ✗ | Escribe en el vault |
+| migration-auditor | shared | ✓ | Revisión de migraciones |
+| model-benchmark | shared | ✗ | Necesita web; `WebFetch` denegado en el bot |
+| pipeline-designer | shared | ✓ | Desarrollo |
+| python-api-design | shared | ✓ | Desarrollo |
+| python-conventions | shared | ✓ | Desarrollo |
+| schema-designer | shared | ✓ | Desarrollo |
+| session-close | shared | ✗ | Ritual de vault |
+| skill-forge | shared | ✗ | Mantiene el setup; requiere sync manual |
+| sql-conventions | shared | ✓ | Desarrollo |
+| web-security-review | shared | ✓ | Revisión, solo lectura |
+| api-evolution | claude-code | ✓ | Desarrollo |
+| dependency-audit | claude-code | ✗ | `npm audit`/`pip-audit` no están en la lista blanca |
+| flaky-test-hunter | claude-code | ✓ | Los comandos de test sí están permitidos |
+| gdb-sanitizers-runbook | claude-code | ✗ | Toolchain C++ fuera de la lista blanca |
+| git-bisect-assist | claude-code | ✗ | Requiere git ops que el agente no puede ejecutar |
+| notify-telegram | claude-code | ✗ | El bot **es** Telegram |
+| project-onboard | claude-code | ✗ | Crea carpetas del vault |
+| project-resume | claude-code | ✗ | Lee el vault; lo sustituye la inyección del daemon (C1b) |
+| secrets-scan | claude-code | ✓ | Escaneo de solo lectura |
+| token-audit | claude-code | ✗ | Analiza el setup local, no el proyecto |
+
+**15 de 29** entran al perfil bot.
+
+**Mantenimiento**: toda skill nueva añade su fila **en el mismo PR** (misma regla
+que el registro de secretos del `setup/README.md`). La lista se revisa en el
+`vault-drift-audit` quincenal, junto con la poda de skills sin uso. Si una fila
+falta, el perfil bot la excluye por defecto — mejor perder una skill que colar
+ruido en cada invocación.
+
 ## Añadir una skill nueva (el flujo completo)
 
 ```

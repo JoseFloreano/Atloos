@@ -19,6 +19,7 @@ import asyncio
 import os
 import re
 import shutil
+import stat
 import unicodedata
 from datetime import datetime
 from pathlib import Path
@@ -178,6 +179,44 @@ async def create_worktree(repo: str, project: str, slug: str) -> dict:
     return {"branch": branch, "path": str(dest), "claude_md": claude_md, "base": base}
 
 
+def _force_rmtree(path: Path) -> bool:
+    """Borra un árbol quitando el atributo de solo-lectura por el camino.
+
+    Necesario porque el repo del usuario vive en OneDrive: Files On-Demand
+    convierte los archivos internos de `.git/worktrees/**` en *reparse points*
+    marcados **ReadOnly**, y el `unlink` de git falla con "Permission denied".
+    Limpiar el bit y reintentar es lo que hace `Remove-Item -Force`.
+    """
+    def _on_error(func, target, _exc):
+        try:
+            os.chmod(target, stat.S_IWRITE)
+            func(target)
+        except OSError:
+            pass
+
+    try:
+        shutil.rmtree(path, onerror=_on_error)
+        return not path.exists()
+    except OSError:
+        return False
+
+
+async def _cleanup_admin_dir(repo: str, worktree_path: str) -> str:
+    """Quita el directorio administrativo `.git/worktrees/<n>` que git no pudo
+    borrar, y desregistra con `prune`. Devuelve una nota o cadena vacía."""
+    name = Path(worktree_path).name
+    try:
+        common = await git(["rev-parse", "--git-common-dir"], repo, check=False)
+        base = Path(common) if common and Path(common).is_absolute() else Path(repo) / ".git"
+        admin = base / "worktrees" / name
+        if admin.exists() and not _force_rmtree(admin):
+            return f"quedó {admin} (bórralo a mano)"
+        await git(["worktree", "prune"], repo, check=False)
+        return ""
+    except (OSError, GitError) as exc:
+        return f"limpieza administrativa incompleta: {exc}"
+
+
 async def has_tracked_changes(worktree: str) -> bool:
     """¿Hay trabajo real sin commitear? Los archivos sin trackear no cuentan:
     correr tests deja `__pycache__`, `.pytest_cache`, `node_modules`… y eso no
@@ -196,7 +235,8 @@ async def remove_worktree(repo: str, path: str, branch: str = "",
       así que `git branch -d` la ve como "sin mergear". Por eso el daemon pasa
       `merged=True` cuando sabe que se integró, y solo entonces se usa `-D`.
     """
-    result = {"worktree_removed": False, "branch_deleted": False, "notes": []}
+    result = {"worktree_removed": False, "branch_deleted": False,
+              "branch_status": "", "notes": []}
 
     if path and Path(path).exists():
         try:
@@ -210,26 +250,47 @@ async def remove_worktree(repo: str, path: str, branch: str = "",
         # --force: solo quedan archivos sin trackear (artefactos de tests)
         rc, _, err = await run(["git", "worktree", "remove", "--force", path], repo)
         if rc != 0:
-            result["notes"].append(f"worktree no removido: {err[:200]}")
-            return result
+            # El checkout puede haberse borrado igualmente y fallar solo al
+            # limpiar `.git/worktrees/<n>` (OneDrive lo deja ReadOnly). Si el
+            # árbol ya no está, el trabajo está hecho: rematamos la parte
+            # administrativa nosotros en vez de reportar un fallo engañoso.
+            if Path(path).exists():
+                result["notes"].append(f"worktree no removido: {err[:200]}")
+                return result
+            nota = await _cleanup_admin_dir(repo, path)
+            if nota:
+                result["notes"].append(nota)
         result["worktree_removed"] = True
+        if rc == 0:
+            # Aun con éxito, git deja restos si OneDrive bloqueó algún archivo
+            nota = await _cleanup_admin_dir(repo, path)
+            if nota:
+                result["notes"].append(nota)
     else:
         await git(["worktree", "prune"], repo, check=False)
         result["worktree_removed"] = True
 
     if branch:
-        rc, _, err = await run(["git", "branch", "-d", branch], repo)
+        if not await branch_exists(repo, branch):
+            # Ya no está (borrada a mano, o por `gh pr merge --delete-branch`).
+            # Decir "conservada" aquí sería mentir sobre el estado real.
+            result["branch_status"] = "ya no existía"
+            return result
+        rc, _, _ = await run(["git", "branch", "-d", branch], repo)
         if rc == 0:
             result["branch_deleted"] = True
+            result["branch_status"] = "borrada"
         elif merged:
+            # Tras un squash, `-d` no la reconoce como integrada: por eso -D,
+            # pero solo cuando el daemon confirma que hubo merge.
             rc2, _, err2 = await run(["git", "branch", "-D", branch], repo)
             if rc2 == 0:
                 result["branch_deleted"] = True
-                result["notes"].append("rama borrada con -D (squash merge)")
+                result["branch_status"] = "borrada (squash merge)"
             else:
-                result["notes"].append(f"rama conservada: {err2[:150]}")
+                result["branch_status"] = f"conservada: {err2[:120]}"
         else:
-            result["notes"].append("rama conservada (sin mergear; se borra tras /merge)")
+            result["branch_status"] = "conservada (sin mergear; se borra tras /merge)"
     return result
 
 
@@ -312,19 +373,39 @@ async def merge_squash(repo: str, branch: str, base: str, message: str,
     if pr_url:
         gh = shutil.which("gh")
         if gh:
-            rc, out, err = await run([gh, "pr", "merge", branch, "--squash",
-                                      "--delete-branch"], repo, timeout=180)
+            # SIN --delete-branch: gh intentaría borrar también la rama LOCAL,
+            # que está montada en el worktree del bot; git se niega, gh sale con
+            # error y un merge EXITOSO se reportaría como fallido. La limpieza
+            # de rama y worktree es responsabilidad de /done, que sabe hacerla.
+            rc, out, err = await run([gh, "pr", "merge", branch, "--squash"],
+                                     repo, timeout=180)
             if rc == 0:
                 return {"merged": True, "via": "pr", "detail": out[:300]}
+            # Antes de darlo por fallido, preguntar al remoto: gh puede fallar
+            # por un paso posterior al merge y el PR estar ya integrado.
+            rc2, state, _ = await run([gh, "pr", "view", branch, "--json", "state",
+                                       "-q", ".state"], repo, timeout=90)
+            if rc2 == 0 and state.strip().upper() == "MERGED":
+                return {"merged": True, "via": "pr",
+                        "detail": "el PR quedó integrado (gh devolvió error en un paso posterior)"}
             return {"merged": False, "via": "pr", "reason": (err or out)[:300]}
 
+    # Merge local: es el ÚNICO punto en que T2 escribe en el árbol del usuario,
+    # y solo porque `main` no puede actualizarse desde otro worktree. Por eso se
+    # exige limpio: hacerlo con cambios encima mezclaría su trabajo con el del bot.
     current = await git(["rev-parse", "--abbrev-ref", "HEAD"], repo)
     if current != base:
         return {"merged": False, "via": "local",
-                "reason": f"el árbol del usuario está en '{current}', no en '{base}'"}
+                "reason": f"tu árbol está en la rama '{current}', no en '{base}'. "
+                          f"Cámbiate a '{base}' en la laptop y repite /merge."}
     if not await is_clean(repo):
         return {"merged": False, "via": "local",
-                "reason": "el árbol del usuario tiene cambios sin commitear"}
+                "reason": "tu árbol de trabajo tiene cambios sin commitear y el "
+                          "merge local escribiría encima.\n\nOpciones: (a) commitea "
+                          "o guarda tus cambios en la laptop y repite /merge; o "
+                          "(b) configura un remoto y así el merge irá por PR, que "
+                          "no toca tu árbol.\n\nMientras tanto la rama del bot "
+                          "sigue intacta: nada se ha perdido."}
 
     await git(["merge", "--squash", branch], repo)
     await git(["-c", "core.autocrlf=false", "commit", "-m", message], repo)

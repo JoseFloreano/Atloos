@@ -43,6 +43,7 @@ except ImportError:
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gitops                                              # noqa: E402
+from progress import ProgressTracker                       # noqa: E402
 from notify_telegram import deliver_text, load_env_file, _env_candidates  # noqa: E402
 
 BASE = Path(__file__).resolve().parent
@@ -55,7 +56,9 @@ READ_TIMEOUT = 600          # 10 min basta para una consulta
 WRITE_TIMEOUT = 5400        # 90 min: un desarrollo real no cabe en 10 (RFD C9)
 CHECKPOINT_EVERY = 1800     # 30 min (RFD C2)
 MERGE_TOKEN_TTL = 300       # 5 min de vida del botón de merge (RFD C4)
-MAX_TURNS = "15"
+MAX_TURNS = "15"            # consultas de lectura
+MAX_TURNS_WRITE = "60"      # desarrollo real: con 15 una investigación se corta
+                            # a mitad (observado: 6m40s → error_max_turns)
 
 READ_TOOLS = "Read,Grep,Glob"
 # Lista blanca de escritura (RFD C3). Es blanca: lo que no está, no corre.
@@ -89,6 +92,8 @@ DEFAULT_MODEL = ""
 
 INFLIGHT: dict = {}         # chat_id -> ts de inicio (un vuelo por chat)
 PENDING_MERGE: dict = {}    # token -> {chat_id, project, idx, expires}
+TRACKERS: dict = {}         # chat_id -> ProgressTracker (vivo o el último)
+MONITOR_TICK = 5            # cada cuánto revisa el monitor (alertas + panel)
 
 log = logging.getLogger("tg_daemon")
 
@@ -454,6 +459,50 @@ async def cmd_model(update, context):
     await reply(cfg, chat_id, f"✅ Modelo: {elegido} — {MODELS[elegido]}")
 
 
+async def cmd_progress(update, context):
+    """/progress · /progress live · /progress off (RFD 04).
+
+    NO está sujeto al lock de un vuelo por chat: su utilidad es precisamente
+    mientras algo corre.
+    """
+    cfg, state = context.bot_data["cfg"], context.bot_data["state"]
+    if not guard(update, cfg):
+        return
+    chat_id = update.effective_chat.id
+    cs = chat_state(state, chat_id)
+    arg = (context.args or [""])[0].strip().lower()
+    tracker = TRACKERS.get(chat_id)
+
+    if arg in ("live", "on"):
+        cs["progress_live"] = True
+        save_state(state)
+        if tracker and not tracker.finished:
+            # Encender a media tarea muestra lo YA ocurrido: el búfer estaba ahí
+            msg = await context.bot.send_message(chat_id, tracker.panel_text())
+            tracker.panel_msg_id = msg.message_id
+            await reply(cfg, chat_id, "📊 Panel en vivo encendido (arriba, se actualiza solo).")
+        else:
+            await reply(cfg, chat_id, "📊 Panel en vivo encendido. Aparecerá en la próxima tarea.")
+        return
+
+    if arg in ("off", "no"):
+        cs["progress_live"] = False
+        save_state(state)
+        await reply(cfg, chat_id, "📊 Panel apagado. `/progress` sigue disponible "
+                                  "y las alertas siguen activas.")
+        return
+
+    if arg:
+        await reply(cfg, chat_id, "Uso: /progress · /progress live · /progress off")
+        return
+
+    if not tracker:
+        await reply(cfg, chat_id, "Nada en curso y sin tareas previas en esta sesión.")
+        return
+    ended = 0 if not tracker.finished else now_ts() - tracker.last_event
+    await reply(cfg, chat_id, tracker.snapshot_text(ended))
+
+
 async def cmd_status(update, context):
     cfg, projects, state = (context.bot_data[k] for k in ("cfg", "projects", "state"))
     if not guard(update, cfg):
@@ -797,9 +846,30 @@ async def on_callback(update, context):
     INFLIGHT[chat_id] = now_ts()
     try:
         base = await gitops.default_branch(repo)
+        pr_url = conv.get("pr_url", "")
+
+        # Ruta preferente: vía PR. El merge ocurre en el remoto y NO toca el
+        # árbol del usuario — que casi siempre tiene cambios sin commitear, así
+        # que la ruta local sería inutilizable en la práctica. Si hay remoto,
+        # publicamos aquí mismo aunque no se haya hecho /push.
+        if not pr_url and await gitops.has_remote(repo):
+            await reply(cfg, chat_id, "Publicando la rama para integrarla vía PR "
+                                      "(así no se toca tu árbol de trabajo)…")
+            pushed = await gitops.push_branch(conv["worktree"], conv["branch"])
+            if pushed.get("pushed"):
+                pr = await gitops.ensure_pr(conv["worktree"], conv["branch"], base,
+                                            conv["label"][:70] or conv["branch"])
+                if pr.get("pr"):
+                    pr_url = pr["url"]
+                    conv["pr_url"] = pr_url
+                    save_state(state)
+                    log.info("PR listo para merge: %s", pr_url)
+                else:
+                    log.warning("sin PR (%s): se intentará merge local", pr.get("reason"))
+
         r = await gitops.merge_squash(repo, conv["branch"], base,
                                       conv["label"][:70] or f"merge {conv['branch']}",
-                                      conv.get("pr_url", ""))
+                                      pr_url)
         if r["merged"]:
             conv["merged"] = True       # /done necesita saberlo: el squash no deja rastro
             save_state(state)
@@ -846,7 +916,8 @@ async def cmd_done(update, context):
                                       + "\n".join(f"· {n}" for n in r["notes"]))
             return
         notas.append("worktree eliminado")
-        notas.append(f"rama {'borrada' if r['branch_deleted'] else 'conservada'}")
+        if r.get("branch_status"):          # ya viene redactado y sin duplicar
+            notas.append(f"rama {r['branch_status']}")
         notas += r["notes"]
 
     conv["archived"] = True
@@ -859,18 +930,24 @@ async def cmd_done(update, context):
 
 # ── Invocación de Claude Code ─────────────────────────────────────────────
 async def run_claude(prompt: str, cwd: str, session_id, model: str = "",
-                     write_mode: bool = False, timeout: int = READ_TIMEOUT) -> dict:
-    """`claude -p` headless en el cwd dado. Devuelve el JSON parseado.
+                     write_mode: bool = False, timeout: int = READ_TIMEOUT,
+                     tracker=None) -> dict:
+    """`claude -p` headless en el cwd dado. Devuelve el evento `result`.
+
+    Usa `stream-json` (que **exige `--verbose`** con `-p`, verificado) para
+    poder alimentar el tracker de progreso según ocurren las cosas. El evento
+    final `result` tiene la misma forma que el JSON de antes, así que el resto
+    del daemon no cambia.
 
     La lista blanca (`--allowedTools` + `dontAsk`) es el único mecanismo de
     permisos: validado en T1, donde denegó una escritura real.
     """
     exe = shutil.which("claude") or "claude"
-    cmd = [exe, "-p", prompt, "--output-format", "json",
+    cmd = [exe, "-p", prompt, "--output-format", "stream-json", "--verbose",
            "--allowedTools", WRITE_TOOLS if write_mode else READ_TOOLS,
            "--disallowedTools", DENY_TOOLS,
            "--permission-mode", "dontAsk",
-           "--max-turns", MAX_TURNS]
+           "--max-turns", MAX_TURNS_WRITE if write_mode else MAX_TURNS]
     if session_id:
         cmd += ["--resume", session_id]
     if model in MODELS:
@@ -880,41 +957,111 @@ async def run_claude(prompt: str, cwd: str, session_id, model: str = "",
     log.info("invocando claude (cwd=%s, resume=%s, modelo=%s, escritura=%s, prompt=%d chars)",
              Path(cwd).name, bool(session_id), model or "default", write_mode, len(prompt))
 
+    # limit alto: una línea del stream puede traer el input/output de una
+    # herramienta y los 64 KB por defecto se quedan cortos.
     proc = await asyncio.create_subprocess_exec(
-        *cmd, cwd=cwd, env=env,
+        *cmd, cwd=cwd, env=env, limit=8 * 1024 * 1024,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+
+    result_event, stderr_text = None, ""
+
+    async def pump_stdout():
+        nonlocal result_event
+        while True:
+            try:
+                raw = await proc.stdout.readline()
+            except (ValueError, asyncio.LimitOverrunError):
+                continue                      # línea gigante: se ignora, no se muere
+            if not raw:
+                break
+            line = raw.decode("utf-8", "replace").strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if tracker is not None:
+                tracker.feed(event)
+            if event.get("type") == "result":
+                result_event = event
+
+    async def pump_stderr():
+        nonlocal stderr_text
+        data = await proc.stderr.read()
+        stderr_text = data.decode("utf-8", "replace").strip()
+
     try:
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        await asyncio.wait_for(
+            asyncio.gather(pump_stdout(), pump_stderr(), proc.wait()), timeout=timeout)
     except asyncio.TimeoutError:
         proc.kill()
         await proc.wait()
         raise RuntimeError(f"La tarea superó {timeout // 60} minutos y se canceló.")
 
+    # El CLI sale con código 1 en errores SEMÁNTICOS (agotar --max-turns) con
+    # stderr vacío, pero el evento `result` SÍ llega — con el session_id dentro.
+    # Aprovecharlo siempre: guiarse solo por el returncode pierde la respuesta
+    # y, peor, el hilo de la conversación.
+    if result_event is not None:
+        if proc.returncode != 0:
+            log.info("exit %s con evento result (subtype=%s): se aprovecha",
+                     proc.returncode, result_event.get("subtype"))
+        return result_event
+
     if proc.returncode != 0:
-        err = (stderr or b"").decode("utf-8", "replace").strip()[:400]
-        raise RuntimeError(f"claude terminó con código {proc.returncode}: {err or 'sin detalle'}")
-    try:
-        return json.loads((stdout or b"").decode("utf-8", "replace"))
-    except json.JSONDecodeError:
-        raise RuntimeError("La respuesta de claude no es JSON válido.")
+        raise RuntimeError(f"claude terminó con código {proc.returncode}: "
+                           f"{stderr_text[:400] or 'sin detalle en stderr'}")
+    raise RuntimeError("El stream terminó sin evento `result`.")
 
 
-async def checkpoint_loop(cfg: dict, chat_id: int, worktree: str, started: float) -> None:
-    """Avisa cada 30 min con la última etapa de .tg/progress.md (RFD C2)."""
-    ultima = ""
+async def monitor_loop(cfg: dict, chat_id: int, tracker: ProgressTracker,
+                       worktree: str, bot, live: bool) -> None:
+    """Vigila la invocación: **alertas siempre**, panel solo si `live` (RFD 04 P6).
+
+    Las alertas son la red que no depende de que el usuario esté mirando; el
+    panel es comodidad. Por eso este bucle corre aunque el panel esté apagado.
+    """
+    ultimo_checkpoint = now_ts()
     while True:
-        await asyncio.sleep(CHECKPOINT_EVERY)
-        mins = int((now_ts() - started) / 60)
-        etapa = read_progress(worktree)
-        if etapa and etapa != ultima:
-            texto = f"⏱ {mins} min trabajando.\nÚltima etapa: {etapa}"
-            ultima = etapa
-        elif etapa:
-            texto = f"⏱ {mins} min trabajando.\nSigue en: {etapa}"
-        else:
-            texto = f"⏱ {mins} min trabajando (el agente aún no ha reportado etapas)."
-        log.info("checkpoint %s min (%s)", mins, etapa or "sin etapa")
-        await reply(cfg, chat_id, texto)
+        await asyncio.sleep(MONITOR_TICK)
+
+        if worktree:                     # hitos semánticos que el agente elige
+            tracker.milestone = read_progress(worktree)
+
+        for alerta in tracker.pending_alerts():      # P6: máx 1 de cada tipo
+            log.info("ALERTA: %s", alerta)
+            await reply(cfg, chat_id, alerta)
+
+        if live and tracker.should_edit():
+            try:
+                if tracker.panel_msg_id is None:
+                    msg = await bot.send_message(chat_id, tracker.panel_text())
+                    tracker.panel_msg_id = msg.message_id
+                else:
+                    await bot.edit_message_text(tracker.panel_text(), chat_id=chat_id,
+                                                message_id=tracker.panel_msg_id)
+            except Exception as exc:      # panel roto no puede tumbar la tarea
+                log.warning("panel no actualizado: %s", exc)
+
+        # Checkpoint de T2 (C2): superviviente para tareas MUY largas sin panel
+        if worktree and not live and now_ts() - ultimo_checkpoint >= CHECKPOINT_EVERY:
+            ultimo_checkpoint = now_ts()
+            mins = int((now_ts() - tracker.started) / 60)
+            etapa = tracker.milestone or "(el agente aún no ha reportado etapas)"
+            log.info("checkpoint %s min (%s)", mins, etapa)
+            await reply(cfg, chat_id, f"⏱ {mins} min trabajando.\nÚltima etapa: {etapa}")
+
+
+async def close_panel(bot, chat_id: int, tracker: ProgressTracker) -> None:
+    """Edición FINAL del panel con el resumen (RFD 04 P3/P5)."""
+    if tracker.panel_msg_id is None:
+        return
+    try:
+        await bot.edit_message_text(tracker.final_text(), chat_id=chat_id,
+                                    message_id=tracker.panel_msg_id)
+    except Exception as exc:
+        log.warning("panel final no actualizado: %s", exc)
 
 
 # ── Mensajes normales ─────────────────────────────────────────────────────
@@ -951,7 +1098,14 @@ async def on_message(update, context):
         session_id = None
 
     INFLIGHT[chat_id] = now_ts()
-    ticker = None
+    cs = chat_state(state, chat_id)
+    live = bool(cs.get("progress_live"))          # apagado por defecto (RFD 04 §8.1)
+    tracker = ProgressTracker(
+        branch=conv.get("branch") or "", model=cs["model"] or "default",
+        max_turns=int(MAX_TURNS_WRITE if write_mode else MAX_TURNS),
+        write_mode=write_mode)
+    TRACKERS[chat_id] = tracker
+    monitor = None
     try:
         await context.bot.send_chat_action(chat_id=chat_id, action="typing")
         if aged:
@@ -960,24 +1114,42 @@ async def on_message(update, context):
         prompt = text
         if write_mode:
             prompt = WRITE_PREAMBLE.format(branch=conv["branch"]) + text
-            ticker = asyncio.create_task(
-                checkpoint_loop(cfg, chat_id, conv["worktree"], now_ts()))
+        # El monitor corre SIEMPRE: las alertas no dependen del panel (P6)
+        monitor = asyncio.create_task(
+            monitor_loop(cfg, chat_id, tracker, conv.get("worktree") or "",
+                         context.bot, live))
 
         try:
-            data = await run_claude(prompt, cwd, session_id,
-                                    chat_state(state, chat_id)["model"],
+            data = await run_claude(prompt, cwd, session_id, cs["model"],
                                     write_mode=write_mode,
-                                    timeout=WRITE_TIMEOUT if write_mode else READ_TIMEOUT)
+                                    timeout=WRITE_TIMEOUT if write_mode else READ_TIMEOUT,
+                                    tracker=tracker)
         except RuntimeError as exc:
             log.error("invocación fallida: %s", exc)
+            tracker.finished = True
             await reply(cfg, chat_id, f"❌ {exc}")
             return
 
         new_session = data.get("session_id")
-        answer = (data.get("result") or "").strip() or "(respuesta vacía)"
+        answer = (data.get("result") or "").strip()
         denials = data.get("permission_denials") or []
-        if data.get("is_error"):
-            answer = f"⚠️ Claude reportó error:\n{answer}"
+        subtype = data.get("subtype") or ""
+
+        if subtype == "error_max_turns":
+            # No es un fallo: se quedó sin turnos. El hilo sobrevive (guardamos
+            # el session_id abajo), así que basta con pedirle que siga.
+            limite = MAX_TURNS_WRITE if write_mode else MAX_TURNS
+            answer = (f"⏹ Alcanzado el límite de {limite} turnos "
+                      f"({data.get('num_turns')} usados) y se detuvo ahí.\n\n"
+                      f"{answer or 'No alcanzó a redactar una respuesta.'}\n\n"
+                      f"La conversación NO se perdió: escribe «continúa» y sigue "
+                      f"desde donde iba"
+                      + (" (revisa /diff: puede haber dejado trabajo hecho)."
+                         if write_mode else "."))
+        elif data.get("is_error"):
+            answer = f"⚠️ Claude reportó error:\n{answer or '(sin detalle)'}"
+        elif not answer:
+            answer = "(respuesta vacía)"
         if denials:
             log.info("permission_denials: %d", len(denials))
             answer += (f"\n\n🔒 {len(denials)} acción(es) bloqueada(s) por la lista blanca"
@@ -998,8 +1170,10 @@ async def on_message(update, context):
             answer += "\n\n(/diff para ver los cambios · /commit para guardarlos)"
         await reply(cfg, chat_id, answer)
     finally:
-        if ticker:
-            ticker.cancel()
+        tracker.finished = True
+        if monitor:
+            monitor.cancel()
+        await close_panel(context.bot, chat_id, tracker)    # resumen final (P3/P5)
         INFLIGHT.pop(chat_id, None)
 
 
@@ -1059,7 +1233,7 @@ def main() -> None:
 
     for name, fn in (("start", cmd_start), ("help", cmd_start), ("p", cmd_p),
                      ("new", cmd_new), ("chats", cmd_chats), ("chat", cmd_chat),
-                     ("model", cmd_model), ("status", cmd_status),
+                     ("model", cmd_model), ("status", cmd_status), ("progress", cmd_progress),
                      ("write", cmd_write), ("diff", cmd_diff), ("test", cmd_test),
                      ("commit", cmd_commit), ("push", cmd_push), ("merge", cmd_merge),
                      ("done", cmd_done)):
