@@ -35,6 +35,10 @@ e invisible — se caza con revisiones periódicas, no en caliente.)
    días (pendientes zombis), `_PROJECT.md` sin sección "Próximo paso", ADRs
    con `status: accepted` que otro ADR contradice sin marcarse `superseded`,
    y `codebase-map.md` más viejo que el último cambio estructural conocido.
+   Además (detalle y comandos en `references/checks.md`): índice de ADRs
+   desfasado (`adr-index.py --check`), `_PROJECT.md` por encima de 120 líneas o
+   con secciones `## Hecho`, y notas de `sessions/` ya cosechadas con más de 30
+   días — candidatas a `_archive/`.
 4. **Reporte por proyecto**, ordenado por severidad de drift: qué está
    desfasado, evidencia (fechas), y la actualización mínima propuesta.
 5. **Solo si el usuario aprueba**: aplica las actualizaciones propuestas
