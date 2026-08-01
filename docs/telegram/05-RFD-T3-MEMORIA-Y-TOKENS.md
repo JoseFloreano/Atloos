@@ -3,12 +3,6 @@
 > **Estado:** propuesta, pendiente de aprobación. NO implementado.
 > **Fecha:** 2026-08-01 (mediciones de ese día, por el auditor Cowork)
 > **Contexto:** RFD 02 v2 (T2) · `setup/memory-instructions.md` · doc 16 (tokens)
-> **Depende de:** `../arquitectura-memoria/09-RFD-HIGIENE-VAULT.md` §3.1 — el
-> contrato de `_PROJECT.md` (esqueleto fijo, tope de 120 líneas, sin secciones
-> `## Hecho`) es **precondición** del extracto de ~2K chars de C1b: truncar a 2K
-> un archivo que acumula historial tira lo importante casi al azar. Implementado
-> el 2026-08-01: `_PROJECT.md` pasó de 188 a 101 líneas y el arranque de
-> 36 100 B a 7 861 B.
 > **Cambio de alcance:** el T3 original (rate limit, tope de costo, systemd)
 > se pospone; este RFD ataca primero la pregunta de fondo.
 
