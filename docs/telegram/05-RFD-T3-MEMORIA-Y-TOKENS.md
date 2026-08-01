@@ -18,17 +18,27 @@ el bot de Telegram lo **paga en cada invocación sin obtener casi nada**:
 | Skills cargadas en sesión bot (shared+claude-code) | **29** | árbol `setup/skills/` |
 | Overhead de sus descriptions | 13.269 chars ≈ **3.3-4K tokens** + envoltura (~25/skill) ≈ **4-5K tokens fijos/invocación** | medido sobre los SKILL.md |
 | Costo real por invocación (18 en logs) | piso 1-turno **$0.05-0.46**; mediana ≈ $0.42; picos $3.71/$4.53/$5.50 | `logs/daemon-202608.log` |
-| `--add-dir` en `run_claude` | **ausente** | tg_daemon.py |
+| `--add-dir` en `run_claude` | **ausente** — pero **irrelevante**: E1 probó que la lectura funciona igual | tg_daemon.py |
 
 Diagnóstico por pieza:
 
-1. **Memory Rules → vault: orden imposible.** El CLAUDE.md copiado al worktree
-   ordena "lee `10-Projects/<proyecto>/_PROJECT.md`" — pero el cwd es
-   `%LOCALAPPDATA%\claude-tg-worktrees\…` y el vault está en OneDrive: lectura
-   FUERA del directorio del proyecto, que `dontAsk` deniega (confirmar con E1).
-   Coste doble: las reglas ocupan contexto Y el intento fallido quema un paso.
-2. **`adr-writer` y `memory-keeper` ordenan escribir al vault**: imposible
-   desde el worktree por lo mismo. Peso muerto con instrucciones incumplibles.
+1. ~~**Memory Rules → vault: orden imposible.**~~ **CORREGIDO tras E1
+   (2026-08-01): la premisa era FALSA.** Se suponía que leer el vault desde el
+   worktree se denegaba por estar fuera del cwd. E1 lo desmintió: el agente
+   leyó `_PROJECT.md` sin una sola denegación. **Las lecturas no tienen frontera
+   de directorio en ningún modo** — un hallazgo que además destapó el agujero
+   de aislamiento de T2 (ver `02-RFD…` C0).
+
+   Lo que sí queda en pie: **coste de contexto sin control**. Las reglas ocupan
+   ~300 tokens en cada invocación y el agente gasta turnos localizando y leyendo
+   archivos completos del vault. C1(b) sigue siendo la respuesta correcta, pero
+   por otro motivo: no porque leer sea imposible, sino porque **inyectar es
+   determinista y acotado** (sin turnos, sin búsqueda, con presupuesto) y
+   mantiene el vault fuera de la superficie del agente.
+2. **`adr-writer` y `memory-keeper` ordenan escribir al vault.** Aquí el
+   problema no es que no puedan —podrían—, sino que **no deben**: darle al LLM
+   escritura sobre el vault reabre lo que T2 cerró. Por eso salen del perfil bot
+   (C2) y la escritura la hace el daemon (C4).
 3. **Graphiti**: no desplegado (ADR vigente); las reglas ya dicen "skip
    silencioso" — correcto, coste marginal.
 4. **Skills irrelevantes en sesión bot** (±15 de 29): `notify-telegram` (ya

@@ -44,6 +44,7 @@ except ImportError:
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gitops                                              # noqa: E402
 from progress import ProgressTracker                       # noqa: E402
+import vaultio                                             # noqa: E402
 from notify_telegram import deliver_text, load_env_file, _env_candidates  # noqa: E402
 
 BASE = Path(__file__).resolve().parent
@@ -969,6 +970,31 @@ async def cmd_done(update, context):
 
     notas = []
     if conv.get("worktree"):
+        # C4 — la nota la escribe EL DAEMON, y ANTES de borrar el worktree:
+        # después ya no se podrían leer ni los commits ni .tg/progress.md.
+        # Solo en /done: un /write off es una pausa, no un final (RFD 05 §6.2).
+        try:
+            base = await gitops.default_branch(projects[project]["path"])
+            commits = await gitops.commits_ahead(conv["worktree"], conv["branch"], base)
+        except gitops.GitError:
+            commits = []
+        etapas = []
+        try:
+            pf = Path(conv["worktree"]) / gitops.PROGRESS_DIR / "progress.md"
+            if pf.is_file():
+                etapas = [l.strip() for l in pf.read_text(encoding="utf-8",
+                                                          errors="replace").splitlines()
+                          if l.strip()]
+        except OSError:
+            pass
+        ruta_nota = vaultio.write_session_note(
+            project, conv["branch"] or "", commits,
+            "mergeada" if conv.get("merged") else "abandonada",
+            etapas, conv.get("label", ""))
+        if ruta_nota:
+            notas.append(f"nota de sesión en el vault: {Path(ruta_nota).name}")
+            log.info("nota de sesión escrita: %s", ruta_nota)
+
         try:
             r = await gitops.remove_worktree(projects[project]["path"], conv["worktree"],
                                              conv["branch"], merged=bool(conv.get("merged")))
@@ -1218,6 +1244,13 @@ async def on_message(update, context):
         prompt = text
         if write_mode:
             prompt = WRITE_PREAMBLE.format(branch=conv["branch"]) + text
+        # C1b — solo en el PRIMER mensaje de la conversación: después ya vive en
+        # el transcript y repetirlo sería pagar el mismo contexto cada turno.
+        if not session_id:
+            briefing = vaultio.project_briefing(project)
+            if briefing:
+                prompt = briefing + prompt
+                log.info("briefing inyectado (%d chars)", len(briefing))
         # El monitor corre SIEMPRE: las alertas no dependen del panel (P6)
         monitor = asyncio.create_task(
             monitor_loop(cfg, chat_id, tracker, conv.get("worktree") or "",

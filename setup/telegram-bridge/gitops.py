@@ -124,6 +124,50 @@ async def head_sha(path: str, short: bool = True) -> str:
     return await git(args, path)
 
 
+# Secciones que se SUSTITUYEN enteras en la versión bot. Filtrar línea a línea
+# no sirve: los puntos numerados ocupan varias líneas y quitar la primera deja
+# continuaciones huérfanas — más confusas que la regla original.
+BOT_SECCIONES_FUERA = ("memory rules",)
+
+BOT_REGLAS = """## Memory Rules — versión puente Telegram
+
+1. **No escribas en el vault.** El contexto del proyecto te lo inyecta el daemon
+   al abrir la conversación, y la nota de sesión la escribe él al hacer `/done`.
+2. Trabajas en un **worktree aislado**: el árbol del usuario no se toca nunca.
+3. Si algo merece quedar registrado, **dilo en tu respuesta** — el daemon lo
+   recoge; no intentes guardarlo tú.
+4. Un hecho almacenado que contradiga el código actual: manda el presente.
+
+<!-- Versión BOT: se han omitido las reglas de vault y de Graphiti del CLAUDE.md
+     original porque aquí no aplican (no hay MCP, y el vault lo gestiona el
+     daemon). El resto de convenciones del proyecto siguen vigentes. -->
+"""
+
+
+def bot_claude_md(texto: str) -> str:
+    """CLAUDE.md del proyecto → versión para el bot (C3 del RFD 05).
+
+    Conserva las convenciones del proyecto —que es lo que hace útil el
+    CLAUDE.md— y **sustituye entera** la sección de Memory Rules por una que el
+    bot sí puede cumplir. Si el CLAUDE.md no tiene esa sección (otro proyecto,
+    otra estructura), se devuelve tal cual: no inventamos recortes.
+    """
+    texto = texto or ""
+    partes = re.split(r"(?m)^(?=## )", texto)
+    salida, sustituida = [], False
+    for bloque in partes:
+        titulo = bloque.splitlines()[0].lstrip("# ").strip().lower() if bloque.strip() else ""
+        if any(m in titulo for m in BOT_SECCIONES_FUERA):
+            if not sustituida:
+                salida.append(BOT_REGLAS)
+                sustituida = True
+            continue
+        salida.append(bloque.rstrip() + "\n")
+    if not sustituida:
+        return texto.rstrip() + "\n"
+    return "\n".join(x for x in salida if x.strip()).rstrip() + "\n"
+
+
 # ── Ciclo de vida del worktree ────────────────────────────────────────────
 async def create_worktree(repo: str, project: str, slug: str) -> dict:
     """Crea rama + worktree aislados. Devuelve {branch, path}.
@@ -149,12 +193,18 @@ async def create_worktree(repo: str, project: str, slug: str) -> dict:
     base = await default_branch(repo)
     await git(["worktree", "add", "-b", branch, str(dest), base], repo)
 
-    # CLAUDE.md: gitignorado, hay que copiarlo a mano o se pierden las Memory Rules
+    # CLAUDE.md: gitignorado, hay que copiarlo o el worktree nace sin las
+    # convenciones del proyecto. C3 (RFD 05): se copia una VERSIÓN BOT, sin las
+    # órdenes que en el puente no aplican — leer/escribir el vault (lo cubren
+    # C1b y C4) y Graphiti (no hay MCP aquí). Menos órdenes imposibles = menos
+    # contexto y menos intentos fallidos.
     src_md = Path(repo) / "CLAUDE.md"
     claude_md = False
     if src_md.is_file():
         try:
-            shutil.copyfile(src_md, dest / "CLAUDE.md")
+            (dest / "CLAUDE.md").write_text(
+                bot_claude_md(src_md.read_text(encoding="utf-8", errors="replace")),
+                encoding="utf-8")
             claude_md = True
         except OSError:
             pass
