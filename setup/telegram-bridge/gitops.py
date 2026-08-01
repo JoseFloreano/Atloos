@@ -407,7 +407,30 @@ async def merge_squash(repo: str, branch: str, base: str, message: str,
                           "no toca tu árbol.\n\nMientras tanto la rama del bot "
                           "sigue intacta: nada se ha perdido."}
 
-    await git(["merge", "--squash", branch], repo)
-    await git(["-c", "core.autocrlf=false", "commit", "-m", message], repo)
+    # A1 — un `merge --squash` en conflicto deja el índice y el árbol del
+    # usuario a medias. Como es SU árbol, no podemos abandonarlo así: se
+    # revierte al estado previo y se informa. `reset --merge` preserva los
+    # cambios locales no relacionados; si ni eso funciona, se dice claramente.
+    rc, out, err = await run(["git", "merge", "--squash", branch], repo)
+    if rc != 0:
+        limpio = False
+        for recuperacion in (["merge", "--abort"], ["reset", "--merge"]):
+            rc2, _, _ = await run(["git"] + recuperacion, repo)
+            if rc2 == 0:
+                limpio = True
+                break
+        return {"merged": False, "via": "local",
+                "reason": (f"conflictos al integrar: {(err or out)[:200]}\n\n"
+                           + ("Tu árbol quedó como estaba (revertido)."
+                              if limpio else
+                              "⚠️ NO pude revertir automáticamente: revisa "
+                              "`git status` en la laptop antes de seguir."))}
+
+    rc, out, err = await run(["git", "-c", "core.autocrlf=false", "commit",
+                              "-m", message], repo)
+    if rc != 0:
+        await run(["git", "reset", "--merge"], repo)     # deshacer el squash preparado
+        return {"merged": False, "via": "local",
+                "reason": f"no se pudo commitear la integración: {(err or out)[:200]}"}
     return {"merged": True, "via": "local",
             "sha": await git(["rev-parse", "--short", "HEAD"], repo)}

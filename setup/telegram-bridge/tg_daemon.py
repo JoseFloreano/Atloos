@@ -109,6 +109,23 @@ WRITE_PREAMBLE = (
 )
 
 SECRET_DENIES = ""      # se calcula en main() (rutas de ESTA máquina)
+BOT_PROFILE_DIR = ""    # perfil de skills del bot (C2); vacío = config normal
+
+
+def bot_profile_dir() -> str:
+    """Directorio de config con SOLO las skills del perfil bot.
+
+    Requiere `.credentials.json` (un CLAUDE_CONFIG_DIR nuevo no hereda la
+    autenticación). Si falta algo, se devuelve "" y el daemon usa la config
+    normal: perder el ahorro es preferible a que no arranquen las invocaciones.
+    """
+    base = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "claude-tg-profile"
+    if not (base / "skills").is_dir():
+        return ""
+    if not (base / ".credentials.json").is_file():
+        log.warning("perfil bot sin .credentials.json: se usa la config normal")
+        return ""
+    return str(base)
 
 MODELS = {
     "opus":   "el más capaz; caro (~0.1-1.9 USD por consulta observado)",
@@ -869,6 +886,27 @@ async def on_callback(update, context):
     ps = project_state(state, chat_id, pend["project"])
     conv = ps["conversations"][pend["idx"]]
     repo = projects[pend["project"]]["path"]
+
+    # A3 — TOCTOU: entre lanzar /merge y pulsar el botón pudo pasar cualquier
+    # cosa (un /commit invalida el verde, o llegaron cambios sin commitear).
+    # El estado se re-verifica AQUÍ, no solo al crear el token.
+    try:
+        head_ahora = await gitops.head_sha(conv["worktree"])
+        sucio = (await gitops.diff_summary(conv["worktree"]))["has_changes"]
+    except gitops.GitError as exc:
+        await query.edit_message_text(f"❌ No pude verificar el estado: {exc}")
+        return
+    if sucio:
+        await query.edit_message_text("🚫 Cancelado: aparecieron cambios sin commitear "
+                                      "después de lanzar /merge. Haz /commit y repite.")
+        return
+    if conv.get("test_ok_sha") != head_ahora:
+        await query.edit_message_text(
+            f"🚫 Cancelado: la rama cambió desde que pediste el merge "
+            f"(verde en {conv.get('test_ok_sha') or '—'}, ahora {head_ahora}).\n"
+            f"Corre /test otra vez y vuelve a lanzar /merge.")
+        return
+
     await query.edit_message_text(f"Integrando {conv['branch']}…")
 
     INFLIGHT[chat_id] = now_ts()
@@ -995,6 +1033,15 @@ async def run_claude(prompt: str, cwd: str, session_id, model: str = "",
         cmd += ["--model", model]
 
     env = {**os.environ, "CLAUDE_TG_BOT": "1"}
+    # C2 — perfil de skills del bot: solo las 15 del registro de
+    # setup/skills/README.md. Medido el 2026-08-01 con el mismo prompt:
+    #   perfil completo (31 skills) 40 605 tok / 0.1894 USD
+    #   perfil bot      (15 skills) 34 961 tok / 0.1248 USD  ← −14% tok, −34% costo
+    #   sin skills de usuario       32 487 tok / 0.1034 USD  (pierde las útiles)
+    # El costo cae mucho más que los tokens porque crear caché se paga más caro
+    # que leerla. Si el perfil no existe, se usa la config normal (fallback).
+    if BOT_PROFILE_DIR:
+        env["CLAUDE_CONFIG_DIR"] = BOT_PROFILE_DIR
     log.info("invocando claude (cwd=%s, resume=%s, modelo=%s, escritura=%s, prompt=%d chars)",
              Path(cwd).name, bool(session_id), model or "default", write_mode, len(prompt))
 
@@ -1008,11 +1055,27 @@ async def run_claude(prompt: str, cwd: str, session_id, model: str = "",
 
     async def pump_stdout():
         nonlocal result_event
+        descartadas = 0
         while True:
             try:
                 raw = await proc.stdout.readline()
             except (ValueError, asyncio.LimitOverrunError):
-                continue                      # línea gigante: se ignora, no se muere
+                # A2 — una línea mayor que el límite NO se consume sola: hacer
+                # `continue` sin drenar giraría para siempre quemando CPU.
+                # Se drena a mano hasta el próximo salto de línea.
+                descartadas += 1
+                try:
+                    while True:
+                        trozo = await proc.stdout.read(65536)
+                        if not trozo or b"\n" in trozo:
+                            break
+                except Exception:
+                    break
+                if descartadas > 50:          # algo va muy mal: no insistir
+                    log.error("stream con demasiadas líneas ilegibles; se corta la lectura")
+                    break
+                log.warning("línea del stream mayor que el límite: descartada")
+                continue
             if not raw:
                 break
             line = raw.decode("utf-8", "replace").strip()
@@ -1238,9 +1301,12 @@ def setup_logging() -> None:
 async def reconcile_startup(projects: dict, state: dict) -> None:
     """Contrasta el estado con los worktrees reales. Reporta, nunca borra."""
     for name, cfg in projects.items():
+        # Solo las conversaciones VIVAS: una archivada por /done ya no tiene
+        # worktree a propósito, y reportarla sería ruido en cada arranque.
         conocidos = [c.get("worktree") for cs in state.get("chats", {}).values()
                      for pname, ps in cs.get("projects", {}).items() if pname == name
-                     for c in ps.get("conversations", []) if c.get("worktree")]
+                     for c in ps.get("conversations", [])
+                     if c.get("worktree") and not c.get("archived")]
         try:
             r = await gitops.reconcile(cfg["path"], conocidos)
         except gitops.GitError as exc:
@@ -1261,9 +1327,12 @@ def main() -> None:
         pass
     setup_logging()
 
-    global SECRET_DENIES
+    global SECRET_DENIES, BOT_PROFILE_DIR
     SECRET_DENIES = secret_denies()
-    log.info("deny de secretos: %d rutas", len(SECRET_DENIES.split(",")) if SECRET_DENIES else 0)
+    BOT_PROFILE_DIR = bot_profile_dir()
+    log.info("deny de secretos: %d rutas | perfil bot: %s",
+             len(SECRET_DENIES.split(",")) if SECRET_DENIES else 0,
+             f"{len(list(Path(BOT_PROFILE_DIR, 'skills').iterdir()))} skills" if BOT_PROFILE_DIR else "no (config normal)")
     cfg = load_config()
     projects = load_projects()
     state = load_state()
