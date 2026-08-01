@@ -658,8 +658,17 @@ Texto nuevo:
    |---|---|
    | Propuesta abierta / en discusión | se queda |
    | Aprobado pero **no** implementado | se queda |
-   | Implementado **y con las condiciones de auditoría cerradas** | cosecha → ADR → `git rm` |
-   | Abandonado | se borra sin ADR, con confirmación |
+   | Implementado, con la **auditoría abierta o con condiciones pendientes** | se queda — todavía NO se cosecha |
+   | Implementado **y con las condiciones de auditoría cerradas** | cosecha → ADR → **redirigir referencias (paso 5)** → `git rm` |
+   | Abandonado | **redirigir referencias (paso 5)** → borrar sin ADR, con confirmación |
+
+   > **Corrección tras la revisión (3 huecos de la tabla de v1):** el atajo decía
+   > `cosecha → ADR → git rm`, saltándose la redirección 26 líneas antes de que
+   > el paso 5 la exija — un modelo que use la tabla como referencia rápida
+   > reabre el agujero. "Abandonado" tampoco pedía redirigir, y un RFD
+   > abandonado sí puede estar citado. Y faltaba el estado "implementado con la
+   > auditoría aún abierta", que es justo el del RFD 02: el primer RFD que
+   > alguien clasifique caía en el hueco.
 
    "Auditado" significa **condiciones de auditoría cerradas**, no "hubo
    auditoría". Un RFD con la auditoría aprobada *con condiciones* pendientes NO

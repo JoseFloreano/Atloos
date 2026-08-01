@@ -180,8 +180,15 @@ Superpowers — para cubrir los RFDs de `docs/**`:
 |---|---|
 | Propuesta abierta / en discusión | se queda |
 | Aprobado pero **no** implementado | se queda |
-| Implementado **y con las condiciones de auditoría cerradas** | **cosecha** → ADR → `git rm` |
-| Abandonado | se borra sin ADR, con confirmación |
+| Implementado, con la **auditoría abierta o con condiciones pendientes** | se queda — todavía NO se cosecha |
+| Implementado **y con las condiciones de auditoría cerradas** | **cosecha** → ADR → **redirigir referencias** → `git rm` |
+| Abandonado | **redirigir referencias** → borrar sin ADR, con confirmación |
+
+> *Delta de implementación (2026-08-01):* la tabla de v2 tenía cuatro filas y la
+> revisión de la Task 5 encontró tres huecos — el atajo omitía la redirección,
+> "abandonado" no la exigía pese a que un RFD abandonado también puede estar
+> citado, y faltaba el estado en el que hoy está el RFD 02. Corregida aquí y en
+> la skill a la vez.
 
 El ADR de cosecha absorbe lo que hay que conservar: decisión, **alternativas
 rechazadas y su porqué**, trade-offs aceptados y **deltas diseño↔implementación**
