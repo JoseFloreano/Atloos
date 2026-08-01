@@ -24,10 +24,10 @@ a `sessions/`.
 - **Vault:** `C:\Users\jlflo\OneDrive\DevSetup\ObsidianVault` — es **su propio
   repo git**, distinto del repo de AlphaDogs.
 - **Carpeta a migrar:** `10-Projects/alphadogs/`
-- **El diseño y su porqué:** `docs/arquitectura-memoria/09-RFD-HIGIENE-VAULT.md`
-  en el repo `ClaudeSetup`
-  (`C:\Users\jlflo\OneDrive\Documentos\Mis_Documentos\Proyectos\Coding\Python\Otros\ClaudeSetup`).
-  Lee §3.0 (las tres capas) y §3.1 (el contrato). No hace falta más.
+- **El diseño y su porqué:** `ADR-20260801-higiene-vault`, en
+  `10-Projects/claude-setup/ADRs/` del vault. Lee la Decisión y las
+  Consecuencias; no hace falta más. (El RFD original se cosechó a ese ADR y se
+  borró del repo el 2026-08-01; su historia sigue en git, `763aabb..71a23b0`.)
 - **Referencia viva del resultado:** `10-Projects/tt1-revisor-chatbot/` —
   ya migrado. Mira su `_PROJECT.md` y sus dos notas de `sessions/`: eso es
   exactamente lo que tienes que producir aquí.

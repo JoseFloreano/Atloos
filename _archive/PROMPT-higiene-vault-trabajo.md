@@ -24,9 +24,11 @@ gratis.
 
 El repo `ClaudeSetup` en `<RUTA-AL-REPO>`. Léelo en este orden y no más:
 
-1. `docs/arquitectura-memoria/09-RFD-HIGIENE-VAULT.md` — el diseño y, sobre todo,
-   **por qué** cada decisión. Presta atención a §3.0 (las tres capas), §4
-   (alternativas rechazadas, con sus umbrales) y §8 (riesgos).
+1. `ADR-20260801-higiene-vault`, en `10-Projects/claude-setup/ADRs/` del vault —
+   el diseño y, sobre todo, **por qué** cada decisión: las tres capas, las
+   alternativas rechazadas con sus umbrales y los deltas diseño↔implementación.
+   (El RFD original se cosechó ahí y se borró del repo el 2026-08-01; su
+   historia sigue en git, `763aabb..71a23b0`.)
 2. `setup/scripts/adr-index.py` — el generador del índice. Es el único código.
 3. `setup/skills/shared/{adr-writer,session-close,design-doc-harvest}/SKILL.md` y
    `setup/skills/claude-code/project-resume/SKILL.md` — cómo se cablearon las

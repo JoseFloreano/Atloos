@@ -72,13 +72,21 @@ lo durable vive en el vault. Esta skill cierra el pipeline
 
    ```bash
    # sustituye NN por el número real: para el RFD 02 -> "RFD 02|02-RFD"
-   grep -rl -E "RFD 02|02-RFD" docs/
+   # OJO al alcance: TODO el repo, no solo docs/ — y también el vault
+   grep -rn -E "RFD 02|02-RFD" . --exclude-dir=.git --exclude-dir=.superpowers
+   grep -rn -E "RFD 02|02-RFD" <vault>/10-Projects/<proyecto>/
    ```
 
    Copiado literal con `NN` el comando no matchea nada — no confundas "cero
    resultados porque no sustituiste NN" con "no hay referencias entrantes": lo
    segundo lleva a borrar y reproducir el mismo huérfano que este paso existe
    para evitar.
+
+   **Buscar solo en `docs/` no basta**, y es un error ya cometido: al cosechar
+   el RFD 09 quedaron citas colgando en `_archive/` (dos prompts que apuntaban
+   al diseño borrado) y en el propio ADR del vault. Los ADR y las notas del
+   vault también citan documentos del repo: el enlace roto se ve igual de mal
+   desde ahí.
 
    Actualiza cada cita para que apunte al ADR resultante. Solo cuando el grep
    deje de devolver referencias huérfanas se borra el archivo. (Precedente: el
