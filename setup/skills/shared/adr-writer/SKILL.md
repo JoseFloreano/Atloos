@@ -64,11 +64,16 @@ productos (Claude Code y Cowork comparten el vault).
    Máximo ~300 palabras — un ADR es un registro, no un ensayo.
 
 4. Añade el wikilink `[[ADR-YYYYMMDD-tema]]` en `10-Projects/<proyecto>/_PROJECT.md`.
-5. **Regenera el índice**:
+5. **Regenera el índice**. Esta skill se instala globalmente y corre desde el
+   cwd de cualquier proyecto, así que el script hay que invocarlo por ruta
+   absoluta — vive en el repo ClaudeSetup, y esa ruta es estable entre laptops
+   porque el repo viaja dentro de OneDrive:
 
    ```bash
-   py setup/scripts/adr-index.py "<vault>/10-Projects/<proyecto>/ADRs"
+   py "$HOME/OneDrive/Documentos/Mis_Documentos/Proyectos/Coding/Python/Otros/ClaudeSetup/setup/scripts/adr-index.py" "<vault>/10-Projects/<proyecto>/ADRs"
    ```
+
+   (PowerShell: `py "$env:USERPROFILE\OneDrive\Documentos\Mis_Documentos\Proyectos\Coding\Python\Otros\ClaudeSetup\setup\scripts\adr-index.py" "<vault>\10-Projects\<proyecto>\ADRs"`)
 
    Verifica que la línea del ADR nuevo aparece en `ADRs/_INDEX.md`. Si el script
    avisa de un `status:` ausente en otro ADR, arréglalo de paso: un ADR sin

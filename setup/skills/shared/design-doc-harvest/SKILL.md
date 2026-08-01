@@ -61,12 +61,24 @@ lo durable vive en el vault. Esta skill cierra el pipeline
    **Si la decisión ya tiene ADR, la cosecha lo enriquece — no crea otro.**
    Dos ADRs sobre el mismo asunto reproducen en la capa durable la divergencia
    que la cosecha venía a eliminar.
+
+   Si el contenido cosechado incluye una nota de `sessions/` (frontmatter de
+   `templates/session-import.md`), marca `harvested: true` en esa nota al
+   terminar: es lo que la hace elegible para archivar más adelante
+   (`vault-drift-audit` la propone para `_archive/` solo cuando ese campo está
+   en `true`).
 5. **Redirige las referencias entrantes.** "Git conserva la historia" es cierto
    para el contenido y falso para los enlaces:
 
    ```bash
-   grep -rl -E "RFD NN|NN-RFD" docs/
+   # sustituye NN por el número real: para el RFD 02 -> "RFD 02|02-RFD"
+   grep -rl -E "RFD 02|02-RFD" docs/
    ```
+
+   Copiado literal con `NN` el comando no matchea nada — no confundas "cero
+   resultados porque no sustituiste NN" con "no hay referencias entrantes": lo
+   segundo lleva a borrar y reproducir el mismo huérfano que este paso existe
+   para evitar.
 
    Actualiza cada cita para que apunte al ADR resultante. Solo cuando el grep
    deje de devolver referencias huérfanas se borra el archivo. (Precedente: el

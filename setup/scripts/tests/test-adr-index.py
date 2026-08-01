@@ -159,9 +159,39 @@ def main():
         rc, _, err = run(os.path.join(tmp, "no-existe"))
         check("9b. carpeta inexistente -> exit 1", rc == 1, f"rc={rc}")
 
+    # --- Caso 11: '#' dentro del summary no se trunca (ya no hay strip de
+    # comentario inline: el vocabulario de status vive en su propia linea con
+    # '#' al inicio, que el guard startswith("#") sigue filtrando aparte) ---
+    with tempfile.TemporaryDirectory(prefix="adridx4-") as tmp:
+        d = proyecto(tmp)
+        make_adr(d, "ADR-20260721-issue.md",
+                 "title: Con numeral\nstatus: accepted\n"
+                 "summary: Cerramos el issue #12 con el fix")
+        run(d)
+        linea = [l for l in index_text(d).splitlines() if "Cerramos" in l][0]
+        check("11. '#' en el summary no se trunca",
+              "Cerramos el issue #12 con el fix" in linea, linea)
+
+    # --- Caso 12: ADR guardado con BOM sigue leyendose bien ---
+    with tempfile.TemporaryDirectory(prefix="adridx5-") as tmp:
+        d = proyecto(tmp)
+        path = os.path.join(d, "ADR-20260722-bom.md")
+        contenido = ("---\ntitle: Con BOM\ndate: 2026-07-22\nstatus: accepted\n"
+                     "summary: Sobrevive al BOM\n---\n\n# Con BOM\n")
+        with open(path, "w", encoding="utf-8-sig", newline="\n") as f:
+            f.write(contenido)
+        rc, out, err = run(d)
+        txt = index_text(d)
+        linea = [l for l in txt.splitlines() if "Sobrevive al BOM" in l]
+        check("12. ADR con BOM -> status y summary se leen bien",
+              rc == 0 and len(linea) == 1 and "accepted" in linea[0]
+              and "unknown" not in linea[0],
+              f"rc={rc} err={err[:80]!r} linea={linea}")
+
     fallos = [n for n, ok, _ in results if not ok]
     print(f"\n{len(results) - len(fallos)}/{len(results)} casos OK")
-    # Nota: ahora son 17 casos (6c cubre titulo con pipe)
+    # Nota: ahora son 19 casos (6c cubre titulo con pipe; 11 y 12 son las
+    # regresiones de la revision de rama: '#' en summary y BOM en ADR)
     if fallos:
         print("FALLAN: " + ", ".join(fallos))
     return 1 if fallos else 0

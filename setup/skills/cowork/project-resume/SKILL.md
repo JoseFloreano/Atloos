@@ -39,6 +39,9 @@ Cowork. **Solo lectura** — no escribe memoria ni commitea nada en este paso.
    dilo.
 4. Revisa `bugs/` **solo los `status: open`** (`open | fixed | invalid | wontfix`).
    Stage-a solo lo que vas a leer — no la carpeta completa (anti-patrón de dump).
+
+   > Presupuesto de arranque: si lo que vas a stage-ar y leer al arrancar pasa
+   > de ~10 KB, algo está mal — dilo en vez de leerlo.
 5. *(Solo si graphiti-memory está disponible)* `search_facts("recent decisions
    and known issues", group_ids=["<nombre>", "dev-global"])`.
 6. **Resume al usuario** en pocas líneas: estado actual, decisiones clave, bugs

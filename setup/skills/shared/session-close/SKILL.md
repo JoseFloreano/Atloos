@@ -56,12 +56,12 @@ otra laptop.
      En Cowork omite (es toolchain local).
 6. *(Solo Claude Code)* Si existe `.claude/vault-dirty.json` en el repo,
    bórralo — el cierre manual deja el flag del hook en cero.
-7. **Verifica y despide**: confirma qué se actualizó y responde con el
-   "próximo paso" anotado — así la sesión termina con el arranque de la
-   siguiente ya escrito.
-8. **Comprueba el tamaño de `_PROJECT.md`** (`wc -l`). Si pasa de **120
+7. **Comprueba el tamaño de `_PROJECT.md`** (`wc -l`). Si pasa de **120
    líneas**, di qué sección conviene rotar a `sessions/` y ofrécelo — el tope
    duro es 150. **Avisa, no bloquees**: esto es una convención, no un hook.
+8. **Verifica y despide**: confirma qué se actualizó y responde con el
+   "próximo paso" anotado — así la sesión termina con el arranque de la
+   siguiente ya escrito.
 
 ## Qué NO hacer
 

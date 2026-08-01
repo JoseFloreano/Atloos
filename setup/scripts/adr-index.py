@@ -32,7 +32,6 @@ def parse_frontmatter(texto: str) -> dict:
         return {}
     campos = {}
     for linea in m.group(1).splitlines():
-        linea = linea.split(" #")[0].rstrip()      # comentario inline
         if not linea.strip() or linea.lstrip().startswith("#") or ":" not in linea:
             continue
         clave, valor = linea.split(":", 1)
@@ -62,7 +61,7 @@ def primera_frase_de_decision(texto: str) -> str:
 
 def leer_adr(ruta: str) -> dict:
     nombre = os.path.basename(ruta)
-    with open(ruta, "r", encoding="utf-8", errors="replace") as f:
+    with open(ruta, "r", encoding="utf-8-sig", errors="replace") as f:
         texto = f.read()
     fm = parse_frontmatter(texto)
 
@@ -70,15 +69,6 @@ def leer_adr(ruta: str) -> dict:
     if not re.match(r"^\d{4}-\d{2}-\d{2}$", fecha):
         m = FECHA_EN_NOMBRE.match(nombre)
         fecha = f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else "0000-00-00"
-
-    titulo = fm.get("title", "")
-    if not titulo:
-        for linea in texto.splitlines():
-            if linea.startswith("# "):
-                titulo = linea[2:].strip()
-                break
-    if not titulo:
-        titulo = nombre[:-3]
 
     # Solo `status:`. Aceptar `estado:` en español enmascararía justo el problema
     # que este índice viene a destapar (RFD 09 §1.2).
@@ -91,7 +81,7 @@ def leer_adr(ruta: str) -> dict:
     resumen = fm.get("summary") or fm.get("decision") or primera_frase_de_decision(texto)
 
     return {"archivo": nombre[:-3], "fecha": fecha, "estado": estado,
-            "titulo": titulo, "resumen": resumen or "—"}
+            "resumen": resumen or "—"}
 
 
 def escapar(valor: str) -> str:

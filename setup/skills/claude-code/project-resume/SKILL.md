@@ -34,8 +34,11 @@ donde se quedó. **Solo lectura** — no escribe memoria en este paso.
    si su fecha es ≥ la de la nota más reciente de `sessions/` (se decidió algo
    que aún no viviste) o si la tarea de hoy lo toca directamente.
    Si `_INDEX.md` no existe, el proyecto aún no está migrado: lee los ~3 ADRs
-   más recientes como antes y avisa al usuario de que falta generar el índice
-   (`py setup/scripts/adr-index.py <ruta ADRs>`).
+   más recientes como antes y avisa al usuario de que falta generar el índice.
+   El script vive en el repo ClaudeSetup y esta skill corre desde el cwd de
+   cualquier proyecto, así que se invoca por ruta absoluta (estable entre
+   laptops porque el repo viaja en OneDrive):
+   (`py "$HOME/OneDrive/Documentos/Mis_Documentos/Proyectos/Coding/Python/Otros/ClaudeSetup/setup/scripts/adr-index.py" <ruta ADRs>`).
 4. Revisa `bugs/` **solo los `status: open`** (vocabulario cerrado:
    `open | fixed | invalid | wontfix`). Los cerrados se abren únicamente si la
    tarea de hoy los roza.
