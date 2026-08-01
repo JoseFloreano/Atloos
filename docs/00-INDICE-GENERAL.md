@@ -21,7 +21,7 @@ La serie original: por qué esta arquitectura de memoria y no otra.
 | [06 · Arquitectura final](./arquitectura-memoria/06-ARQUITECTURA-FINAL-RECOMENDADA.md) | Decisión consolidada y fases |
 | [07 · Hallazgos críticos H1–H10](./arquitectura-memoria/07-HALLAZGOS-CRITICOS-REFERENCIA-RAPIDA.md) | ⭐ Leer antes de cualquier decisión |
 | [08 · Graphiti con DeepSeek: costo](./arquitectura-memoria/08-GRAPHITI-DEEPSEEK-COSTO.md) | Extracción barata cuando Graphiti se active |
-| [RFD 09 · Higiene de contexto y ciclo de vida del vault](./arquitectura-memoria/09-RFD-HIGIENE-VAULT.md) | 🔵 **Propuesta, sin implementar** — tope de `_PROJECT.md`, índice de ADRs, ciclo de los RFDs |
+| [RFD 09 · Higiene de contexto y ciclo de vida del vault](./arquitectura-memoria/09-RFD-HIGIENE-VAULT.md) | 🔵 **v2 validada, sin implementar** — tope de `_PROJECT.md`, índice de ADRs, ciclo de los RFDs |
 
 ### 📁 [`cowork-y-multiagente/`](./cowork-y-multiagente/) — Los dos productos y su convivencia
 
