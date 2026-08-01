@@ -28,6 +28,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import shutil
 import sys
 import time
@@ -35,7 +36,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 try:
-    from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+    from telegram import (BotCommand, InlineKeyboardButton,
+                          InlineKeyboardMarkup, Update)
     from telegram.ext import (Application, ApplicationBuilder, CallbackQueryHandler,
                               CommandHandler, ContextTypes, MessageHandler, filters)
 except ImportError:
@@ -115,13 +117,19 @@ WRITE_PREAMBLE = (
 # el disco. Observado el 2026-08-01 (bug §11 del RFD 06/T4).
 DELIVERY_RULE = (
     "[Cómo se entrega lo que produces: el usuario te lee por Telegram, así que "
-    "**el canal de salida es tu respuesta**, no el sistema de archivos. Si te "
-    "piden un resumen, un informe o \"mándame X en un md\", **ponlo en la "
-    "respuesta**: el puente ya lo entrega como mensaje, y si pasa de 4096 "
-    "caracteres lo adjunta solo como archivo .md — no tienes que crear nada. "
-    "Crea archivos únicamente cuando formen parte del trabajo en el repo (código, "
-    "documentación que se va a commitear), nunca para \"entregar\" algo.]\n\n"
+    "**el canal de salida es tu respuesta**, no el sistema de archivos. Nunca "
+    "uses `Write` para \"entregarle\" algo: no vería ese archivo. Crea archivos "
+    "solo cuando formen parte del trabajo en el repo (código, documentación que "
+    "se va a commitear).\n"
+    "Si te pide **explícitamente un archivo** (\"mándame un md\", \"en un "
+    "archivo\", \"un documento con...\"), pon como PRIMERA línea de tu respuesta:\n"
+    "ARCHIVO: nombre-descriptivo.md\n"
+    "y debajo el contenido. El puente lo entregará como adjunto descargable. Si "
+    "no pide archivo, responde normal: lo largo se adjunta solo.]\n\n"
 )
+
+# Marcador con el que el agente pide entrega como adjunto (ver DELIVERY_RULE).
+FILE_MARKER = re.compile(r"^\s*ARCHIVO:\s*([\w.\- ]{1,60})\s*\n", re.IGNORECASE)
 
 SECRET_DENIES = ""      # se calcula en main() (rutas de ESTA máquina)
 BOT_PROFILE_DIR = ""    # perfil de skills del bot (C2); vacío = config normal
@@ -141,6 +149,28 @@ def bot_profile_dir() -> str:
         log.warning("perfil bot sin .credentials.json: se usa la config normal")
         return ""
     return str(base)
+
+# Menú nativo de Telegram: al escribir "/" salen todos con autocompletado.
+# Es la forma de no tener que recordarlos — mejor que un /help que hay que
+# invocar sabiendo que existe. El orden es el del flujo real de trabajo.
+BOT_COMMANDS = [
+    ("p", "Activar proyecto · sin argumento lista los disponibles"),
+    ("status", "Dónde estás: proyecto, conversación, modo, rama"),
+    ("progress", "Qué está haciendo ahora · 'live' panel, 'off' apagar"),
+    ("new", "Empezar una conversación nueva"),
+    ("chats", "Listar las conversaciones del proyecto"),
+    ("chat", "Retomar una conversación: /chat <n>"),
+    ("model", "Ver o cambiar el modelo (opus, sonnet, haiku, fable)"),
+    ("write", "Modo escritura on|off — crea rama y worktree propios"),
+    ("diff", "Ver los cambios de la rama"),
+    ("commit", "Guardar en la rama · sin mensaje lo propone el agente"),
+    ("test", "Correr los tests del proyecto (obligatorio antes de /merge)"),
+    ("pull", "Traer main a la rama, por si se quedó atrás"),
+    ("push", "Publicar la rama y crear/actualizar su PR"),
+    ("merge", "Integrar en main — pide confirmación y exige tests verdes"),
+    ("done", "Terminar: limpia rama y worktree, archiva la conversación"),
+    ("help", "Esta lista, con más detalle"),
+]
 
 MODELS = {
     "opus":   "el más capaz; caro (~0.1-1.9 USD por consulta observado)",
@@ -306,7 +336,21 @@ def human_age(ts: float) -> str:
 
 
 async def reply(cfg: dict, chat_id: int, text: str) -> None:
-    """Respuesta con la política de entrega de T0 (>4096 → resumen + adjunto)."""
+    """Respuesta con la política de entrega de T0 (>4096 → resumen + adjunto).
+
+    Si el agente marcó `ARCHIVO: nombre.md` en la primera línea, se entrega como
+    adjunto descargable aunque sea corto: pedir "un md" y recibir un mensaje de
+    chat no es lo que el usuario pidió (observado el 2026-08-01).
+    """
+    m = FILE_MARKER.match(text or "")
+    if m:
+        nombre = m.group(1).strip().replace(" ", "-")
+        if not nombre.lower().endswith((".md", ".txt", ".json", ".csv")):
+            nombre += ".md"
+        cuerpo = text[m.end():].lstrip()
+        await reply_doc(cfg, chat_id, nombre, cuerpo)
+        log.info("entregado como adjunto: %s (%d chars)", nombre, len(cuerpo))
+        return
     try:
         desc = await asyncio.to_thread(deliver_text, cfg["token"], str(chat_id),
                                        text, "claude-tg")
@@ -377,14 +421,35 @@ async def cmd_start(update, context):
     if not guard(update, cfg):
         return
     await reply(cfg, update.effective_chat.id,
-                "Puente Telegram ↔ Claude Code.\n\n"
-                "**Navegación**\n"
-                "/p <proyecto> · /new · /chats · /chat <n> · /model [m] · /status\n\n"
-                "**Escritura (T2)**\n"
-                "/write on|off — modo auto en una rama y worktree propios\n"
-                "/diff · /commit [msg] · /test · /push · /merge · /done\n\n"
-                "Por defecto solo leo. En modo escritura trabajo en una rama "
-                "`tg/*` aislada: tu árbol de trabajo nunca se toca.")
+                "**Puente Telegram ↔ Claude Code**\n"
+                "_Escribe `/` para ver todos los comandos con autocompletado._\n\n"
+
+                "**Para empezar**\n"
+                "`/p <proyecto>` — activar proyecto (sin argumento: lista)\n"
+                "…y ya escribes normal: te respondo leyendo ese repo.\n"
+                "`/status` — dónde estás · `/model` — cambiar modelo\n\n"
+
+                "**Mientras trabajo**\n"
+                "`/progress` — foto de qué estoy haciendo ahora\n"
+                "`/progress live` — panel que se actualiza solo · `off` lo apaga\n"
+                "_Los avisos de turnos al 80% y de 5 min sin actividad llegan "
+                "siempre, tengas el panel o no._\n\n"
+
+                "**Conversaciones** (cada una con su rama)\n"
+                "`/new` · `/chats` · `/chat <n>`\n\n"
+
+                "**Escritura** — `/write on` abre rama y worktree propios\n"
+                "`/diff` → `/commit [msg]` → `/test` → `/merge` → `/done`\n"
+                "`/pull` — traer main si la rama se quedó atrás\n"
+                "`/push` — publicar la rama y su PR\n\n"
+
+                "**Las reglas que no cambian**\n"
+                "• Por defecto **solo leo**.\n"
+                "• En escritura trabajo en una rama `tg/*` aislada: **tu árbol "
+                "de trabajo nunca se toca**.\n"
+                "• Yo no commiteo, publico ni integro — eso lo haces tú con los "
+                "comandos de arriba.\n"
+                "• `/merge` es el único con botón, y exige tests en verde.")
 
 
 async def cmd_p(update, context):
@@ -1453,8 +1518,18 @@ def main() -> None:
 
     # concurrent_updates: sin esto PTB procesa los updates EN SERIE y el aviso
     # "⏳" nunca llegaría a tiempo (bug encontrado en las pruebas de T1).
+    async def _post_init(application: Application) -> None:
+        """Registra el menú de comandos de Telegram (el que sale al teclear '/')."""
+        try:
+            await application.bot.set_my_commands(
+                [BotCommand(c, d) for c, d in BOT_COMMANDS])
+            log.info("menú de comandos registrado (%d)", len(BOT_COMMANDS))
+        except Exception as exc:      # sin menú se sigue pudiendo usar todo
+            log.warning("no se pudo registrar el menú de comandos: %s", exc)
+
     app: Application = (ApplicationBuilder().token(cfg["token"])
-                        .concurrent_updates(True).build())
+                        .concurrent_updates(True)
+                        .post_init(_post_init).build())
     app.bot_data.update({"cfg": cfg, "projects": projects, "state": state})
 
     for name, fn in (("start", cmd_start), ("help", cmd_start), ("p", cmd_p),

@@ -121,13 +121,46 @@ formalice.
 - [ ] Daemon corriendo de forma confiable (T3 base: autoarranque), porque
       T4 depende de que siempre esté escuchando.
 
-## 10. Preguntas abiertas para cuando se diseñe en serio
+## 10. Preguntas cerradas (auditoría 2026-08-01)
 
-1. ¿Cuánto vive un ID de "pickup" antes de expirar?
-2. ¿El traspaso corto se le muestra al usuario dentro del aviso mismo, o
-   solo al confirmar el `/pickup`?
-3. ¿`/pickup` puede fallar si la rama de origen ya no existe (se hizo
-   `/done` o `/merge` de esa conversación mientras tanto)? ¿Qué se reporta?
+1. **Expiración: 7 días**, con purga al arrancar el daemon — mismo patrón que
+   la reconciliación de worktrees, que ya demostró que limpiar al arranque es
+   el momento natural.
+2. **El traspaso se muestra DENTRO del aviso**, no al confirmar. Cuesta cero
+   (va en la misma llamada que genera el aviso) y te deja decidir si vale la
+   pena hacer `/pickup` sin tener que mandarlo para verlo.
+3. **Con la rama de origen ya mergeada, `/pickup` FUNCIONA**: nace de un `main`
+   que ya contiene ese trabajo. Se reporta "el trabajo de origen ya está
+   integrado". Si la conversación se cerró con `/done` **sin** merge, hay que
+   advertir que el traspaso referencia trabajo descartado.
+
+## 10b. Huecos que hay que resolver ANTES de promover a diseño (auditoría)
+
+**H1 — El handoff no tiene DÓNDE vivir.** El traspaso lo redacta la sesión de
+laptop (T0) y el `/pickup` lo recibe el daemon: falta especificar el registro
+compartido. Propuesta: `pickups.json` junto al `state.json` del daemon, escrito
+por `notify_telegram.py`.
+
+> ⚠️ **Dependencia que hay que declarar ahora, no al migrar.** Hoy T0 y el
+> daemon comparten disco. Cuando el daemon viva en la mini PC 24/7
+> (`01-MINIPC-SERVIDOR-24-7.md`), **dejan de compartirlo** — y usar OneDrive
+> como transporte arrastra el problema de bytes obsoletos que ya nos ha mordido
+> tres veces (datos de FalkorDB, `.git` del vault, reparse points de
+> `.git/worktrees`). Diseñar el registro sin tener esto en cuenta es diseñar
+> algo que muere en la migración. Opciones a evaluar entonces: que el propio
+> daemon redacte el traspaso (elimina el traspaso entre máquinas), o un endpoint
+> mínimo del daemon al que la laptop publique.
+
+**H2 — La rama del pickup nace de `main` y puede nacer ciega.** Si la sesión de
+origen trabajaba en otra rama o dejó commits sin integrar, el worktree nuevo no
+los ve. El traspaso debe llevar **rama y sha de origen**, y el daemon **advertir
+si `main` no los contiene** antes de arrancar (mismo criterio que la
+verificación de punta remota que salvó al `/merge`).
+
+**H3 — Generación del ID.** Lo genera **el script** (hash corto determinista
+sobre timestamp + proyecto), **nunca el modelo**: un ID inventado por el LLM
+puede colisionar o no ser reproducible, y es la clave con la que se recupera el
+traspaso.
 
 ## 11. Debug 2026-08-01 — "mándamelo" creaba archivos en vez de entregarlos
 

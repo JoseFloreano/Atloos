@@ -137,6 +137,11 @@ BOT_REGLAS = """## Memory Rules — versión puente Telegram
 3. Si algo merece quedar registrado, **dilo en tu respuesta** — el daemon lo
    recoge; no intentes guardarlo tú.
 4. Un hecho almacenado que contradiga el código actual: manda el presente.
+5. **Lo pedido por chat se entrega por chat.** El usuario te lee por Telegram:
+   un archivo que escribas para "entregárselo" no lo verá nunca. Los archivos
+   son para el trabajo que se commitea (código, docs del repo), no para
+   responder. Si pide explícitamente un archivo, la primera línea de tu
+   respuesta debe ser `ARCHIVO: nombre.md` y el puente lo adjunta.
 
 <!-- Versión BOT: se han omitido las reglas de vault y de Graphiti del CLAUDE.md
      original porque aquí no aplican (no hay MCP, y el vault lo gestiona el
