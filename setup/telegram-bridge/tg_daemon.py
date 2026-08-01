@@ -73,6 +73,32 @@ WRITE_TOOLS = (
 DENY_TOOLS = ("WebFetch,Bash(git commit:*),Bash(git push:*),Bash(git merge:*),"
               "Bash(git reset:*),Bash(git checkout:*),Bash(rm:*),Bash(curl:*),Bash(wget:*)")
 
+
+def secret_denies() -> str:
+    """Deny de lectura sobre las rutas sensibles conocidas de ESTA máquina.
+
+    Las LECTURAS no tienen frontera de directorio en ningún modo — el agente
+    puede leer cualquier ruta del disco (auditoría 08-01; el diseño §2.4 lo
+    prometía y no estaba implementado).
+
+    ⚠ Verificado el 2026-08-01: los patrones **glob NO funcionan**
+    (`Read(**/.env)` y `Read(*.env)` dejaron pasar la lectura). Solo bloquean
+    las **rutas absolutas** (`Read(C:\\ruta\\**)`), así que se calculan aquí en
+    vez de escribirse como comodín. Es mitigación de las rutas conocidas, no una
+    frontera general: eso sigue siendo un residual documentado.
+    """
+    home = Path.home()
+    objetivos = [p.parent for p in _env_candidates()]          # dirs de los .env
+    objetivos += [home / ".ssh", home / ".aws", home / ".gnupg",
+                  home / ".config" / "gh"]
+    reglas = []
+    for d in objetivos:
+        try:
+            reglas.append(f"Read({d}\\**)")
+        except Exception:
+            continue
+    return ",".join(dict.fromkeys(reglas))                     # sin duplicados
+
 WRITE_PREAMBLE = (
     "[Puente Telegram — modo escritura. Trabajas en un worktree aislado sobre la "
     "rama {branch}; el árbol del usuario no se toca. Ve anotando el avance en "
@@ -81,6 +107,8 @@ WRITE_PREAMBLE = (
     "NO hagas commit, push ni merge: de eso se encarga el daemon con confirmación "
     "del usuario.]\n\n"
 )
+
+SECRET_DENIES = ""      # se calcula en main() (rutas de ESTA máquina)
 
 MODELS = {
     "opus":   "el más capaz; caro (~0.1-1.9 USD por consulta observado)",
@@ -950,7 +978,7 @@ async def run_claude(prompt: str, cwd: str, session_id, model: str = "",
     # En lectura `dontAsk` es correcto (deniega toda escritura, validado en T1);
     # en escritura sería un agujero en el aislamiento que T2 promete.
     mode = "acceptEdits" if write_mode else "dontAsk"
-    deny = DENY_TOOLS
+    deny = DENY_TOOLS + ("," + SECRET_DENIES if SECRET_DENIES else "")
     if write_mode and repo_path:
         # Segunda barrera explícita sobre el repo del usuario: el worktree vive
         # en %LOCALAPPDATA%, así que esto no estorba al trabajo legítimo.
@@ -1233,6 +1261,9 @@ def main() -> None:
         pass
     setup_logging()
 
+    global SECRET_DENIES
+    SECRET_DENIES = secret_denies()
+    log.info("deny de secretos: %d rutas", len(SECRET_DENIES.split(",")) if SECRET_DENIES else 0)
     cfg = load_config()
     projects = load_projects()
     state = load_state()
