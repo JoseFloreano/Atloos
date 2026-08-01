@@ -4,7 +4,7 @@ adr-index.py — Genera ADRs/_INDEX.md desde el frontmatter de los ADRs.
 
 Por qué existe: `project-resume` leía los 3 ADRs más recientes enteros en cada
 arranque (~13 KB). Con el índice lee ~1 KB y abre el ADR completo solo cuando la
-tarea lo pide (RFD 09 §3.3).
+tarea lo pide (decisión: ADR-20260801-higiene-vault, en el vault).
 
 Determinista a propósito: sin LLM, sin marcas de tiempo, sin contadores. El
 archivo generado debe ser byte a byte idéntico entre corridas y entre laptops —
@@ -71,7 +71,7 @@ def leer_adr(ruta: str) -> dict:
         fecha = f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else "0000-00-00"
 
     # Solo `status:`. Aceptar `estado:` en español enmascararía justo el problema
-    # que este índice viene a destapar (RFD 09 §1.2).
+    # que este índice viene a destapar (ver ADR-20260801-higiene-vault).
     estado = fm.get("status", "")
     if not estado:
         estado = "unknown"
