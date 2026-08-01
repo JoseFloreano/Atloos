@@ -584,6 +584,15 @@ tags: [<tema>, <subsistema>]
 más. Nada de `estado:` en español — el vocabulario es el de MADR, en inglés.
 ```
 
+> **Resolución durante la ejecución:** el paso 3 de la skill **ya tenía** un
+> bloque de frontmatter (`title`, `tags`, `created`, `status`, `project`) que el
+> brief no mencionaba. El bloque nuevo lo **sustituye**, no se añade al lado —
+> dos ejemplos YAML en el mismo paso harían que un modelo eligiera uno al azar.
+> Se conserva `project:` (Obsidian lo usa aunque el script no) y se cambia
+> `created:` por `date:`: el script lee `date` e ignora `created`, y mantener las
+> dos sería tener dos claves para el mismo hecho, que acabarían divergiendo.
+> Debe quedar carácter por carácter igual al de `templates/adr.md` (Task 7).
+
 - [ ] **Step 2: Añade el paso de regeneración del índice**
 
 Justo después del paso 4 (el del wikilink en `_PROJECT.md`):
@@ -873,10 +882,14 @@ date: YYYY-MM-DD
 status: proposed
 # status: proposed | accepted | rejected | superseded-by: ADR-YYYYMMDD-<tema>
 summary: <UNA frase: qué se decidió. Es la celda que se lee en ADRs/_INDEX.md>
-tags: []
+tags: [<tema>, <subsistema>]
 project: <slug>
 ---
 ```
+
+Debe quedar **carácter por carácter igual** al bloque que la Task 4 pone en
+`adr-writer`: si la plantilla y la skill divergen, el frontmatter depende de por
+dónde entres a escribir el ADR.
 
 El cuerpo (Contexto / Decisión / Alternativas consideradas / Consecuencias) no cambia.
 
