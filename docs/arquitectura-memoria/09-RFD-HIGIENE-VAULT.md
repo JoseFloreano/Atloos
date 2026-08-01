@@ -188,7 +188,7 @@ entonces, primero tags + índice; carpetas solo si eso se queda corto.
 ### 4.2 Borrar el RFD en cuanto nace el ADR — rechazada
 
 Un RFD sigue siendo útil mientras la decisión está viva pero sin implementar (el
-`03-RFD-T3-T4` (ahora T5) es un registro de ideas, no hay nada que cosechar). El disparador
+`03-RFD-T5-DESARROLLO-PARALELO.md` es un registro de ideas, no hay nada que cosechar). El disparador
 correcto es "implementado **y auditado**", no "decidido".
 
 ### 4.3 Archivar en `40-Archive/` del vault — rechazada

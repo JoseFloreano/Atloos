@@ -4,8 +4,8 @@
 > **Estado:** propuesta aprobada para implementar; **no** aprobada como fase
 > (eso requiere auditoría externa tras las pruebas)
 > **Contexto previo:** `00-DISENO-TELEGRAM-BRIDGE.md` §2 · `ADR-20260801-puente-telegram`
-> **Continuación futura:** `03-RFD-T3-T4-DESARROLLO-PARALELO.md` (T5) ·
-> `05-RFD-T4-CONTINUAR-DESDE-AVISO.md` (T4)
+> **Continuación futura:** `03-RFD-T5-DESARROLLO-PARALELO.md` (T5) ·
+> `06-RFD-T4-CONTINUAR-DESDE-AVISO.md` (T4)
 > **Método:** brainstorming de Superpowers (spec previa al plan de implementación).
 >
 > **Qué cambió en v2:** se mantienen §3 (opción A), C0, C3 y C8. Se reescriben

@@ -170,6 +170,6 @@ el worktree nuevo — sería el mismo bug otra vez, ahora dentro de T4.
 
 *Renumeración 2026-08-01: lo que antes se mencionaba de forma informal como
 "T4" (desarrollo paralelo multi-proyecto) pasó a ser T5 —
-`03-RFD-T5-DESARROLLO-PARALELO.md` (el archivo conserva su nombre de
-archivo `03-RFD-T3-T4-DESARROLLO-PARALELO.md` por ahora; renombrarlo físico
+`03-RFD-T5-DESARROLLO-PARALELO.md` (renombrado físicamente el 2026-08-01,
+junto con este RFD, que pasó de `05-` a `06-` para no chocar con el T3).
 requiere `git mv`, fuera del alcance de bash permitido en este modo).*

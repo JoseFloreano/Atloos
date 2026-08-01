@@ -2,7 +2,7 @@
 
 > **Estado:** IDEA REGISTRADA — no diseñada, no aprobada. Horizonte: T3 tardío
 > o T5 (renumerado 2026-08-01: T4 pasó a ser "continuar en Telegram tras un
-> aviso", ver `05-RFD-T4-CONTINUAR-DESDE-AVISO.md`), después de que T2 lleve
+> aviso", ver `06-RFD-T4-CONTINUAR-DESDE-AVISO.md`), después de que T2 lleve
 > semanas estable y exista la mini PC.
 > **Origen:** idea del usuario (2026-08-01) al aprobar el modelo de worktrees
 > de T2.
