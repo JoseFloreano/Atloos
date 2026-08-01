@@ -34,8 +34,9 @@ lo durable vive en el vault. Esta skill cierra el pipeline
    |---|---|
    | Propuesta abierta / en discusión | se queda |
    | Aprobado pero **no** implementado | se queda |
-   | Implementado **y con las condiciones de auditoría cerradas** | cosecha → ADR → `git rm` |
-   | Abandonado | se borra sin ADR, con confirmación |
+   | Implementado, con la **auditoría abierta o con condiciones pendientes** | se queda — todavía NO se cosecha |
+   | Implementado **y con las condiciones de auditoría cerradas** | cosecha → ADR → **redirigir referencias (paso 5)** → `git rm` |
+   | Abandonado | **redirigir referencias (paso 5)** → borrar sin ADR, con confirmación |
 
    "Auditado" significa **condiciones de auditoría cerradas**, no "hubo
    auditoría". Un RFD con la auditoría aprobada *con condiciones* pendientes NO
