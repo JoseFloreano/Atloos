@@ -220,6 +220,16 @@ el móvil sin verde es la forma más fácil de romper algo sin verlo.
 Los git ops los ejecuta **el daemon**, nunca el agente (§3). No existe camino
 por el que el agente commitee, publique o mergee.
 
+**Gap detectado (2026-08-01) — falta `/pull`.** La tabla de arriba no tiene
+forma de traer `main` a una rama `tg/*` mientras la conversación sigue
+abierta. Una conversación larga (checkpoints de 30 min, sin caducidad — C2)
+puede quedarse trabajando días sobre una rama que nació de un `main` viejo;
+si mientras tanto se mergea otra cosa, la rama se desfasa y el `/merge`
+final llega con más conflicto del necesario. Pendiente diseñar `/pull`
+(rebase o merge de `main` dentro del worktree, con el mismo criterio de
+botón que C4: probablemente sin botón si es fast-forward, con aviso si trae
+conflictos). No entra en el alcance de T2 (§7); queda anotado para T3.
+
 ### C5. Concurrencia con la laptop *(v2 — resuelto por construcción)*
 
 v1 proponía "avisar si el árbol está sucio". Con worktrees **el problema
@@ -300,7 +310,8 @@ botón y verde), `/done` · checkpoints de 30 min · timeout de 90 min ·
 reconciliación al arrancar · auditoría ampliada · README y pruebas.
 
 **No entra** (T3+): triage con modelo barato, tope de costo, rate limiting,
-systemd, **desarrollo paralelo** (RFD 03).
+systemd, `/pull` (traer `main` a una rama `tg/*` en vuelo — gap de C4),
+**desarrollo paralelo** (RFD 03/T5).
 
 ## 8. Criterios de éxito
 
