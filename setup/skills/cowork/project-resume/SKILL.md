@@ -32,13 +32,16 @@ Cowork. **Solo lectura** — no escribe memoria ni commitea nada en este paso.
 2. Stage-a y lee `10-Projects/<nombre>/_PROJECT.md` desde la carpeta conectada.
    Si no existe, el proyecto no está enganchado → sugiere correr
    `project-onboard` desde Claude Code y para.
-3. Lista `ADRs/` y stage-a los **últimos ~3** (por la fecha `ADR-YYYYMMDD-*` en
-   el nombre, descendente); revisa `bugs/` por issues abiertos relevantes.
-   Stage-a solo lo que vas a leer — no la carpeta completa (anti-patrón de dump).
-4. *(Solo si graphiti-memory está disponible)* `search_facts("recent decisions
+3. Stage-a **solo `ADRs/_INDEX.md`** y léelo: una línea por decisión con su
+   `summary`. Stage-a un ADR completo únicamente si su fecha es ≥ la de la nota
+   más reciente de `sessions/`, o si la tarea de hoy lo toca. Si `_INDEX.md` no
+   existe, el proyecto no está migrado: stage-a los ~3 ADRs más recientes y
+   dilo.
+4. Revisa `bugs/` **solo los `status: open`** (`open | fixed | invalid | wontfix`).
+5. *(Solo si graphiti-memory está disponible)* `search_facts("recent decisions
    and known issues", group_ids=["<nombre>", "dev-global"])`.
-5. **Resume al usuario** en pocas líneas: estado actual, decisiones clave, bugs
+6. **Resume al usuario** en pocas líneas: estado actual, decisiones clave, bugs
    conocidos y pendientes; pregunta en qué quiere continuar.
-6. No modifiques nada aquí. Hallazgos → `memory-keeper`; decisiones →
+7. No modifiques nada aquí. Hallazgos → `memory-keeper`; decisiones →
    `adr-writer`; y recuerda que en Cowork todo cambio al vault debe
    **commitearse de vuelta** a la carpeta conectada al final.

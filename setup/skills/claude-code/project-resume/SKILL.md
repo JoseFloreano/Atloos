@@ -29,13 +29,23 @@ donde se quedó. **Solo lectura** — no escribe memoria en este paso.
 2. Lee `10-Projects/<nombre>/_PROJECT.md`. Si no existe, el proyecto no está
    enganchado → sugiere `project-onboard` y para. Si existe
    `codebase-map.md`, léelo también — es el mapa estructural del proyecto.
-3. Lee los **últimos ~3 ADRs** de `10-Projects/<nombre>/ADRs/` (por la fecha del
-   nombre, descendente) y revisa `bugs/` por issues abiertos relevantes a la
-   tarea de hoy.
-4. *(Solo si graphiti-memory está disponible)* `search_facts("recent decisions
+3. Lee `10-Projects/<nombre>/ADRs/_INDEX.md` — una línea por decisión, con su
+   `summary`. **No abras los ADRs completos por defecto.** Abre uno entero solo
+   si su fecha es ≥ la de la nota más reciente de `sessions/` (se decidió algo
+   que aún no viviste) o si la tarea de hoy lo toca directamente.
+   Si `_INDEX.md` no existe, el proyecto aún no está migrado: lee los ~3 ADRs
+   más recientes como antes y avisa al usuario de que falta generar el índice
+   (`py setup/scripts/adr-index.py <ruta ADRs>`).
+4. Revisa `bugs/` **solo los `status: open`** (vocabulario cerrado:
+   `open | fixed | invalid | wontfix`). Los cerrados se abren únicamente si la
+   tarea de hoy los roza.
+
+   > Presupuesto de arranque: si lo que vas a leer pasa de ~10 KB, algo está mal
+   > — dilo en vez de leerlo.
+5. *(Solo si graphiti-memory está disponible)* `search_facts("recent decisions
    and known issues", group_ids=["<nombre>", "dev-global"])`. Si no está,
    omítelo en silencio.
-5. **Resume al usuario** en pocas líneas: estado actual, decisiones clave, bugs
+6. **Resume al usuario** en pocas líneas: estado actual, decisiones clave, bugs
    conocidos y pendientes; pregunta en qué quiere continuar.
-6. No modifiques nada aquí. Para guardar hallazgos usa `memory-keeper`; para
+7. No modifiques nada aquí. Para guardar hallazgos usa `memory-keeper`; para
    decisiones de arquitectura, `adr-writer`.
