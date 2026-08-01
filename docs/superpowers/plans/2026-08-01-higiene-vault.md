@@ -363,11 +363,14 @@ def main() -> int:
     destino = os.path.join(carpeta, "_INDEX.md")
 
     if solo_check:
-        actual = ""
+        # Comparación en BYTES, no en texto: leer en modo texto traduciría un
+        # `\r\n` del disco a `\n` y --check diría "al día" sobre un archivo que
+        # ya no cumple el requisito de saltos `\n`.
+        actual = b""
         if os.path.isfile(destino):
-            with open(destino, "r", encoding="utf-8") as f:
+            with open(destino, "rb") as f:
                 actual = f.read()
-        if actual != contenido:
+        if actual != contenido.encode("utf-8"):
             print(f"desfasado: {destino} no coincide con los ADRs de la carpeta",
                   file=sys.stderr)
             return 2
@@ -390,6 +393,12 @@ cd "$REPO" && py setup/scripts/tests/test-adr-index.py
 ```
 
 Esperado: `16/16 casos OK` y exit 0. Si el caso 4b falla, revisa `primera_frase_de_decision`: debe cortar en el primer `". "` y quedarse solo con la primera frase.
+
+> **Delta de ejecución (ronda de fix 1):** la revisión añadió un caso **6c** —
+> un ADR cuyo `title:` lleva un `|`— como guarda de regresión frente a que
+> alguien vuelva a meter el título en la fila sin escapar. Con él, el total
+> final es **17/17**. Es una guarda, no un test de comportamiento: con el
+> formato correcto el título no llega a la fila y el caso no puede fallar.
 
 - [ ] **Step 5: Pruébalo contra los ADRs reales, sin escribir**
 
@@ -1049,7 +1058,7 @@ py setup/hooks/tests/test-memory-flush.py
 py setup/scripts/tests/test-adr-index.py
 ```
 
-Esperado: 12/12, 11/11 y 16/16.
+Esperado: 12/12, 11/11 y 17/17.
 
 - [ ] **Step 7: Prueba humana — `project-resume` en sesión nueva**
 
