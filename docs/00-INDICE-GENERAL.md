@@ -57,6 +57,16 @@ La serie original: por qué esta arquitectura de memoria y no otra.
 | [00 · Índice de la subserie](./bd-y-nube/00-INDICE-Y-RESUMEN-EJECUTIVO.md) | Alcance y capas del dominio |
 | [01 · Estrategias de uso con Claude](./bd-y-nube/01-ESTRATEGIAS-DE-USO-CON-CLAUDE.md) | Las 5 estrategias (docs 02–05 pendientes) |
 
+### 📁 [`subagentes/`](./subagentes/) — Workstreams paralelos con rama y worktree por frente
+
+| Doc | Tema |
+|-----|------|
+| [00 · Índice y resumen ejecutivo](./subagentes/00-INDICE-Y-RESUMEN-EJECUTIVO.md) | Hallazgos S1–S5: el mecanismo ya existe en 4 capas |
+| [01 · Mecanismos nativos y externos](./subagentes/01-MECANISMOS-NATIVOS-Y-EXTERNOS.md) | `--worktree`, Agent Teams, Superpowers instalado, plugin wshobson |
+| [02 · Patrón propuesto y riesgos](./subagentes/02-PATRON-PROPUESTO-Y-RIESGOS.md) | Flujo en 4 pasos, gate de merge, costo y riesgos |
+| [03 · Skills propuestas](./subagentes/03-SKILLS-PROPUESTAS.md) | `workstream-merge-gate`, `workstream-memory-briefing`, plan de adopción |
+| [04 · RFD de adopción](./subagentes/04-RFD-ADOPCION-WORKSTREAMS.md) | ⭐ La ruta: fases W0–W3 con gates, dónde vive el gate de merge |
+
 ## Convenciones
 
 - **Subserie nueva** = carpeta kebab-case con su propio `00-INDICE-*.md` (el patrón lo fijó `bd-y-nube/`).
