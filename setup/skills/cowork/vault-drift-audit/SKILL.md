@@ -32,9 +32,10 @@ e invisible — se caza con revisiones periódicas, no en caliente.)
    repo o pídele al usuario correrlo) contra el `updated` del `_PROJECT.md`.
    **Drift = código con actividad posterior al vault por más de ~7 días.**
 3. **Señales internas** (siempre): pendientes con checkboxes intactos por >30
-   días (pendientes zombis), `_PROJECT.md` sin sección "Próximo paso", ADRs
-   con `status: accepted` que otro ADR contradice sin marcarse `superseded`,
-   y `codebase-map.md` más viejo que el último cambio estructural conocido.
+   días (pendientes zombis), `_PROJECT.md` sin sección "Próximo paso", y
+   `codebase-map.md` más viejo que el último cambio estructural conocido.
+   **ADRs: todos los estados, no solo `accepted`** — `proposed` estancado >14
+   días y contradicciones sin `superseded` (tabla en `references/checks.md`).
    Además (detalle y comandos en `references/checks.md`): índice de ADRs
    desfasado (`adr-index.py --check`), `_PROJECT.md` por encima de 120 líneas o
    con secciones `## Hecho`, y notas de `sessions/` ya cosechadas con más de 30

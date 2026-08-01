@@ -1,7 +1,12 @@
 # RFD — Higiene de contexto y ciclo de vida del vault
 
 > **Versión:** v2 (2026-08-01) — corregida tras revisión adversarial (agente Fable)
-> **Estado:** propuesta validada, **lista para spec**. Nada implementado.
+> **Estado:** **Fase 1 IMPLEMENTADA** (2026-08-01, rama `feat/higiene-vault`):
+> script del índice, 5 skills, 2 plantillas y la migración de `claude-setup`
+> —`_PROJECT.md` de 188 a 106 líneas, arranque de 36 100 B a 7 861 B de suelo—.
+> **Pendiente:** fase 2 (migrar `alphadogs` y `tt1-revisor-chatbot`) y la
+> auditoría externa. **No se cosecha hasta que la auditoría cierre**, por la
+> regla de §3.5 de este mismo RFD.
 > **Contexto previo:** `01-OBSIDIAN-MEMORIA-EXTERNA.md` · `06-ARQUITECTURA-FINAL-RECOMENDADA.md` ·
 > `07-HALLAZGOS-CRITICOS-REFERENCIA-RAPIDA.md` · **`../telegram/05-RFD-T3-MEMORIA-Y-TOKENS.md`** ·
 > skills `project-resume`, `session-close`, `adr-writer`, `design-doc-harvest`, `vault-drift-audit`

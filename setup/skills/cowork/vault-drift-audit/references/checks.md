@@ -41,10 +41,27 @@ notas migradas comparten todas el mismo timestamp de sync)— es candidata a
 `10-Projects/<proyecto>/_archive/`. **Proponer, nunca mover sin aprobación**:
 el usuario decide qué deja de estar a la vista.
 
-## Frontmatter de ADRs
+## Ciclo de vida de los ADRs — todos los estados, no solo `accepted`
+
+El vocabulario es el de MADR: `proposed | accepted | rejected | superseded-by: …`.
+Un ADR **nace `proposed`** y eso es correcto: refleja la verdad. Lo que la
+auditoría vigila es que no se quede ahí para siempre.
 
 ```bash
-grep -L "^status:" <vault>/10-Projects/<proyecto>/ADRs/ADR-*.md
+grep -H "^status:" <vault>/10-Projects/<proyecto>/ADRs/ADR-*.md
+grep -L "^status:" <vault>/10-Projects/<proyecto>/ADRs/ADR-*.md   # sin estado
 ```
 
-Cualquier archivo listado es invisible para el chequeo de ADRs contradictorios.
+| Señal | Hallazgo |
+|---|---|
+| `proposed` con **más de 14 días** | **Decisión en el limbo.** Reportar: hay que aprobarla o rechazarla. Un `proposed` eterno es una decisión que nadie tomó y que el equipo cree tomada. |
+| `accepted` contradicho por otro ADR sin `superseded-by:` | El registro durable se contradice consigo mismo. |
+| Sin `status:` | Invisible para todos los chequeos anteriores. |
+| `rejected` o `superseded-by:` | Nada que hacer: el ciclo se cerró bien. |
+
+La fecha para el umbral de 14 días sale del `date:` del frontmatter, no del
+mtime (el vault se sincroniza por OneDrive y los mtime no son fiables).
+
+**Por qué así y no forzando `accepted` al nacer:** falsear el estado para que
+la auditoría lo vea sería mentirle al registro. La auditoría cubre el ciclo
+completo; el estado dice la verdad.
