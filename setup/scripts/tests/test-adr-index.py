@@ -134,13 +134,22 @@ def main():
         make_adr(d, "ADR-20260719-pipe.md",
                  "title: Con pipe\nstatus: accepted\nsummary: Elegimos A | no B")
         run(d)
-        linea = [l for l in index_text(d).splitlines() if "Con pipe" in l][0]
+        linea = [l for l in index_text(d).splitlines() if "Elegimos" in l][0]
         check("6. '|' del summary escapado", r"A \| no B" in linea, linea)
         # Ojo: el backslash no impide que split('|') corte — hay que quitar los
         # escapes antes de contar columnas, o el test falla por su propia culpa.
         sin_escapes = linea.replace(r"\|", "")
         check("6b. la fila mantiene 4 columnas",
               len([c for c in sin_escapes.split("|") if c.strip()]) == 4, linea)
+
+        # --- Caso 6c: pipe en el titulo ---
+        make_adr(d, "ADR-20260720-titulo-pipe.md",
+                 "title: Eleccion A | o B\nstatus: accepted\nsummary: Usando opcion A")
+        run(d)
+        linea_tp = [l for l in index_text(d).splitlines() if "Usando opcion A" in l][0]
+        sin_escapes_tp = linea_tp.replace(r"\|", "")
+        check("6c. titulo con pipe no rompe columnas",
+              len([c for c in sin_escapes_tp.split("|") if c.strip()]) == 4, linea_tp)
 
     # --- Caso 9: errores ---
     with tempfile.TemporaryDirectory(prefix="adridx3-") as tmp:
@@ -152,6 +161,7 @@ def main():
 
     fallos = [n for n, ok, _ in results if not ok]
     print(f"\n{len(results) - len(fallos)}/{len(results)} casos OK")
+    # Nota: ahora son 17 casos (6c cubre titulo con pipe)
     if fallos:
         print("FALLAN: " + ", ".join(fallos))
     return 1 if fallos else 0

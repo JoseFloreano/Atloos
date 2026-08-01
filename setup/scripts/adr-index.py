@@ -110,7 +110,7 @@ def construir_indice(adrs: list, proyecto: str) -> str:
     ]
     for a in adrs:
         lineas.append(
-            f"| {a['fecha']} | {escapar(a['estado'])} | [[{a['archivo']}]] {a['titulo']} | {escapar(a['resumen'])} |")
+            f"| {a['fecha']} | {escapar(a['estado'])} | [[{a['archivo']}]] | {escapar(a['resumen'])} |")
     return "\n".join(lineas) + "\n"
 
 
@@ -140,11 +140,11 @@ def main() -> int:
     destino = os.path.join(carpeta, "_INDEX.md")
 
     if solo_check:
-        actual = ""
+        actual_bytes = b""
         if os.path.isfile(destino):
-            with open(destino, "r", encoding="utf-8") as f:
-                actual = f.read()
-        if actual != contenido:
+            with open(destino, "rb") as f:
+                actual_bytes = f.read()
+        if actual_bytes != contenido.encode("utf-8"):
             print(f"desfasado: {destino} no coincide con los ADRs de la carpeta",
                   file=sys.stderr)
             return 2
