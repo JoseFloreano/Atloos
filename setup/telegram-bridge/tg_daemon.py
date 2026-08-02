@@ -874,6 +874,10 @@ async def cmd_push(update, context):
         if not r["pushed"]:
             await reply(cfg, chat_id, f"ℹ️ No publicado: {r['reason']}")
             return
+        if r.get("forzado"):
+            await reply(cfg, chat_id, "ℹ️ La rama venía rebasada (`/pull`), así que se "
+                                      "reescribió en el remoto con `--force-with-lease`. "
+                                      "Si había un PR abierto, se actualiza solo.")
         base = await gitops.default_branch(projects[project]["path"])
         pr = await gitops.ensure_pr(conv["worktree"], conv["branch"], base,
                                     conv["label"][:70] or conv["branch"])

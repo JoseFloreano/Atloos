@@ -404,11 +404,41 @@ async def remote_head(worktree: str, branch: str) -> str:
 
 
 async def push_branch(worktree: str, branch: str) -> dict:
-    """Publica la rama. Requiere remoto configurado."""
+    """Publica la rama. Requiere remoto configurado.
+
+    Tras un `/pull` la rama se rebasa, así que su historia deja de ser
+    descendiente de lo publicado y git rechaza el push (`non-fast-forward`).
+    En ese caso se reintenta con **`--force-with-lease`**, que sobrescribe SOLO
+    si el remoto sigue donde creíamos: si alguien más publicó ahí mientras
+    tanto, falla en vez de pisarlo. Un `--force` a secas sí lo pisaría.
+
+    El forzado se limita a las ramas `tg/*` (las del bot). Nunca se fuerza una
+    rama del usuario: el daemon no tiene por qué reescribir su historia.
+    """
     if not await has_remote(worktree):
         return {"pushed": False, "reason": "el repo no tiene remoto configurado"}
-    await git(["push", "-u", "origin", branch], worktree, timeout=180)
-    return {"pushed": True}
+
+    rc, out, err = await run(["git", "push", "-u", "origin", branch], worktree, timeout=180)
+    if rc == 0:
+        return {"pushed": True}
+
+    salida = (err or out)
+    rebasada = "non-fast-forward" in salida or "fetch first" in salida or "rejected" in salida
+    if not rebasada:
+        return {"pushed": False, "reason": salida[:250]}
+    if not branch.startswith(f"{BRANCH_PREFIX}/"):
+        return {"pushed": False,
+                "reason": f"la rama '{branch}' divergió del remoto y NO es una rama "
+                          f"del bot: no la fuerzo. Resuélvelo en la laptop."}
+
+    rc2, out2, err2 = await run(
+        ["git", "push", "--force-with-lease", "-u", "origin", branch], worktree, timeout=180)
+    if rc2 == 0:
+        return {"pushed": True, "forzado": True}
+    return {"pushed": False,
+            "reason": f"la rama divergió (rebase) y el push forzado también falló — "
+                      f"probablemente alguien publicó en ella mientras tanto:\n"
+                      f"{(err2 or out2)[:200]}"}
 
 
 async def ensure_pr(worktree: str, branch: str, base: str, title: str) -> dict:
