@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-progress.py — Seguimiento en vivo de una invocación (RFD 04).
+progress.py — Seguimiento en vivo de una invocación.
+Decisión: ADR-20260801-puente-telegram, sección "Progreso en vivo" (vault).
 
 Consume los eventos de `claude -p --output-format stream-json --verbose` y
 mantiene el estado de la tarea en curso. No sabe nada de Telegram: el daemon le

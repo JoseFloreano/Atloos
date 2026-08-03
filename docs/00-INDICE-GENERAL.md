@@ -74,12 +74,12 @@ La línea de trabajo activa. Los RFDs llevan su estado en la cabecera Y aquí.
 
 | Doc | Estado | Tema |
 |-----|--------|------|
-| [00 · Diseño del puente](./telegram/00-DISENO-TELEGRAM-BRIDGE.md) | Implementado (T0–T3) | Diseño original; lo vigente está en los RFDs 02–06 |
+| [00 · Diseño del puente](./telegram/00-DISENO-TELEGRAM-BRIDGE.md) | Implementado (T0–T3) | Diseño original; lo vigente vive en los ADRs del vault (ver abajo) y en los RFDs 03 y 06 |
 | [01 · Mini PC servidor 24/7](./telegram/01-MINIPC-SERVIDOR-24-7.md) | Cerrado | Investigación de compra (Beelink SER8) |
-| [02 · RFD T2: modo escritura](./telegram/02-RFD-T2-MODO-ESCRITURA.md) | Auditado con condiciones; cosecha tras `/push` de prueba | Worktrees, permisos, merge con botón |
+| ~~02 · RFD T2: modo escritura~~ | ✅ **Implementado, auditado y cosechado** (2026-08-01) → `ADR-20260801-puente-telegram`, sección «Modo escritura (T2)». Las 4 condiciones (A1/A2/A3 + pasada manual) cerradas | Worktrees, permisos ortogonales, merge con botón y verde |
 | [03 · RFD T5: desarrollo paralelo](./telegram/03-RFD-T5-DESARROLLO-PARALELO.md) | Idea registrada | Multi-proyecto en vuelo (antes T4) |
-| [04 · RFD: progreso en vivo](./telegram/04-RFD-PROGRESO-EN-VIVO.md) | **Implementado y auditado — cosechable** | Panel, alertas proactivas, stream-json |
-| [05 · RFD T3: memoria y tokens](./telegram/05-RFD-T3-MEMORIA-Y-TOKENS.md) | **Implementado y auditado — cosechable** | vaultio, perfil bot de skills, E1–E3 |
+| ~~04 · RFD: progreso en vivo~~ | ✅ **Implementado, auditado y cosechado** (2026-08-01) → `ADR-20260801-puente-telegram`, sección «Progreso en vivo» | Panel, alertas proactivas, stream-json |
+| ~~05 · RFD T3: memoria y tokens~~ | ✅ **Implementado, auditado y cosechado** (2026-08-01) → `ADR-20260801-bot-memoria-y-perfil` (ADR nuevo) | vaultio, perfil bot de skills, E1/E3 refutados |
 | [06 · RFD T4: continuar desde aviso](./telegram/06-RFD-T4-CONTINUAR-DESDE-AVISO.md) | Idea validada (3 huecos anotados) | /pickup con traspaso de contexto |
 
 ### 📁 [`subagentes/`](./subagentes/) — Workstreams paralelos con rama y worktree por frente

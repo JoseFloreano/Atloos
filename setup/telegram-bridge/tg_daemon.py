@@ -6,7 +6,7 @@ Long polling saliente: sin URL pública, sin túnel, detrás de NAT. Cada mensaj
 invoca `claude -p --output-format json` desde el cwd correspondiente, así que la
 sesión hereda el CLAUDE.md y las Memory Rules de ESE proyecto.
 
-T2 — modo escritura (RFD 02 v2):
+T2 — modo escritura (`ADR-20260801-puente-telegram`):
   · **1 conversación = 1 rama = 1 worktree.** El bot NUNCA escribe en el árbol
     de trabajo del usuario; trabaja en `%LOCALAPPDATA%\\claude-tg-worktrees\\…`
     sobre una rama `tg/<fecha>-<slug>` creada al primer `/write on`.
@@ -585,7 +585,7 @@ async def cmd_model(update, context):
 
 
 async def cmd_progress(update, context):
-    """/progress · /progress live · /progress off (RFD 04).
+    """/progress · /progress live · /progress off (ADR-20260801-puente-telegram).
 
     NO está sujeto al lock de un vuelo por chat: su utilidad es precisamente
     mientras algo corre.
@@ -896,7 +896,7 @@ async def cmd_push(update, context):
 
 
 async def cmd_pull(update, context):
-    """Trae `main` a la rama de la conversación (gap del RFD 02 C4)."""
+    """Trae `main` a la rama de la conversación (gap del `ADR-20260801-puente-telegram` (gate de merge))."""
     cfg, projects, state = (context.bot_data[k] for k in ("cfg", "projects", "state"))
     if not guard(update, cfg):
         return
@@ -1116,7 +1116,7 @@ async def cmd_done(update, context):
     if conv.get("worktree"):
         # C4 — la nota la escribe EL DAEMON, y ANTES de borrar el worktree:
         # después ya no se podrían leer ni los commits ni .tg/progress.md.
-        # Solo en /done: un /write off es una pausa, no un final (RFD 05 §6.2).
+        # Solo en /done: un /write off es una pausa, no un final (ADR-20260801-bot-memoria-y-perfil).
         try:
             base = await gitops.default_branch(projects[project]["path"])
             commits = await gitops.commits_ahead(conv["worktree"], conv["branch"], base)
@@ -1291,7 +1291,9 @@ async def run_claude(prompt: str, cwd: str, session_id, model: str = "",
 
 async def monitor_loop(cfg: dict, chat_id: int, tracker: ProgressTracker,
                        worktree: str, bot, live: bool) -> None:
-    """Vigila la invocación: **alertas siempre**, panel solo si `live` (RFD 04 P6).
+    """Vigila la invocación: **alertas siempre**, panel solo si `live`.
+
+    Las alertas proactivas son la pieza no-opcional (ADR-20260801-puente-telegram).
 
     Las alertas son la red que no depende de que el usuario esté mirando; el
     panel es comodidad. Por eso este bucle corre aunque el panel esté apagado.
@@ -1328,7 +1330,7 @@ async def monitor_loop(cfg: dict, chat_id: int, tracker: ProgressTracker,
 
 
 async def close_panel(bot, chat_id: int, tracker: ProgressTracker) -> None:
-    """Edición FINAL del panel con el resumen (RFD 04 P3/P5)."""
+    """Edición FINAL del panel con el resumen (ADR-20260801-puente-telegram)."""
     if tracker.panel_msg_id is None:
         return
     try:
@@ -1373,7 +1375,7 @@ async def on_message(update, context):
 
     INFLIGHT[chat_id] = now_ts()
     cs = chat_state(state, chat_id)
-    live = bool(cs.get("progress_live"))          # apagado por defecto (RFD 04 §8.1)
+    live = bool(cs.get("progress_live"))          # apagado por defecto (ADR del puente)
     tracker = ProgressTracker(
         branch=conv.get("branch") or "", model=cs["model"] or "default",
         max_turns=int(MAX_TURNS_WRITE if write_mode else MAX_TURNS),
