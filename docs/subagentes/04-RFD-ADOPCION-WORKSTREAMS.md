@@ -6,7 +6,7 @@
 > el flag nativo, porque la ruta nativa no es configurable); **C7 añadido** en
 > v3 (el anti-drift del vault con N frentes sobre el mismo proyecto).
 > W0 queda cerrado salvo declarar el comando de test.
-> **Contexto:** `00`–`03` de esta subserie · RFD 02 §4/C4 del puente Telegram ·
+> **Contexto:** `00`–`03` de esta subserie · `ADR-20260801-puente-telegram` (worktree + gate de merge) del puente Telegram ·
 > doc 12 (concurrencia) · doc 13 §2 (plugin agent-teams) · R2 de la auditoría.
 > **Método:** evaluación de la investigación 00–03; formato de RFD del repo
 > (problema → objetivos → casos de diseño → alcance → criterios de éxito).
@@ -17,7 +17,7 @@
 
 La investigación 00–03 dejó claro **qué existe**, pero no **qué hacemos**.
 Y el riesgo de no decidir es concreto: cuatro capas de mecanismo disponibles
-(nativo, Superpowers, plugin externo, RFD 02) invitan a montar infraestructura
+(nativo, Superpowers, plugin externo, `ADR-20260801-puente-telegram`) invitan a montar infraestructura
 antes de tener un caso de uso que la pague. Sería el anti-patrón que el propio
 doc 02 de la serie de memoria describe — sofisticación por delante de la
 necesidad.
@@ -39,7 +39,7 @@ reglas. Toda la inversión propia debe ir ahí, no al aislamiento.
 aprendió esta lección (R2 de la auditoría: "las instrucciones son
 probabilísticas; los hooks son garantía"). Una skill que dice "no mergees sin
 test verde" es exactamente el tipo de instrucción que se degrada en sesiones
-largas — que es cuando más se usa este patrón. El RFD 02 lo resolvió sacando
+largas — que es cuando más se usa este patrón. El `ADR-20260801-puente-telegram` lo resolvió sacando
 los git ops del agente y poniéndolos en el daemon; en una sesión normal de
 Claude Code no hay daemon, así que la garantía tiene que venir de otro lado.
 
@@ -96,7 +96,7 @@ tolerable porque en esa ventana el humano sigue en el loop de cada merge
 
 ## 5. Casos de diseño
 
-### C1. Unidad de aislamiento: worktree manual del RFD 02, NO el flag nativo
+### C1. Unidad de aislamiento: worktree manual del `ADR-20260801-puente-telegram`, NO el flag nativo
 
 *(Decidido tras verificar la pregunta 2 del §9 — 2026-08-01. Esta decisión se
 invirtió respecto al primer borrador de este RFD.)*
@@ -110,11 +110,11 @@ decir, reconocido como limitación y sin implementar.
 **Por qué importa aquí:** *todos* los repos del caso de uso viven dentro de
 OneDrive (`OneDrive\Documentos\...\Proyectos\`), igual que este. Usar el flag
 nativo metería un checkout completo por frente dentro de la carpeta
-sincronizada — exactamente lo que H8/A1 prohíben y lo que el RFD 02 evitó a
+sincronizada — exactamente lo que H8/A1 prohíben y lo que el `ADR-20260801-puente-telegram` evitó a
 propósito.
 
 **Decisión:** worktrees creados a mano fuera de OneDrive
-(`%LOCALAPPDATA%\...`), reutilizando el patrón del RFD 02 §4. No es un rodeo:
+(`%LOCALAPPDATA%\...`), reutilizando el patrón del `ADR-20260801-puente-telegram` (worktree por conversación). No es un rodeo:
 ese patrón **ya está escrito, probado y corriendo** — este mismo RFD se está
 redactando dentro de uno de esos worktrees. `EnterWorktree`/`ExitWorktree`
 siguen sirviendo para *moverse* entre worktrees ya creados; lo que no se usa
@@ -137,7 +137,7 @@ Por fases, y a propósito:
 
 ### C3. Criterio de merge (contenido del gate)
 
-Heredado de C4 del RFD 02, con una diferencia: allá el botón caduca a 5 min
+Heredado de C4 del `ADR-20260801-puente-telegram`, con una diferencia: allá el botón caduca a 5 min
 porque la UI es Telegram; aquí la confirmación es conversacional.
 
 1. Verificación verde (tests/lint del proyecto) **después del último commit**
@@ -155,7 +155,7 @@ worktree por sí sola. `workstream-memory-briefing` (doc 03 §2.2) **solo se
 escribe si se llega a W2** con subagentes lanzados programáticamente — antes
 de eso sería una skill sin usuario.
 
-⚠ Excepción heredada del RFD 02 §4: si el worktree se crea en una ruta donde
+⚠ Excepción heredada del `ADR-20260801-puente-telegram` (worktree por conversación): si el worktree se crea en una ruta donde
 `CLAUDE.md` no viaja (está gitignorado como artefacto de instancia), el frente
 nace **sin Memory Rules**. Verificar esto en W1 es criterio de éxito (§7.3).
 
@@ -216,7 +216,7 @@ investigación 00–03 queda como registro de por qué no.
    resuelven fuera de OneDrive (C1).
 2. **W1 (aislamiento):** un archivo modificado y sin commitear en un frente
    queda byte-idéntico tras trabajar en el otro (hash antes/después) — mismo
-   criterio que usó el RFD 02 §8.2.
+   criterio que usó el `ADR-20260801-puente-telegram`.
 3. **W1 (memoria):** cada frente ve las Memory Rules de su proyecto
    (comprobable pidiéndole que las cite).
 4. **W1 (valor):** el trabajo en paralelo terminó antes que la estimación
@@ -253,7 +253,7 @@ investigación 00–03 queda como registro de por qué no.
 2. ~~¿La ruta de `.claude/worktrees/` es configurable?~~ **RESUELTA
    (2026-08-01): NO.** Hardcodeada bajo la raíz del repo; feature requests
    abiertas sin implementar. Consecuencia: C1 invertido — se usa el worktree
-   manual del RFD 02, no el flag nativo. Ver C1.
+   manual del `ADR-20260801-puente-telegram`, no el flag nativo. Ver C1.
 3. ~~¿"Rama protegida" es siempre `main`?~~ **RESUELTA (usuario,
    2026-08-01): sí, siempre `main`.** Simplifica el hook de W3: no necesita
    configuración por repo, la rama destino es constante.

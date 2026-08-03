@@ -48,7 +48,7 @@ Las cuatro capas, de más nativa a más nuestra:
 3. PLUGIN          wshobson `agent-teams` (evaluado en doc 13, NO instalado)
    EXTERNO         → presets de equipo + file-ownership + interface contracts
 
-4. PROPIO          RFD 02 §4/C4 del puente Telegram (worktree por conversación,
+4. PROPIO          `ADR-20260801-puente-telegram` (worktree + gate de merge) del puente Telegram (worktree por conversación,
    (YA ESCRITO)     gate de /merge con test verde + squash + botón caduco)
                    → la única pieza que ya resuelve ESTE problema con
                      NUESTRAS reglas, aunque hoy vive atada al bot
@@ -56,7 +56,7 @@ Las cuatro capas, de más nativa a más nuestra:
 
 ## Hallazgos (S1–S5)
 
-**S1 — El repo ya diseñó esto una vez, para otro canal.** El RFD 02 §4
+**S1 — El repo ya diseñó esto una vez, para otro canal.** El `ADR-20260801-puente-telegram` (worktree por conversación)
 (worktree por conversación, fuera de OneDrive, `CLAUDE.md` copiado al
 worktree) y su C4 (`/merge` con test verde obligatorio + squash + botón que
 caduca a 5 min) son exactamente el patrón "workstream aislado → un agente
@@ -99,7 +99,7 @@ No construir un mecanismo de aislamiento nuevo. Usar `claude --worktree` /
 Agent Teams (nativo) + los 4 skills de Superpowers ya instalados como base;
 evaluar instalar el plugin `agent-teams` de wshobson cuando el caso de uso
 aparezca de verdad; y escribir **dos piezas propias delgadas**:
-`workstream-merge-gate` (generaliza el `/merge` del RFD 02 fuera del puente) y
+`workstream-merge-gate` (generaliza el `/merge` del `ADR-20260801-puente-telegram` fuera del puente) y
 `workstream-memory-briefing` (cierra el hueco S4). Ninguna reemplaza lo que ya
 existe — rellenan exactamente lo que falta.
 

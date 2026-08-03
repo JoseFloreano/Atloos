@@ -25,7 +25,7 @@ propios.
 aparecen como tools disponibles (deferred) en esta misma sesión de Cowork —
 no es solo documentación externa, es una capacidad presente aquí y ahora.
 
-Es el mecanismo que el RFD 02 §4 ya adaptó a mano (worktree por conversación,
+Es el mecanismo que el `ADR-20260801-puente-telegram` (worktree por conversación) ya adaptó a mano (worktree por conversación,
 fuera de OneDrive) antes de que esta investigación confirmara que hay una
 tool nativa para entrar/salir de worktrees sin reinventar el `git worktree add`.
 
@@ -64,9 +64,9 @@ que exista. Trae presets (`/team-spawn feature|review|debug|fullstack|
 research|security|migration`) y `--plan-first` para revisar la descomposición
 antes de lanzar implementadores. MIT, plugin activo a jul-2026.
 
-## 4. Ya escrito en este repo (atado al puente Telegram): RFD 02
+## 4. Ya escrito en este repo (atado al puente Telegram): `ADR-20260801-puente-telegram`
 
-El RFD 02 (§4 y C4) diseñó — para el puente, no en general — el mismo patrón:
+El `ADR-20260801-puente-telegram` (§4 y C4) diseñó — para el puente, no en general — el mismo patrón:
 
 - Worktree por conversación, creado perezoso, fuera de OneDrive.
 - `CLAUDE.md` copiado al worktree al crearlo (está gitignorado como artefacto

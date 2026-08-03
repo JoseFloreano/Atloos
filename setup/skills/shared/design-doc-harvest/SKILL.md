@@ -89,8 +89,11 @@ lo durable vive en el vault. Esta skill cierra el pipeline
    desde ahí.
 
    Actualiza cada cita para que apunte al ADR resultante. Solo cuando el grep
-   deje de devolver referencias huérfanas se borra el archivo. (Precedente: el
-   RFD 02 lo citaban 9 documentos.)
+   deje de devolver referencias huérfanas se borra el archivo. (Precedente real:
+   al cosechar el RFD 02 hubo que redirigir **31 líneas en 10 archivos** — casi
+   todas en una subserie distinta, `subagentes/`, que seguía en vuelo. Las
+   referencias entrantes casi siempre son más de las que parecen: cuéntalas con
+   el grep, no de memoria.)
 6. **Borra los docs cosechados** — SOLO después de que el/los ADR existen y el
    usuario aprobó la lista exacta de archivos:
    ```bash

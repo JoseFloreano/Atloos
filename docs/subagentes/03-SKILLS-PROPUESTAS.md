@@ -19,7 +19,7 @@
 
 ### 2.1 `workstream-merge-gate` (`shared/`) — prioridad 🔴 alta
 
-Generaliza el `/merge` del RFD 02 C4 fuera del contexto del puente Telegram,
+Generaliza el `/merge` del `ADR-20260801-puente-telegram` (gate de merge) fuera del contexto del puente Telegram,
 para usarse igual desde una sesión normal de Claude Code cuando un agente
 coordinador integra el trabajo de uno o más workstreams.
 
@@ -36,7 +36,7 @@ coordinador integra el trabajo de uno o más workstreams.
 **Requisitos (regla 3 del `_template`):** comando de test declarado por el
 usuario o inferido del proyecto; fallback si no hay ninguno: avisar y no
 mergear (igual que "sin `test` en `projects.json`" bloquea `/merge` en el
-RFD 02).
+`ADR-20260801-puente-telegram`).
 
 ### 2.2 `workstream-memory-briefing` (`shared/`) — prioridad 🟠 media
 
@@ -73,7 +73,7 @@ del `ecosistema/16`).
 
 | Skill | Carpeta | Origen | Prioridad |
 |---|---|---|---|
-| `workstream-merge-gate` | `shared/` | Propia (generaliza RFD 02 C4) | 🔴 Alta |
+| `workstream-merge-gate` | `shared/` | Propia (generaliza `ADR-20260801-puente-telegram` (gate de merge)) | 🔴 Alta |
 | `workstream-memory-briefing` | `shared/` | Propia (cierra hueco S4) | 🟠 Media |
 | `agent-teams` (plugin) | marketplace, no `claude-skills/` | wshobson, ya evaluado doc 13 | 🟡 Instalar solo cuando el caso de uso aparezca |
 

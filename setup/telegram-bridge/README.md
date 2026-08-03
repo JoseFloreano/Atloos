@@ -194,7 +194,7 @@ El arranque 24/7 con `systemd` llega cuando exista la mini PC — no lo montes a
 
 # Fase T2 — Modo escritura (`/write`)
 
-Desarrollo real desde el móvil. Diseño completo: `docs/telegram/02-RFD-T2-MODO-ESCRITURA.md`.
+Desarrollo real desde el móvil. Diseño completo: `ADR-20260801-puente-telegram`.
 
 ## La idea en una frase
 

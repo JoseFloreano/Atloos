@@ -7,7 +7,7 @@
 > propuso crear una copia con rama, igual que T2, pero disparada desde un
 > aviso.
 > **Contexto:** `00-DISENO-TELEGRAM-BRIDGE.md` §1 (vía 1, avisos) ·
-> `02-RFD-T2-MODO-ESCRITURA.md` (aislamiento por worktree) ·
+> `ADR-20260801-puente-telegram` (aislamiento por worktree) ·
 > `03-RFD-T5-DESARROLLO-PARALELO.md` (T5 — antes T4, renumerado hoy para
 > dejar este hueco libre).
 

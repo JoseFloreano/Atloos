@@ -6,7 +6,7 @@
 > semanas estable y exista la mini PC.
 > **Origen:** idea del usuario (2026-08-01) al aprobar el modelo de worktrees
 > de T2.
-> **Contexto:** `02-RFD-T2-MODO-ESCRITURA.md` (v2, worktrees) · ADR del puente.
+> **Contexto:** `ADR-20260801-puente-telegram` · ADR del puente.
 
 ---
 
@@ -76,4 +76,4 @@ es el síntoma de que la cola secuencial ya cuesta más que el diseño de esto.
 
 *RFD de captura: registra la idea y sus fronteras para no re-pensarla desde
 cero. Promoverla a diseño = sesión de brainstorming + actualización de este
-doc a "propuesta" con los casos C del formato del RFD 02.*
+doc a "propuesta" con los casos C del formato del `ADR-20260801-puente-telegram`.*

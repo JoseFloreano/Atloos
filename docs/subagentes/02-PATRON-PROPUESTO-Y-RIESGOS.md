@@ -42,9 +42,9 @@ propia. Antes de montar nada:
 El paso 4 es la pieza que ninguna capa externa resuelve con nuestro criterio:
 es donde entra `workstream-merge-gate` (doc 03).
 
-## 3. El gate de merge (generaliza C4 del RFD 02, fuera del puente)
+## 3. El gate de merge (generaliza C4 del `ADR-20260801-puente-telegram`, fuera del puente)
 
-El RFD 02 ya lo resolvió para el contexto Telegram; el criterio traslada
+El `ADR-20260801-puente-telegram` ya lo resolvió para el contexto Telegram; el criterio traslada
 igual a una sesión normal de Claude Code:
 
 | Regla | Por qué |
@@ -53,7 +53,7 @@ igual a una sesión normal de Claude Code:
 | Orden de integración explícito, uno a la vez | Dos frentes mergeados "a la vez" sobre la misma base pueden generar conflictos que ninguno de los dos vio en su propio worktree |
 | Squash por defecto | La historia de `main` queda legible; el detalle del frente vive en su rama hasta que se borra |
 | Confirmación humana si el repo/rama destino es sensible | Mismo criterio de C4: botón solo para lo que toca `main` de verdad — no para cada commit intermedio |
-| Limpieza tras integrar (worktree + rama local) | Evita el mismo problema de worktrees huérfanos que el RFD 02 ya resolvió con reconciliación al arrancar |
+| Limpieza tras integrar (worktree + rama local) | Evita el mismo problema de worktrees huérfanos que el `ADR-20260801-puente-telegram` ya resolvió con reconciliación al arrancar |
 
 ## 4. Qué mecanismo usar según el caso
 
@@ -78,7 +78,7 @@ igual a una sesión normal de Claude Code:
   detectarlo).
 - **OneDrive**: si el repo vive sincronizado (como este), los worktrees de
   workstreams deben crearse **fuera** de la carpeta de OneDrive — mismo
-  criterio H8/A1 que ya aplicó el RFD 02 (símlinks/archivos con lock no
+  criterio H8/A1 que ya aplicó el `ADR-20260801-puente-telegram` (símlinks/archivos con lock no
   sincronizan bien; un checkout completo dentro de OneDrive añade tormentas
   de sync). Verificar dónde resuelve `.claude/worktrees/` por defecto en cada
   máquina antes de usarlo con un repo dentro de OneDrive.
