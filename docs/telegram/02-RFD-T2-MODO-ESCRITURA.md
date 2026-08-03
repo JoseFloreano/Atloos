@@ -1,8 +1,32 @@
 # RFD — Fase T2 del puente Telegram: modo escritura
 
 > **Versión:** v2 (2026-08-01) — revisada por el usuario y el auditor
-> **Estado:** propuesta aprobada para implementar; **no** aprobada como fase
-> (eso requiere auditoría externa tras las pruebas)
+> **Estado:** **IMPLEMENTADO y con las condiciones de auditoría CERRADAS**
+> (2026-08-01). Cosechable → `ADR-20260801-puente-telegram`.
+>
+> Las cuatro condiciones de la auditoría externa
+> ([[2026-08-01-auditoria-t2]] §"Condiciones para aprobar el RFD 02"):
+>
+> | Condición | Estado | Evidencia |
+> |---|---|---|
+> | **A1** — `merge_squash` local deja el árbol sucio en conflicto | ✅ cerrada | `merge --abort` → `reset --merge` con reporte honesto; verificada por el auditor en main ([[2026-08-01-auditoria-t3-y-diseno-t4]]) |
+> | **A2** — línea >8 MB del stream deja los datos en el buffer y bucle | ✅ cerrada | drenado del buffer con tope de 50 descartes; verificada en main |
+> | **A3** — TOCTOU del botón de `/merge` | ✅ cerrada | re-verificación de HEAD y árbol limpio DENTRO del callback (daemon 1014-1018); verificada en main |
+> | **Pasada manual por Telegram, incl. `/push`** | ✅ cerrada | ver abajo |
+>
+> **Cumplimiento de la pasada manual (evidencia recogida el 2026-08-01):** el
+> flujo no se probó — **se usó**. `git ls-remote --heads origin "tg/*"` devuelve
+> **3 ramas publicadas** por el daemon, y `gh pr list --state merged` **3 PRs
+> creados y mergeados** desde el móvil (#1 17:35Z, #2 22:09Z, #3 00:23Z). `/push`
+> es justo lo que publica la rama y abre el PR: no hay forma de que existan sin
+> haberse ejecutado. El flujo completo `/write on → /commit → /test → /pull →
+> /merge → /done` se ejercitó end-to-end, y el PR #3 se integró **sin pérdida**
+> (punta local = remota, `diff origin/main..rama` vacío).
+>
+> Se consideró innecesario un `/push` adicional de laboratorio: repetiría en
+> condiciones artificiales lo que ya ocurrió tres veces en uso real. Lo que sí
+> queda pendiente y se anota como no cubierto: el caso **"repo ajeno"** que el
+> auditor citaba como riesgo residual medio-bajo.
 > **Contexto previo:** `00-DISENO-TELEGRAM-BRIDGE.md` §2 · `ADR-20260801-puente-telegram`
 > **Continuación futura:** `03-RFD-T5-DESARROLLO-PARALELO.md` (T5) ·
 > `06-RFD-T4-CONTINUAR-DESDE-AVISO.md` (T4)
