@@ -47,7 +47,7 @@ invocarlas manualmente ni configurar nada más.
 Las sesiones del daemon de Telegram **no son un cuarto directorio**, sino un
 **subconjunto** de `shared/` + `claude-code/`. Cada `description` entra al
 contexto en *cada* invocación, así que cargar las 29 cuesta tokens en tareas
-donde muchas no aplican jamás (RFD `docs/telegram/05-RFD-T3-MEMORIA-Y-TOKENS.md`).
+donde muchas no aplican jamás (decisión: `ADR-20260801-bot-memoria-y-perfil`, en el vault).
 
 **Criterio de inclusión.** Entra si sirve para *leer o escribir código desde un
 worktree aislado*. Queda fuera si:

@@ -19,7 +19,9 @@ correcciones inmediatamente debajo.
 ## ⚠ CORRECCIONES (revisión del 2026-08-01)
 
 Este RFD se escribió durante la depuración y varias conclusiones no sobreviven a
-la verificación. Se corrige en vez de taparse (misma convención que el RFD 05):
+la verificación. Se corrige en vez de taparse (la misma convención que se usó
+al corregir el §1.1 del RFD de memoria del bot, hoy cosechado a
+`ADR-20260801-bot-memoria-y-perfil`):
 lo tachado se queda para que se vea qué se creyó y por qué era falso.
 
 | # | Afirmación original | Veredicto | Evidencia |

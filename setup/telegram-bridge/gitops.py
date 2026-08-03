@@ -5,7 +5,7 @@ gitops.py — Operaciones de git y worktrees para el puente Telegram (T2).
 No sabe nada de Telegram: recibe rutas y devuelve datos. Toda la política de
 "quién puede hacer qué" vive en el daemon; aquí solo está el cómo.
 
-Modelo (RFD 02 v2 §4): **1 conversación = 1 rama = 1 worktree**.
+Modelo (`ADR-20260801-puente-telegram` (worktree por conversación)): **1 conversación = 1 rama = 1 worktree**.
 
     Repo del usuario (OneDrive)     Worktrees del bot (LOCAL, fuera de OneDrive)
     main + su árbol de trabajo      %LOCALAPPDATA%\\claude-tg-worktrees\\<proj>\\<slug>
@@ -150,7 +150,7 @@ BOT_REGLAS = """## Memory Rules — versión puente Telegram
 
 
 def bot_claude_md(texto: str) -> str:
-    """CLAUDE.md del proyecto → versión para el bot (C3 del RFD 05).
+    """CLAUDE.md del proyecto → versión para el bot (ADR-20260801-bot-memoria-y-perfil).
 
     Conserva las convenciones del proyecto —que es lo que hace útil el
     CLAUDE.md— y **sustituye entera** la sección de Memory Rules por una que el
@@ -199,7 +199,8 @@ async def create_worktree(repo: str, project: str, slug: str) -> dict:
     await git(["worktree", "add", "-b", branch, str(dest), base], repo)
 
     # CLAUDE.md: gitignorado, hay que copiarlo o el worktree nace sin las
-    # convenciones del proyecto. C3 (RFD 05): se copia una VERSIÓN BOT, sin las
+    # convenciones del proyecto. Decisión 3 del ADR-20260801-bot-memoria-y-perfil:
+    # se copia una VERSIÓN BOT, sin las
     # órdenes que en el puente no aplican — leer/escribir el vault (lo cubren
     # C1b y C4) y Graphiti (no hay MCP aquí). Menos órdenes imposibles = menos
     # contexto y menos intentos fallidos.
@@ -463,7 +464,7 @@ async def ensure_pr(worktree: str, branch: str, base: str, title: str) -> dict:
 async def pull_base(worktree: str, base: str) -> dict:
     """Trae `base` (main) a la rama del worktree, con rebase.
 
-    Cierra el gap del RFD 02 C4: una conversación larga trabaja días sobre un
+    Cierra el gap del `ADR-20260801-puente-telegram` (gate de merge): una conversación larga trabaja días sobre un
     `main` viejo y llega al `/merge` con más conflicto del necesario.
 
     Rebase y no merge, porque la rama es desechable y su historia se aplasta al

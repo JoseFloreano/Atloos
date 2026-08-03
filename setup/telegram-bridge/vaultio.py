@@ -2,7 +2,8 @@
 """
 vaultio.py — Lectura y escritura del vault **por el daemon**, nunca por el agente.
 
-RFD 05 C1(b) y C4. El daemon es código nuestro, no un LLM: puede tocar el vault
+Decisión: ADR-20260801-bot-memoria-y-perfil (vault).
+El daemon es código nuestro, no un LLM: puede tocar el vault
 sin abrir la puerta que T2 cerró. Dos direcciones:
 
 - **C1b (leer)**: extracto de `_PROJECT.md` + `codebase-map.md` que se antepone
@@ -21,7 +22,7 @@ from datetime import date
 from pathlib import Path
 
 PROJECT_BUDGET = 2000      # chars del extracto de _PROJECT.md
-MAP_BUDGET = 2000          # chars del extracto de codebase-map.md (RFD 05 §6.3)
+MAP_BUDGET = 2000          # chars del extracto de codebase-map.md (presupuesto del ADR)
 
 
 def vault_root() -> Path:
@@ -163,7 +164,7 @@ def write_session_note(project: str, branch: str, commits: list, estado: str,
 
     La escribe el DAEMON, no el agente: cumple el objetivo de dejar memoria sin
     darle al LLM permiso de escritura sobre el vault. Solo en `/done` — un
-    `/write off` es una pausa, no un final (RFD 05 §6.2).
+    `/write off` es una pausa, no un final (ADR-20260801-bot-memoria-y-perfil).
     """
     d = project_dir(project)
     if not d.parts or not d.is_dir():
