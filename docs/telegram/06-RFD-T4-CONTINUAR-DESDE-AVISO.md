@@ -123,6 +123,10 @@ formalice.
 
 ## 10. Preguntas cerradas (auditoría 2026-08-01)
 
+*Las tres las respondió el auditor externo; evidencia y razonamiento completos
+en la nota del vault `2026-08-01-auditoria-t3-y-diseno-t4`, sección "Mejoras
+baratas + respuestas a sus preguntas abiertas".*
+
 1. **Expiración: 7 días**, con purga al arrancar el daemon — mismo patrón que
    la reconciliación de worktrees, que ya demostró que limpiar al arranque es
    el momento natural.
