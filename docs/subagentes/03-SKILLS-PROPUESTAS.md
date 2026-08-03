@@ -12,7 +12,7 @@
 | Repartir un plan entre tareas independientes | `subagent-driven-development` (Superpowers) | Cubre la orquestación dentro de la sesión |
 | Verificar antes de decir "listo" | `verification-before-completion` (Superpowers) | El gate de merge (§3 doc 02) lo asume como prerrequisito, no lo reemplaza |
 | Decidir cómo integrar una rama terminada | `finishing-a-development-branch` (Superpowers) | Genérico — nuestro `workstream-merge-gate` (abajo) lo especializa con nuestros criterios, no lo sustituye |
-| File-ownership + contratos de interfaz al descomponer | `parallel-feature-development` del plugin `agent-teams` (wshobson, evaluado en doc 13, no instalado) | Instalar cuando el caso de uso aparezca — protocolo doc 10 §2 |
+| File-ownership + contratos de interfaz al descomponer | `parallel-feature-development` del plugin `agent-teams` (wshobson, evaluado en doc 13, no instalado) | Instalar cuando el caso de uso aparezca — protocolo `skills/10` §2 |
 | Elegir modelo/costo por etapa | `model-benchmark`, `token-audit` (ya existentes) | Aplicar antes del fan-out, no crear una versión "workstreams" de lo mismo |
 
 ## 2. Skills propias nuevas — huecos verificados
@@ -67,7 +67,7 @@ La necesidad ("no abrir 6 frentes sin saber el costo") ya la resuelve
 `token-audit` si se invoca antes de decidir cuántos workstreams abrir — no
 amerita una skill nueva. Revisar solo si en el uso real se repite 3+ veces
 pedir esto y `token-audit` no encaja bien (regla de "3 repeticiones → skill"
-del doc 16 de la subserie ecosistema).
+del `ecosistema/16`).
 
 ## 3. Tabla resumen
 
@@ -93,7 +93,7 @@ del doc 16 de la subserie ecosistema).
    `CLAUDE.md`.
 4. **Instalar el plugin `agent-teams` de wshobson** únicamente cuando la
    descomposición con file-ownership explícito empiece a doler a mano —
-   protocolo de importación completo (doc 10 §2, doc 05 §2) antes de copiar
+   protocolo de importación completo (`skills/10` §2, doc 05 §2) antes de copiar
    nada a `claude-skills/`.
 
 ## 5. Nota de honestidad (H10)

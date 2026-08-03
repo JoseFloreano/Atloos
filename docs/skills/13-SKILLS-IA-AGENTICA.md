@@ -3,7 +3,7 @@
 
 > **Fecha:** Julio 2026
 > **Método:** 4 líneas de investigación paralelas sobre fuentes primarias (repos clonados/fetcheados, docs oficiales de Anthropic, leaderboards vivos). Análisis comparativo por categoría y — donde la investigación confirmó huecos — **4 skills propias ya creadas** adaptadas al setup (§6).
-> Aplica el protocolo de auditoría (doc 10 §2) antes de instalar cualquier tercero de esta lista.
+> Aplica el protocolo de auditoría (`skills/10` §2) antes de instalar cualquier tercero de esta lista.
 
 ---
 
@@ -45,7 +45,7 @@ Para n8n: `czlonkowski/n8n-skills` (autor de n8n-mcp, MIT, con carpeta `evaluati
 | ECC continuous-learning-v2 | Aprendizaje "instinct-based" vía hooks con confidence scores | Complejo, hooks-pesado, estilo propio | Observar; no adoptar aún |
 | muratcankoylan (15 skills) | Empaquetado educativo de la doctrina oficial de context engineering | Educativo más que operativo | Destilado a nuestra skill `context-engineering` (§6) — las 15 quedan como lectura de profundización |
 
-**Nuestra respuesta:** `token-audit` (creada) — pequeña, operativa, con la vara de NUESTROS presupuestos ya investigados (H3, H4, límites del doc 10 §8.3) y medición real (`/context`, `/cost`, ccusage — v18, 14.2k stars, MIT, el estándar de facto para gasto local). Medir → recortar → re-medir, nunca estimar.
+**Nuestra respuesta:** `token-audit` (creada) — pequeña, operativa, con la vara de NUESTROS presupuestos ya investigados (H3, H4, límites del `skills/10` §8.3) y medición real (`/context`, `/cost`, ccusage — v18, 14.2k stars, MIT, el estándar de facto para gasto local). Medir → recortar → re-medir, nunca estimar.
 
 ## 4. Meta-skills (crear/evaluar skills) — comparativa
 
@@ -89,7 +89,7 @@ Para n8n: `czlonkowski/n8n-skills` (autor de n8n-mcp, MIT, con carpeta `evaluati
 Cadena natural que queda armada para automatizaciones:
 `agentic-system-design` (diseño) → `context-engineering` (el contexto/prompt de cada pieza) → `model-benchmark` (elegir modelo por etapa) → `council` (si hay duda) → `adr-writer` (registrar) → construir → `token-audit` (afinar el gasto).
 
-## 7. Plan de adopción externa (con protocolo doc 10 §2)
+## 7. Plan de adopción externa (con protocolo `skills/10` §2)
 
 1. **Ya**: instalar `skill-creator` de anthropics/skills en Claude Code (oficial, Apache-2.0).
 2. **Cuando uses Agent Teams**: plugin `agent-teams` de wshobson (marketplace, no a claude-skills/).

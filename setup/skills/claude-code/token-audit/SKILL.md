@@ -26,7 +26,7 @@ Medir primero, recortar después — nunca al revés.
 |-----------|-------------|--------|
 | CLAUDE.md global + proyecto | < 500 tokens c/u | H4 (3,847→312 = 91.9% menos overhead) |
 | MCPs conectados | ≤ 8-10, con tool search activo | H3 (10-20k tokens/MCP sin lazy loading) |
-| Descripciones de skills | ~40-60 tokens c/u; sin solapes | doc 10 §8.3 |
+| Descripciones de skills | ~40-60 tokens c/u; sin solapes | `skills/10` §8.3 |
 | Instrucciones totales siempre-en-contexto | degradación sobre ~150 instrucciones | H4 |
 
 ## Pasos

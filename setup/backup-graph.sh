@@ -4,7 +4,7 @@
 #  Cron sugerido: 0 */4 * * * /path/to/backup-graph.sh
 #  También: ejecutar SIEMPRE antes de cambiar de laptop.
 #
-#  Fixes de auditoría (doc 09):
+#  Fixes de auditoría (`auditoria/09`):
 #   - Manifest JSON válido (A7: antes incrustaba INFO multilínea)
 #   - Aviso de fork si el último backup lo escribió otra máquina (R1)
 #   - Restore SOLO via restore-graph.sh (A3: con AOF activo, copiar

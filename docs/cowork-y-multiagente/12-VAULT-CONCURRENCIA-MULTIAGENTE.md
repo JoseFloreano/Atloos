@@ -116,4 +116,4 @@ Resultado esperado tras aplicar la regla: cero archivos nuevos no solicitados, y
 
 ---
 
-*Doc 12 de la serie. Relacionado: doc 08 §6 (Cowork y el puente), doc 07 H2/H8 (OneDrive), auditoría R2 (enforcement > instrucciones — la regla del §5 es el mismo principio aplicado a concurrencia).*
+*Doc 12 de la serie. Relacionado: `cowork-y-multiagente/08` §6 (Cowork y el puente), doc 07 H2/H8 (OneDrive), auditoría R2 (enforcement > instrucciones — la regla del §5 es el mismo principio aplicado a concurrencia).*

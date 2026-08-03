@@ -3,7 +3,7 @@
 
 > **Fecha:** Julio 2026
 > **Contexto:** Continúa la subserie `skills/` (docs 10, 11, 13, 15). El doc 15 ya cubrió diseño de APIs **REST/HTTP** (`api-design`, `shared/`); este doc cubre lo que faltaba: cómo Claude debe escribir clases y código Python idiomático en general, y cómo diseñar la **API de una librería o módulo Python** (superficie de import, naming, excepciones) — un problema distinto y complementario al de REST.
-> **Método:** Investigación web sobre fuentes primarias (Real Python, PEPs, artículos de autores con nombre propio, plugins oficiales de terceros) + lectura del sistema de skills existente (`setup/skills/README.md`, `_template/SKILL.md`, `skill-forge`). Protocolo de auditoría del doc 10 §2 vigente para toda adopción externa.
+> **Método:** Investigación web sobre fuentes primarias (Real Python, PEPs, artículos de autores con nombre propio, plugins oficiales de terceros) + lectura del sistema de skills existente (`setup/skills/README.md`, `_template/SKILL.md`, `skill-forge`). Protocolo de auditoría del `skills/10` §2 vigente para toda adopción externa.
 > **Resultado:** 2 skills propias creadas (§5) + 1 plugin externo recomendado para adoptar tal cual (§4).
 > **Stacks objetivo:** el mismo de siempre — este doc añade Python al catálogo ya cubierto para React/Flutter/C++.
 
@@ -16,7 +16,7 @@
 | Clases y modelado de datos | Múltiples fuentes coinciden en un árbol de decisión claro (dataclass/attrs/Pydantic/clase simple) + SOLID adaptado a duck typing (Real Python) | Destilar, no instalar — es criterio, no tooling | ⭐ `python-conventions` (shared) |
 | Desarrollo general (toolchain) | Plugin oficial **`astral@astral-sh`** (uv + Ruff + ty) | **Adoptar tal cual** — es del mismo equipo que las herramientas | Nada propio — sería duplicar |
 | Diseño de APIs de librería Python | Ben Hoyt, *"Designing Pythonic library APIs"* — la mejor síntesis encontrada, sin equivalente empaquetado como skill | Destilar — no existe como skill en ningún repo verificado | ⭐ `python-api-design` (shared) |
-| Testing Python | Ya cubierto en doc 11 §2.4 (`honnibal/claude-skills`: hypothesis, mutation-testing) | No duplicar | — |
+| Testing Python | Ya cubierto en `skills/11` §2.4 (`honnibal/claude-skills`: hypothesis, mutation-testing) | No duplicar | — |
 
 **El hallazgo que gobierna esta investigación:** a diferencia de REST (doc 15, donde el consenso ya viene empaquetado en varias skills de terceros), el diseño de *clases* y de *APIs de librería Python* es terreno de artículos y guías de estilo, no de skills ya escritas. Nadie empaquetó "cuándo uso `@dataclass` vs `attrs` vs Pydantic" ni "cómo estructurar el `__init__.py` de tu paquete" como SKILL.md — dos huecos reales que llenamos con piezas propias cortas.
 
@@ -77,7 +77,7 @@ El equipo que mantiene **uv** y **Ruff** (Astral) publica un plugin oficial de C
 /plugin install astral@astral-sh
 ```
 
-No tiene sentido escribir una skill propia de "cómo usar uv/ruff" — sería duplicar trabajo del propio fabricante de la herramienta, exactamente el mismo criterio que ya aplicamos al descartar duplicados de Superpowers en el doc 11.
+No tiene sentido escribir una skill propia de "cómo usar uv/ruff" — sería duplicar trabajo del propio fabricante de la herramienta, exactamente el mismo criterio que ya aplicamos al descartar duplicados de Superpowers en el `skills/11`.
 
 ### 3.2 Estructura de proyecto recomendada
 
@@ -85,7 +85,7 @@ El patrón que converge en las fuentes 2026: `uv init <proyecto> --package` gene
 
 ### 3.3 Lo que NO se repite aquí
 
-- **Testing** (Hypothesis, mutation testing, pytest): ya está en el doc 11 §2.4 — `honnibal/claude-skills`.
+- **Testing** (Hypothesis, mutation testing, pytest): ya está en el `skills/11` §2.4 — `honnibal/claude-skills`.
 - **Hooks de enforcement** (auto-lint post-escritura, bloquear `pip`/`python` suelto a favor de `uv run`): el patrón ya está documentado en `setup/hooks/README.md` y en el doc de arquitectura 05 §6 — aplica el mismo principio: la skill dice qué hacer, el hook lo garantiza. Un hook `PostToolUse` típico para Python:
 
 ```json

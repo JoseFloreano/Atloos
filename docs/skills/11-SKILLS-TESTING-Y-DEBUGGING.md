@@ -2,7 +2,7 @@
 ## Qué adoptar, qué ya cubre Superpowers, y los huecos para skills propias
 
 > **Fecha:** Julio 2026
-> **Contexto:** Continúa el doc 10 (catálogo de diseño/desarrollo) con las dos categorías que faltaban. Mismo método: fuentes primarias fetcheadas (SKILL.md leídos en raw), solapes verificados contra lo ya instalado (Superpowers, skills propias). Aplica el **protocolo de auditoría del doc 10 §2** antes de instalar cualquier cosa de esta lista.
+> **Contexto:** Continúa el `skills/10` (catálogo de diseño/desarrollo) con las dos categorías que faltaban. Mismo método: fuentes primarias fetcheadas (SKILL.md leídos en raw), solapes verificados contra lo ya instalado (Superpowers, skills propias). Aplica el **protocolo de auditoría del `skills/10` §2** antes de instalar cualquier cosa de esta lista.
 > **Stacks objetivo:** React/Next.js, Flutter/Dart, Python, C++.
 
 ---
@@ -33,7 +33,7 @@ Verificado su SKILL.md: usa **Playwright en Python** (no MCP) con `scripts/with_
 
 Del Testing Handbook de ToB (appsec.guide): fuzzers (libFuzzer, AFL++, libAFL, cargo-fuzz, Atheris para Python), harness writing, **AddressSanitizer**, coverage analysis, diccionarios, OSS-Fuzz, más Semgrep/CodeQL y cripto (Wycheproof, constant-time). CC BY-SA 4.0, activo 2026. **Solape con Superpowers: cero** — nada de esto existe ahí.
 **Matiz:** casi todas asumen binarios instalados (LLVM/clang, AFL++). Adoptar el subset del stack real: `addresssanitizer`, `coverage-analysis`, `fuzzing-harness` (C++), `atheris` (Python) — el resto cuando se necesite.
-**Destino:** `claude-code/` con prefijo `tob-` (atribución CC BY-SA, igual que doc 10 §8.1).
+**Destino:** `claude-code/` con prefijo `tob-` (atribución CC BY-SA, igual que `skills/10` §8.1).
 
 ### 2.3 ToB `property-based-testing` ⭐ el más portable
 
@@ -44,7 +44,7 @@ Verificado: hub de decisión + referencias (roundtrip, idempotencia, invariantes
 
 | Stack | Skill | Veredicto |
 |-------|-------|-----------|
-| Flutter | `flutter-tester` (Harishwarrior, MIT) — unit/widget/integration con Mockito y Riverpod | Adoptar a `claude-code/`. **Sin golden tests** — hueco confirmado por segunda vez (doc 10 §6.4) |
+| Flutter | `flutter-tester` (Harishwarrior, MIT) — unit/widget/integration con Mockito y Riverpod | Adoptar a `claude-code/`. **Sin golden tests** — hueco confirmado por segunda vez (`skills/10` §6.4) |
 | Python | `honnibal/claude-skills` (MIT) — `hypothesis-tests`, `mutation-testing` (manual: Claude introduce bugs deliberados para auditar la suite), `try-except` | Adoptar selectivamente; repo chico (17 commits) pero autor de spaCy. La mutation manual complementa TDD como auditoría de calidad de suite sin binarios |
 | React/Next | Nada dominante fuera de webapp-testing; skills de Vitest/RTL solo en agregadores sin fuente primaria | **No adoptar de terceros** — skill propia corta con tus convenciones RTL/Vitest cuando toque proyecto React |
 | C++ | Sin skill de referencia para GoogleTest/Catch2 | Cubrir con ToB (sanitizers/fuzzing) + skill propia de conventions cuando toque |
@@ -67,7 +67,7 @@ Cuatro fases: investigación de causa raíz (reproducir, cambios recientes, traz
 
 - **ECC build-resolvers** (affaan-m, MIT): agentes por lenguaje (cpp, pytorch, rust...) + `/build-fix` — enfocados en errores de *build*, no de runtime. Complementa limpio.
 - **wshobson plugins Debugging (6) / Diagnostics (4) / Incident Response (4)**: agentes delegables (`error-detective`, `distributed-debugging`) — evaluar como plugin.
-- **jeremylongshore** (mega-marketplace): `memory-leak-detector`, `log-analysis-tool`, `application-profiler` — usar solo como **cantera** (doc 10: volumen ≠ calidad; auditar duro antes de copiar cualquier pieza).
+- **jeremylongshore** (mega-marketplace): `memory-leak-detector`, `log-analysis-tool`, `application-profiler` — usar solo como **cantera** (`skills/10`: volumen ≠ calidad; auditar duro antes de copiar cualquier pieza).
 
 ### 3.3 Sinergia con tus skills
 
@@ -117,4 +117,4 @@ Confirmado por búsqueda exhaustiva que NO existen como skill mantenida — cand
 
 ---
 
-*Doc 11 de la serie (sustituye al reporte temporal de bugfixes, ya retirado). Ejecutar adopciones con el protocolo del doc 10 §2: leer línea por línea, congelar copia en git, sync, probar triggers.*
+*Doc 11 de la serie (sustituye al reporte temporal de bugfixes, ya retirado). Ejecutar adopciones con el protocolo del `skills/10` §2: leer línea por línea, congelar copia en git, sync, probar triggers.*

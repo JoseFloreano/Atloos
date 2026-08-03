@@ -100,7 +100,7 @@ Esta tabla es ese sitio.
 |---|---|---|---|---|---|
 | `graphiti/.env` | `%LOCALAPPDATA%\graphiti\.env`<br>*(Unix: `~/.local/share/graphiti/.env`)* | `/etc/claude-setup/graphiti.env` | `DEEPSEEK_API_KEY`, `OPENAI_API_KEY` (embedder, obligatoria), `GOOGLE_API_KEY`/`GROQ_API_KEY`/`ANTHROPIC_API_KEY` (rutas alternativas), `FALKORDB_PASSWORD` | `docker compose --env-file` → MCP server + FalkorDB | DeepSeek: platform.deepseek.com → API keys → crear nueva y borrar la vieja. OpenAI: platform.openai.com → API keys → revoke. Gemini: aistudio.google.com. Groq: console.groq.com. `FALKORDB_PASSWORD`: la eliges tú; cámbiala y reinicia el contenedor |
 | `claude-telegram/.env` | `%LOCALAPPDATA%\claude-telegram\.env`<br>*(Unix: `~/.config/claude-telegram/.env`)* | `/etc/claude-setup/telegram.env` | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_ALLOWED_USER_ID` | `notify_telegram.py` (T0) y `tg_daemon.py` (T1) | Token: **@BotFather → `/revoke`** invalida el viejo al instante y da uno nuevo. `TELEGRAM_CHAT_ID` y `TELEGRAM_ALLOWED_USER_ID` **no son secretos rotables** — son identificadores tuyos; si cambian, se editan a mano |
-| `deepseek/.env` ⚠ **transitorio** | `%LOCALAPPDATA%\deepseek\.env` | *(no llega al server)* | `DEEPSEEK_API_KEY` | Nada en producción: solo el sondeo del doc 08 §9-§10 | Igual que arriba. **Al activar Graphiti, mover la key a `graphiti/.env` y borrar este archivo** — existe solo porque el bootstrap aún no había generado el `.env` de Graphiti |
+| `deepseek/.env` ⚠ **transitorio** | `%LOCALAPPDATA%\deepseek\.env` | *(no llega al server)* | `DEEPSEEK_API_KEY` | Nada en producción: solo el sondeo del `arquitectura-memoria/08` §9-§10 | Igual que arriba. **Al activar Graphiti, mover la key a `graphiti/.env` y borrar este archivo** — existe solo porque el bootstrap aún no había generado el `.env` de Graphiti |
 
 **Toda pieza nueva que necesite un secreto añade su fila aquí en el MISMO PR que
 la crea.** Un secreto sin fila es un secreto que nadie sabrá rotar.
@@ -167,7 +167,7 @@ sincronizar archivos abiertos y puede generar:
 - Conflictos de sync si dos laptops tienen el container corriendo simultáneamente
 - Locks que bloquean la sync de OneDrive silenciosamente
 
-### Estrategia A — Recomendada (y la que implementan los scripts tras la auditoría doc 09)
+### Estrategia A — Recomendada (y la que implementan los scripts tras la auditoría `auditoria/09`)
 
 ```
 Datos vivos:  %LOCALAPPDATA%\graphiti\data   (Win)   ← disco LOCAL, nunca OneDrive

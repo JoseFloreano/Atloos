@@ -2,7 +2,7 @@
 ## Decisión consolidada de la subserie bd-y-nube
 
 > **Fecha:** Julio 2026
-> **Insumos:** Docs 01–04 de esta subserie, reglas de `setup/skills/README.md` y `_template/SKILL.md`, anti-patrones del doc 06 y hallazgos R2/R4 de la auditoría (doc 09).
+> **Insumos:** Docs 01–04 de esta subserie, reglas de `setup/skills/README.md` y `_template/SKILL.md`, anti-patrones del doc 06 y hallazgos R2/R4 de la auditoría (`auditoria/09`).
 > **Formato:** Igual que el doc 06 de la serie principal — catálogo, protocolo, fases con checkboxes, métricas y anti-patrones.
 
 ---

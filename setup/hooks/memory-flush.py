@@ -2,7 +2,7 @@
 """
 memory-flush.py — Hook PreCompact de Claude Code (matchers manual y auto).
 
-Capa 3 del sistema anti-drift (R5 del doc 16, "ahorro de tokens"): compactar es
+Capa 3 del sistema anti-drift (R5 del `ecosistema/16`, "ahorro de tokens"): compactar es
 el momento donde se pierde lo que nunca se escribió. Si la sesión editó CÓDIGO
 (flag de mark-code-dirty.py) y el vault sigue desfasado, este hook devuelve el
 recordatorio de volcar pendientes/decisiones ANTES de que el contexto se resuma.

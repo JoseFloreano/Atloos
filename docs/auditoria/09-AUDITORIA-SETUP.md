@@ -42,7 +42,7 @@ Toda la arquitectura se deriva de un solo principio correcto y verificado por te
 Los docs tratan los números de vendors como marketing, citan el caso donde Mem0 publicó datos desfavorables a sí mismo, y marcan las métricas de reducción de tokens como "casos individuales, no benchmarks controlados". Esa cultura es el mejor antídoto contra decisiones basadas en hype.
 
 ### F3. La capa durable es agnóstica al producto
-Markdown en OneDrive funciona igual para Claude Code, Cowork, el humano y cualquier herramienta futura. Es inspeccionable, versionable y sin vendor lock-in. Fue la decisión que hizo trivial extender el setup a Cowork (doc 08).
+Markdown en OneDrive funciona igual para Claude Code, Cowork, el humano y cualquier herramienta futura. Es inspeccionable, versionable y sin vendor lock-in. Fue la decisión que hizo trivial extender el setup a Cowork (`cowork-y-multiagente/08`).
 
 ### F4. Graphiti es opcional y está marcado como tal
 Prioridad media, con sección explícita "Cuándo NO usar Graphiti" y el vault duplicando las decisiones importantes (ADRs). Si Graphiti falla o se abandona, la memoria esencial sobrevive. Pocos setups tienen esta degradación elegante diseñada.
@@ -137,7 +137,7 @@ Las reglas de `memory-instructions.md` (group_ids obligatorios, carpetas de otro
 
 Dos degradaciones lentas: (a) episodios cuyo texto se guarda pero cuyas entidades no se extraen (H7) — el grafo parece crecer pero no responde; (b) hechos y notas que envejecen sin invalidarse (el vault no tiene TTL; `_PROJECT.md` se actualiza "al cerrar sesión" solo si el agente cumple).
 *Probabilidad: alta a 6+ meses. Impacto: medio — memoria que devuelve cosas viejas es peor que no tener memoria.*
-**Mitigación:** la scheduled task quincenal de Cowork ya propuesta en doc 08 §7, con checklist concreto: (1) muestrear 5 episodios recientes de Graphiti y verificar que `search_facts` los encuentra; (2) listar notas del vault con `updated` > 90 días y estado `active` para revisión; (3) detectar duplicados > 80%. La regla 5 de memory-instructions ("si el hecho contradice el presente, confía en el presente y actualiza") es la defensa en caliente — mantenerla.
+**Mitigación:** la scheduled task quincenal de Cowork ya propuesta en `cowork-y-multiagente/08` §7, con checklist concreto: (1) muestrear 5 episodios recientes de Graphiti y verificar que `search_facts` los encuentra; (2) listar notas del vault con `updated` > 90 días y estado `active` para revisión; (3) detectar duplicados > 80%. La regla 5 de memory-instructions ("si el hecho contradice el presente, confía en el presente y actualiza") es la defensa en caliente — mantenerla.
 
 ### R4. Seguridad — superficie de red y de inyección
 
@@ -234,7 +234,7 @@ Definir hoy, por escrito, cuándo se abandona un componente — evita la falacia
 |----------|------------------|--------|
 | El comportamiento AOF-ignora-RDB aplica a la versión exacta de FalkorDB usada (A3) | Simulacro de restore con datos de prueba | Fase 3, día 1 |
 | `REDIS_ARGS` es la variable que la imagen `falkordb/falkordb` respeta (vs `FALKORDB_ARGS`) | `docker exec ... redis-cli CONFIG GET appendonly` tras arrancar | Fase 3, día 1 |
-| El MCP local de Graphiti se proxea a Cowork vía desktop app (doc 08 §6.3) | Registrar el MCP y probar desde sesión Cowork | Fase 3 |
+| El MCP local de Graphiti se proxea a Cowork vía desktop app (`cowork-y-multiagente/08` §6.3) | Registrar el MCP y probar desde sesión Cowork | Fase 3 |
 | `smart_memory` del `.graphiti.json` es honrado por la versión del MCP server | Guardar un episodio tipo Preference y verificar a qué group_id llegó | Fase 3 |
 | El trigger repetitivo de Task Scheduler se registra bien en tu versión de PowerShell (A2) | `Get-ScheduledTaskInfo GraphitiBackup` tras 8 horas | Fase 3 |
 | Las skills auto-disparan con descripciones en español mezclado con inglés | Prueba de 3 prompts por skill tras el primer sync | Fase 0 |

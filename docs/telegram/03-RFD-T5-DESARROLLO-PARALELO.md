@@ -62,7 +62,7 @@ mismo chat de Telegram.
 - [ ] T2 estable en uso real ≥2-3 semanas (worktrees, merge con botón, checkpoints).
 - [ ] Mini PC operando 24/7 con el daemon bajo systemd (T3 base).
 - [ ] Tope de costo por tarea implementado (T3).
-- [ ] Las mejoras sencillas de T3 primero: triage con modelo barato (R2 doc 16),
+- [ ] Las mejoras sencillas de T3 primero: triage con modelo barato (R2 `ecosistema/16`),
       rate limiting, session-search (R6) — más valor por menos riesgo que el
       paralelismo.
 

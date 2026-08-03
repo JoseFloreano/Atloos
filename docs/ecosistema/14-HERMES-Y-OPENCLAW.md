@@ -47,7 +47,7 @@ Tu arquitectura tiene UNA fuente de verdad por tipo de dato (doc 02) y acabas de
 Adoptar SOLO cuando puedas nombrar 3+ automatizaciones concretas que requieran canal entrante o proactividad continua. Entonces:
 
 1. **Preferir Hermes Agent** sobre OpenClaw como primera evaluación: momentum actual, loop de auto-skills, migración limpia, y sin el historial ClawHavoc — pero aplicándole el MISMO escepticismo (es pre-1.0 y su Skills Hub tiene el mismo modelo de riesgo).
-2. **Reglas innegociables de despliegue** (de las lecciones OpenClaw): loopback + Tailscale (jamás expuesto a internet), pairing/allowlist de remitentes, cero skills de registros públicos sin el protocolo doc 10 §2, sandbox Docker, y **el vault sigue siendo la memoria canónica** — el asistente escribe al vault (vía su carpeta git), no a una memoria propia.
+2. **Reglas innegociables de despliegue** (de las lecciones OpenClaw): loopback + Tailscale (jamás expuesto a internet), pairing/allowlist de remitentes, cero skills de registros públicos sin el protocolo `skills/10` §2, sandbox Docker, y **el vault sigue siendo la memoria canónica** — el asistente escribe al vault (vía su carpeta git), no a una memoria propia.
 3. **Modelo barato por defecto** (router a Gemini/Kimi-class) con escalado puntual — nunca frontier en heartbeats.
 4. Diseñarlo con `agentic-system-design` + `context-engineering` + `model-benchmark`, y registrar la decisión con `adr-writer`.
 

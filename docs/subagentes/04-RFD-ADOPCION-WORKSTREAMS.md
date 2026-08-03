@@ -86,7 +86,7 @@ y sirve de especificación de lo que el hook tendrá que verificar); el hook
 Escribir el hook antes sería adivinar qué hay que bloquear — y un hook mal
 calibrado que bloquea merges legítimos se desactiva a la semana.
 
-C se descarta por lo mismo que el doc 09 descartó "hook sin skill" en otros
+C se descarta por lo mismo que el `auditoria/09` descartó "hook sin skill" en otros
 frentes: un bloqueo sin explicación no enseña el flujo correcto, solo
 frustra. A se descarta por E2.
 
@@ -173,7 +173,7 @@ nace **sin Memory Rules**. Verificar esto en W1 es criterio de éxito (§7.3).
 - Agent Teams (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`): solo si en W2 los
   frentes necesitan hablar entre sí durante la ejecución, no solo al final.
 - Plugin `agent-teams` de wshobson: solo con el protocolo de importación
-  completo (doc 10 §2), y solo si la descomposición manual duele.
+  completo (`skills/10` §2), y solo si la descomposición manual duele.
 
 ### C7. El hook anti-drift con N frentes sobre el MISMO proyecto *(nuevo, v3)*
 

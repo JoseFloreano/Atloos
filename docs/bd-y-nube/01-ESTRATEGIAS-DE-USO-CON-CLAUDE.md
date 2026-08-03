@@ -72,7 +72,7 @@ Reglas para esta subserie:
 1. Un MCP se conecta cuando una skill concreta lo requiere para la sesión actual — no antes.
 2. Toda skill que dependa de un MCP lo declara en "Requisitos" **con fallback** (regla 3 del `_template`): así la misma skill funciona en Cowork sin el MCP local.
 3. Preferir MCPs read-only para exploración; el modo write de un MCP de warehouse es equivalente a darle DDL a un agente — solo con hook de enforcement.
-4. El puente Cowork↔MCP local sigue siendo el del doc 08 (desktop app); las skills de `cowork/` no pueden asumir localhost.
+4. El puente Cowork↔MCP local sigue siendo el del `cowork-y-multiagente/08` (desktop app); las skills de `cowork/` no pueden asumir localhost.
 
 ---
 

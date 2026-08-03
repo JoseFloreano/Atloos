@@ -54,7 +54,7 @@ PROJECTS_FILE = BASE / "projects.json"
 STATE_FILE = BASE / "state.json"
 LOG_DIR = BASE / "logs"
 
-SESSION_TTL_H = 24          # R3 doc 16: la continuidad durable la da el vault
+SESSION_TTL_H = 24          # R3 `ecosistema/16`: la continuidad durable la da el vault
 READ_TIMEOUT = 600          # 10 min basta para una consulta
 WRITE_TIMEOUT = 5400        # 90 min: un desarrollo real no cabe en 10 (RFD C9)
 CHECKPOINT_EVERY = 1800     # 30 min (RFD C2)

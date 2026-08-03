@@ -64,7 +64,7 @@ Nota de alcance: el modo headless (Claude Code agendado o disparado por webhooks
 
 Dos piezas complementarias, ambas de bajo esfuerzo:
 
-- **`cloud-architecture-review`** (`cowork/`): comparativas de servicios y decisiones de arquitectura con web research y documentos como entregable — trabajo de investigación, no de toolchain, exactamente la división del doc 08 (Code toca la máquina; Cowork investiga y redacta).
+- **`cloud-architecture-review`** (`cowork/`): comparativas de servicios y decisiones de arquitectura con web research y documentos como entregable — trabajo de investigación, no de toolchain, exactamente la división del `cowork-y-multiagente/08` (Code toca la máquina; Cowork investiga y redacta).
 - **Inventario de assets vía MCP** (opcional): CloudQuery expone el inventario de assets cloud por MCP (modos CLI/PostgreSQL/Snowflake) para consultarlo en lenguaje natural. Útil para auditorías; conectar solo en sesiones de auditoría (estrategia 5).
 
 ---

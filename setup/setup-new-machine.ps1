@@ -5,7 +5,7 @@
 #  (%LOCALAPPDATA%\graphiti), la raíz de sync SOLO recibe backups terminados.
 #  El .env con API keys también vive LOCAL (fix A4 — nunca en OneDrive).
 #
-#  ⚠ Este archivo DEBE guardarse como UTF-8 CON BOM (doc 11, B1):
+#  ⚠ Este archivo DEBE guardarse como UTF-8 CON BOM (hallazgo B1 de la instalacion single-laptop):
 #    powershell.exe (PS 5.1 / Task Scheduler) lee .ps1 sin BOM como ANSI y
 #    los caracteres ─ / — inyectan comillas fantasma que rompen el parseo.
 #

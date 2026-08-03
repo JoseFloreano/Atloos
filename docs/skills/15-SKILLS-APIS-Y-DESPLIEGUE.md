@@ -2,7 +2,7 @@
 ## Diseño y evolución de APIs + production readiness para dev individual
 
 > **Fecha:** Julio 2026
-> **Método:** 2 líneas de investigación paralelas; los repos principales se verificaron por **clonado directo** (GitHub API/WebFetch bloqueados ese día — `git clone --depth 1` sí). Protocolo de auditoría doc 10 §2 vigente para cualquier adopción.
+> **Método:** 2 líneas de investigación paralelas; los repos principales se verificaron por **clonado directo** (GitHub API/WebFetch bloqueados ese día — `git clone --depth 1` sí). Protocolo de auditoría `skills/10` §2 vigente para cualquier adopción.
 > **Resultado:** 3 skills propias creadas (§4) — el ecosistema tiene buen material de *diseño* de APIs para destilar, un gap de tooling en *evolución* (nadie empaquetó oasdiff) y un gap total en *despliegue indie*.
 
 ---

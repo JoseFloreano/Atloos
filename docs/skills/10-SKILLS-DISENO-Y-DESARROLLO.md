@@ -28,7 +28,7 @@ El ecosistema de skills maduró desde la investigación de junio: ahora hay **ve
 
 ## 2. Protocolo de seguridad para adoptar skills (LEER PRIMERO)
 
-Esto extiende el hallazgo R4 de la auditoría (doc 09): una skill es texto auto-cargado como instrucciones — quien escribe tu SKILL.md programa a tu agente.
+Esto extiende el hallazgo R4 de la auditoría (`auditoria/09`): una skill es texto auto-cargado como instrucciones — quien escribe tu SKILL.md programa a tu agente.
 
 **Evidencia 2026:**
 - **Snyk "ToxicSkills"** (feb 2026): de 3,984 skills en registros públicos, 36% con fallos, 534 con issues críticos, 76 payloads maliciosos confirmados; 91% vía prompt injection.
@@ -226,4 +226,4 @@ Los plugins de wshobson (`comprehensive-review`, `performance-optimization`) son
 
 ---
 
-*Doc 10 de la serie. Siguiente paso natural cuando lo decidas: ejecutar la Tanda 1 aplicando el protocolo §2. Revisar este catálogo trimestralmente — el ecosistema se mueve rápido (el digest mensual de Cowork propuesto en doc 08 §7 puede vigilar estos repos).*
+*Doc 10 de la serie. Siguiente paso natural cuando lo decidas: ejecutar la Tanda 1 aplicando el protocolo §2. Revisar este catálogo trimestralmente — el ecosistema se mueve rápido (el digest mensual de Cowork propuesto en `cowork-y-multiagente/08` §7 puede vigilar estos repos).*

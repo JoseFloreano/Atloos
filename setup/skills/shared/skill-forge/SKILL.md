@@ -32,7 +32,7 @@ nuestras reglas de carpetas, sync y auditoría.
 ## Pasos
 
 1. **Justifica el gap**: ¿qué falla hoy sin la skill? ¿Ya lo cubre Superpowers
-   o una skill existente? (los duplicados se descartan — doc 11 mostró que casi
+   o una skill existente? (los duplicados se descartan — `skills/11` mostró que casi
    todo el "debugging metodológico" externo duplicaba systematic-debugging).
 2. **Decide carpeta** con la tabla de skills/README.md: metodología pura →
    `shared/`; toolchain/MCP local → `claude-code/`; sandbox/documentos/web →
@@ -43,7 +43,7 @@ nuestras reglas de carpetas, sync y auditoría.
    verificación, sección "Qué NO hacer" si hay anti-patrones conocidos.
 4. **Integra con el sistema**: si produce conocimiento durable → termina en
    `memory-keeper`/`adr-writer`; si toca el vault → respeta el aislamiento por
-   proyecto; si es de terceros adaptada → protocolo de auditoría (doc 10 §2)
+   proyecto; si es de terceros adaptada → protocolo de auditoría (`skills/10` §2)
    y atribución de licencia (CC BY-SA exige compartir igual).
 5. **Prueba de triggers (mínimo viable)**: 3 frases que DEBEN dispararla y 2
    que NO deben (las vecinas más cercanas). Corre las 5 en sesión nueva; si

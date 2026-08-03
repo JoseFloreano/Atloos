@@ -50,7 +50,7 @@ e invisible — se caza con revisiones periódicas, no en caliente.)
    y revisa el `git log` de `claude-skills/` buscando skills sin ediciones ni
    menciones. Las que nadie usa → candidatas a poda o fusión con `skill-forge`
    (decide él, no tú). **NUNCA un pase LLM automático sobre el catálogo
-   completo** — lección del Curator de Hermes: 91M tokens quemados (doc 16 §R7).
+   completo** — lección del Curator de Hermes: 91M tokens quemados (`ecosistema/16` §R7).
 7. Cierra sugiriendo la causa si hay patrón: si el mismo proyecto driftea
    repetidamente, el hook/ritual no está corriendo en esa laptop — revisarlo.
 

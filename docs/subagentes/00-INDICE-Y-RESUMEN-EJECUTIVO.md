@@ -10,7 +10,7 @@
 > **Método:** primero se agotó lo que el propio repo ya sabe (RFDs del puente
 > Telegram, doc 12, skill `agentic-system-design`, doc 13); solo después se
 > buscó afuera para llenar los huecos reales. Aplica el protocolo de auditoría
-> de skills de terceros del doc 10 §2 a cualquier adopción.
+> de skills de terceros del `skills/10` §2 a cualquier adopción.
 
 ---
 
@@ -88,7 +88,7 @@ teammate lanzado a un workstream sin ese contexto puede escribir memoria al
 que ninguna pieza externa cierra — y el argumento más fuerte para escribir
 algo propio en vez de solo instalar un plugin.
 
-**S5 — El protocolo de importación (doc 10 §2, doc 05 §2) sigue vigente sin
+**S5 — El protocolo de importación (`skills/10` §2, doc 05 §2) sigue vigente sin
 excepciones**, incluida esta investigación: el plugin `agent-teams` de
 wshobson se lee completo antes de instalarlo, aunque doc 13 ya lo haya
 evaluado favorablemente.
