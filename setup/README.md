@@ -14,6 +14,10 @@ productos en `docs/cowork-y-multiagente/08-COWORK-VS-CLAUDE-CODE.md`.
 | **Graphiti + FalkorDB** (memoria temporal, resto de este README) | `docker-compose.yml`, `config.yaml`, `.env.example`, `backup-graph.ps1/.sh`, `restore-graph.ps1/.sh` | Claude Code (Cowork solo vía puente del desktop app) |
 | **Bootstrap laptop nueva** | `setup-new-machine.ps1/.sh` (incluye sync de skills y tareas programadas de backup) | Ambos |
 | **Tareas programadas** (patrón "heartbeat barato") | `templates/scheduled-task-prompt.md` | Ambos |
+| **Puente Telegram** (avisos + chat + escritura por worktree + memoria) | `telegram-bridge/` (5 módulos Python + README propio) | Claude Code |
+| **Sync de hooks** (copia + cablea settings.json, idempotente) | `sync-hooks.ps1` | Claude Code |
+| **Índice de ADRs** (determinista, sin LLM) | `scripts/adr-index.py` + `scripts/tests/` | Ambos (vault) |
+| **Preferencias de Superpowers** (ciclo de docs de diseño) | `superpowers-vault-preferences.md` | Claude Code |
 
 ### Skills: el flujo corto
 
@@ -277,7 +281,7 @@ claude mcp list
 ```
 
 ### .graphiti.json por proyecto
-Copia `config/graphiti-project-template.json` a la raíz de cada
+Copia `graphiti-project-template.json` a la raíz de cada
 proyecto como `.graphiti.json` y ajusta `project_id` y `group_id`.
 
 El archivo es detectado vía `GRAPHITI_PROJECT_DIR` env var (no por CWD).

@@ -1,7 +1,12 @@
 # Puente Telegram ↔ Claude Setup — Diseño preliminar (pre-ADR)
 
 > **Fecha:** Agosto 2026 (investigado con fuentes primarias el 2026-08-01)
-> **Estado:** BORRADOR para discutir y formalizar en ADR. Nada implementado.
+> **Estado (2026-08-01):** IMPLEMENTADO — T0 (avisos), T1 (chat lectura), T2
+> (escritura por worktree) y T3 (memoria/tokens) operan en `setup/telegram-bridge/`
+> (`notify_telegram.py`, `tg_daemon.py`, `gitops.py`, `progress.py`, `vaultio.py`).
+> Este doc conserva el diseño original; lo vigente vive en los RFDs 02-06 de esta
+> carpeta y en el ADR del puente (vault). Ojo: donde este doc diga
+> `setup/scripts/` para el script de avisos, la ruta real es `setup/telegram-bridge/`.
 > **Origen:** dos ideas del usuario — (1) recibir respuestas largas por Telegram ("mándamelo por telegram"), (2) chatear con Claude Code desde Telegram con selector de proyecto por comando y continuidad cross-session.
 
 ---

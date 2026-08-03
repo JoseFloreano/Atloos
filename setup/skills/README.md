@@ -91,7 +91,10 @@ worktree aislado*. Queda fuera si:
 | secrets-scan | claude-code | ✓ | Escaneo de solo lectura |
 | token-audit | claude-code | ✗ | Analiza el setup local, no el proyecto |
 
-**15 de 29** entran al perfil bot.
+**15 skills** entran al perfil bot (el universo del registro son `shared/` +
+`claude-code/`; las 2 de `cowork/` quedan fuera A PROPÓSITO — el bot corre sobre
+Claude Code — y por eso no tienen fila). El conteo vivo sale de esta tabla, no
+de esta frase.
 
 **Mantenimiento**: toda skill nueva añade su fila **en el mismo PR** (misma regla
 que el registro de secretos del `setup/README.md`). La lista se revisa en el

@@ -17,6 +17,11 @@
 | 04 | [OneDrive: Estrategias de Sincronización](./04-ONEDRIVE-SINCRONIZACION-MULTI-LAPTOP.md) | Estrategias A/B/C, riesgos documentados, protocolo multi-laptop |
 | 05 | [Skills y Frameworks Agénticos](./05-SKILLS-FRAMEWORKS-AGENTICOS.md) | Superpowers, Graphify, MCPs esenciales por stack |
 | 06 | [Arquitectura Final Recomendada](./06-ARQUITECTURA-FINAL-RECOMENDADA.md) | Decisión consolidada, diagrama, plan de implementación |
+| 07 | [Hallazgos Críticos H1–H10](./07-HALLAZGOS-CRITICOS-REFERENCIA-RAPIDA.md) | ⭐ Referencia rápida — leer antes de cualquier decisión |
+| 08 | [Graphiti con DeepSeek: costo](./08-GRAPHITI-DEEPSEEK-COSTO.md) | Compatibilidad, palancas de ahorro y config para cuando se active |
+| 08b | [Resumen funcional DeepSeek](./08b-RESUMEN-FUNCIONAL-DEEPSEEK.md) | Complemento operativo del 08 |
+| RFD 10 | [Graphiti: errores de integración](./10-RFD-GRAPHITI-INTEGRACION-ERRORES.md) | Draft — 8 errores y propuesta de skills en vez de MCP HTTP |
+| 11 | [Graphiti: guía rápida de setup](./11-GRAPHITI-SETUP-GUIA-RAPIDA.md) | DeepSeek + Ollama; deriva del RFD 10 |
 
 ---
 

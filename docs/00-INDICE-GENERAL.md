@@ -21,6 +21,7 @@ La serie original: por qué esta arquitectura de memoria y no otra.
 | [06 · Arquitectura final](./arquitectura-memoria/06-ARQUITECTURA-FINAL-RECOMENDADA.md) | Decisión consolidada y fases |
 | [07 · Hallazgos críticos H1–H10](./arquitectura-memoria/07-HALLAZGOS-CRITICOS-REFERENCIA-RAPIDA.md) | ⭐ Leer antes de cualquier decisión |
 | [08 · Graphiti con DeepSeek: costo](./arquitectura-memoria/08-GRAPHITI-DEEPSEEK-COSTO.md) | Extracción barata cuando Graphiti se active |
+| [08b · Resumen funcional DeepSeek](./arquitectura-memoria/08b-RESUMEN-FUNCIONAL-DEEPSEEK.md) | Complemento operativo del 08 |
 | ~~09 · Higiene de contexto y ciclo de vida del vault~~ | ✅ **Implementado, auditado y cosechado** (2026-08-01) → la decisión vive en `ADR-20260801-higiene-vault` del vault. Tope de `_PROJECT.md`, índice de ADRs, ciclo de los RFDs |
 | [RFD 10 · Graphiti + FalkorDB: errores de integración](./arquitectura-memoria/10-RFD-GRAPHITI-INTEGRACION-ERRORES.md) | 🔵 **Draft** — 8 errores encontrados y propuesta de solución con skills en vez de MCP HTTP |
 | [11 · Graphiti: guía rápida de setup](./arquitectura-memoria/11-GRAPHITI-SETUP-GUIA-RAPIDA.md) | DeepSeek + Ollama; deriva del RFD 10 |
@@ -53,13 +54,33 @@ La serie original: por qué esta arquitectura de memoria y no otra.
 | Doc | Tema |
 |-----|------|
 | [14 · Hermes y OpenClaw](./ecosistema/14-HERMES-Y-OPENCLAW.md) | ¿Aditivos o estorbo? Veredicto: no adoptar hoy; criterios de re-evaluación |
+| [16 · Ahorro de tokens robado de ambos](./ecosistema/16-AHORRO-TOKENS-ROBADO-DE-HERMES-OPENCLAW.md) | Mecanismos minados de sus docs; fuente de R1/R5 (implementados) |
 
 ### 📁 [`bd-y-nube/`](./bd-y-nube/) — Subserie de datos e infraestructura
 
 | Doc | Tema |
 |-----|------|
 | [00 · Índice de la subserie](./bd-y-nube/00-INDICE-Y-RESUMEN-EJECUTIVO.md) | Alcance y capas del dominio |
-| [01 · Estrategias de uso con Claude](./bd-y-nube/01-ESTRATEGIAS-DE-USO-CON-CLAUDE.md) | Las 5 estrategias (docs 02–05 pendientes) |
+| [01 · Estrategias de uso con Claude](./bd-y-nube/01-ESTRATEGIAS-DE-USO-CON-CLAUDE.md) | Las 5 estrategias que estructuran la subserie |
+| [02 · Skills de bases de datos](./bd-y-nube/02-SKILLS-BASES-DE-DATOS.md) | SQL, esquemas, migraciones, calidad, MCPs de DB |
+| [03 · Skills de big data](./bd-y-nube/03-SKILLS-BIG-DATA.md) | dbt, Spark, warehouses, lineage, costos, PII |
+| [04 · Skills de nube e IaC](./bd-y-nube/04-SKILLS-NUBE-E-IAC.md) | Terraform/OpenTofu, bibliotecas por proveedor, safety-first |
+| [05 · Catálogo y plan de implementación](./bd-y-nube/05-CATALOGO-Y-PLAN-DE-IMPLEMENTACION.md) | Fases S0–S3, protocolo de importación, anti-patrones |
+| [06 · Auditoría adversarial de las skills](./bd-y-nube/06-AUDITORIA-ADVERSARIAL-SKILLS.md) | Correcciones aplicadas y crítica a la investigación de origen |
+
+### 📁 [`telegram/`](./telegram/) — El puente Telegram (T0–T5)
+
+La línea de trabajo activa. Los RFDs llevan su estado en la cabecera Y aquí.
+
+| Doc | Estado | Tema |
+|-----|--------|------|
+| [00 · Diseño del puente](./telegram/00-DISENO-TELEGRAM-BRIDGE.md) | Implementado (T0–T3) | Diseño original; lo vigente está en los RFDs 02–06 |
+| [01 · Mini PC servidor 24/7](./telegram/01-MINIPC-SERVIDOR-24-7.md) | Cerrado | Investigación de compra (Beelink SER8) |
+| [02 · RFD T2: modo escritura](./telegram/02-RFD-T2-MODO-ESCRITURA.md) | Auditado con condiciones; cosecha tras `/push` de prueba | Worktrees, permisos, merge con botón |
+| [03 · RFD T5: desarrollo paralelo](./telegram/03-RFD-T5-DESARROLLO-PARALELO.md) | Idea registrada | Multi-proyecto en vuelo (antes T4) |
+| [04 · RFD: progreso en vivo](./telegram/04-RFD-PROGRESO-EN-VIVO.md) | **Implementado y auditado — cosechable** | Panel, alertas proactivas, stream-json |
+| [05 · RFD T3: memoria y tokens](./telegram/05-RFD-T3-MEMORIA-Y-TOKENS.md) | **Implementado y auditado — cosechable** | vaultio, perfil bot de skills, E1–E3 |
+| [06 · RFD T4: continuar desde aviso](./telegram/06-RFD-T4-CONTINUAR-DESDE-AVISO.md) | Idea validada (3 huecos anotados) | /pickup con traspaso de contexto |
 
 ### 📁 [`subagentes/`](./subagentes/) — Workstreams paralelos con rama y worktree por frente
 
@@ -73,6 +94,15 @@ La serie original: por qué esta arquitectura de memoria y no otra.
 
 ## Convenciones
 
+- **Qué vive en `docs/`**: material cerrado y refinado, **y** RFDs en vuelo. El
+  marcador de estado es la CABECERA del doc y la columna de estado de este
+  índice — no la ubicación. El ciclo de cosecha (skill `design-doc-harvest`,
+  precedente: RFD 09 → `ADR-20260801-higiene-vault`) retira los RFDs cuando
+  quedan implementados y con auditoría cerrada.
 - **Subserie nueva** = carpeta kebab-case con su propio `00-INDICE-*.md` (el patrón lo fijó `bd-y-nube/`).
-- Los docs referencian entre sí por número ("doc 09", "H4") — estable ante movimientos de carpeta.
+- **Citas entre docs: por RUTA** (`skills/10 §2`, `telegram/02 C4`), no por
+  número a secas — hay números duplicados entre subseries (08, 10, 11, 16) y
+  "doc 10" es ambiguo. El número del nombre de archivo es orden de lectura
+  dentro de su carpeta, no identificador global. Los hallazgos H1–H10 sí son
+  identificadores globales (viven en `arquitectura-memoria/07`).
 - Docs temporales (reportes de bugs, notas de instalación) no entran a las subseries: se cosechan a donde corresponda y se retiran (precedente: el reporte de bugfixes de la instalación single-laptop).

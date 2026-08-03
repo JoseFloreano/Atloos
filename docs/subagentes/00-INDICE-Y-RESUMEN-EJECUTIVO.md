@@ -5,7 +5,8 @@
 > **Origen:** pregunta del usuario — cómo implementar en el repo un flujo "estilo
 > Claude Code": varios subagentes trabajando cada uno en su workstream y su
 > rama, y un agente principal que hace el merge a `main`.
-> **Estado:** investigación — nada instalado ni configurado todavía.
+> **Estado:** investigación CERRADA (docs finales). La ADOPCIÓN es lo que sigue
+> en propuesta (RFD 04 de esta carpeta) — nada instalado ni configurado todavía.
 > **Método:** primero se agotó lo que el propio repo ya sabe (RFDs del puente
 > Telegram, doc 12, skill `agentic-system-design`, doc 13); solo después se
 > buscó afuera para llenar los huecos reales. Aplica el protocolo de auditoría

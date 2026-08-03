@@ -1,6 +1,11 @@
 # Auditoría del Setup Completo
 ## Fortalezas, debilidades, riesgos y plan de mitigación
 
+> **Banner (2026-08-01):** este doc es la foto de JULIO. Las mitigaciones que
+> propone ya fueron **aplicadas** (fixes A1-A7/R1-R9, sesión "aplica todos los
+> fixes") y el "nada está implementado aún" quedó obsoleto. Sigue siendo la
+> referencia del *método* de auditoría, no del estado actual.
+
 > **Fecha:** Julio 2026
 > **Alcance:** Docs 00–08, todos los archivos de `setup/` (incluidos los añadidos en la sesión de skills/memoria), y la arquitectura Cowork + Claude Code.
 > **Método:** Lectura línea por línea de cada archivo ejecutable, cruzada contra los hallazgos H1–H10 y las decisiones documentadas. Cada hallazgo cita el archivo y la evidencia. Incluye autocrítica de lo construido en esta misma sesión.

@@ -16,6 +16,7 @@
 | 03 | [Skills de Big Data](./03-SKILLS-BIG-DATA.md) | dbt, Spark, orquestación, warehouses, lineage, costos, PII |
 | 04 | [Skills de Nube e IaC](./04-SKILLS-NUBE-E-IAC.md) | Terraform/OpenTofu, bibliotecas por proveedor, safety-first |
 | 05 | [Catálogo Propuesto y Plan de Implementación](./05-CATALOGO-Y-PLAN-DE-IMPLEMENTACION.md) | Skills concretas por carpeta, fases, riesgos y verificación |
+| 06 | [Auditoría adversarial de las skills](./06-AUDITORIA-ADVERSARIAL-SKILLS.md) | Hallazgos, correcciones aplicadas y crítica a la investigación de origen |
 
 ---
 

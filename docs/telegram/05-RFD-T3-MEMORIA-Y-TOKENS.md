@@ -1,6 +1,8 @@
 # RFD — T3: el bot y el sistema de memoria (¿lo usa o solo lo paga?)
 
-> **Estado:** propuesta, pendiente de aprobación. NO implementado.
+> **Estado (2026-08-01):** IMPLEMENTADO Y AUDITADO (aprobado — nota
+> `2026-08-01-auditoria-t3-y-diseno-t4` del vault). C1b/C2/C3/C4 operan en
+> `vaultio.py` + perfil bot. §1.1 corregido tras E1. **Cosechable a ADR.**
 > **Fecha:** 2026-08-01 (mediciones de ese día, por el auditor Cowork)
 > **Contexto:** RFD 02 v2 (T2) · `setup/memory-instructions.md` · doc 16 (tokens)
 > **Cambio de alcance:** el T3 original (rate limit, tope de costo, systemd)

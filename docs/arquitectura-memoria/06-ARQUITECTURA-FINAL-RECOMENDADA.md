@@ -1,6 +1,13 @@
 # Arquitectura Final Recomendada
 ## Decisión consolidada, justificación, diagrama y plan de implementación
 
+> **Banner (2026-08-01):** Graphiti + FalkorDB está **POSPUESTO** por decisión
+> propia (`ADR-20260726-graphiti-pospuesto`; errores de integración en el RFD 10
+> de esta carpeta). El checklist de instalación de este doc NO es el camino
+> vigente — cuando se active, la guía es el doc 11. Nota: `uv tool install
+> graphifyy` (doble "y") es el nombre REAL del paquete en PyPI (verificado
+> 2026-08-01, graphify no existe) — no lo "corrijas".
+
 ---
 
 ## 1. La decisión
