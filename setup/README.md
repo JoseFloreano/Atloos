@@ -22,9 +22,9 @@ productos en `docs/cowork-y-multiagente/08-COWORK-VS-CLAUDE-CODE.md`.
 ### Skills: el flujo corto
 
 ```
-OneDrive/DevSetup/claude-skills/{shared,claude-code,cowork}   ← fuente de verdad
-  → sync-skills.ps1/.sh copia a ~/.claude*/skills/            ← Claude Code
-  → y empaqueta _build/dev-skills.zip                          ← subir 1 vez a Cowork
+setup/skills/{shared,claude-code,cowork}  ← FUENTE ÚNICA (este repo, en git)
+  → sync-skills.ps1/.sh copia a ~/.claude*/skills/     ← Claude Code
+  → y empaqueta setup/_build/dev-skills.zip            ← subir 1 vez a Cowork
 Skill nueva: carpeta + SKILL.md + re-correr sync. Detalles: skills/README.md
 ```
 
@@ -49,7 +49,7 @@ Activación:  setup-new-machine.ps1 -Local     |  LOCAL=1 bash setup-new-machine
 
 Qué cambia:                      multi-laptop            single-laptop
   Raíz DevSetup                  OneDrive\DevSetup\      %USERPROFILE%\DevSetup\ (~/DevSetup)
-  Skills (claude-skills/)        viajan por OneDrive     misma carpeta, local
+  Skills (setup/skills/)         el repo, igual en ambos  el repo, igual en ambos
   Backups del grafo              a OneDrive              a ~\DevSetup\graphiti-data\backups
   Vault de Obsidian              OneDrive + git remote   local + git remote (GitHub) ← OBLIGATORIO aquí
 
@@ -233,7 +233,7 @@ LOCAL (por máquina — nunca se sincroniza):
 OneDrive (solo artefactos terminados y portables):
 OneDrive/DevSetup/
 ├── claude-dotfiles/               # repo git (configs de Claude Code)
-├── claude-skills/                 # skills shared/claude-code/cowork (+ _build/)
+│                                 # (claude-skills/ RETIRADA: la fuente es el repo)
 └── graphiti-data/backups/         # snapshots con timestamp + manifiestos
     ├── graphiti_20260712_120000.rdb
     └── graphiti_20260712_120000.manifest.json

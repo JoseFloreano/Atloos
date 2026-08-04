@@ -47,7 +47,7 @@ e invisible — se caza con revisiones periódicas, no en caliente.)
    los archivos editados a la carpeta conectada.
 6. **Poda de skills** (mismo ciclo quincenal): ¿qué skills no se han disparado
    este mes? Heurística gratis: pregunta al usuario cuáles recuerda haber usado
-   y revisa el `git log` de `claude-skills/` buscando skills sin ediciones ni
+   y revisa el `git log` de `setup/skills/` buscando skills sin ediciones ni
    menciones. Las que nadie usa → candidatas a poda o fusión con `skill-forge`
    (decide él, no tú). **NUNCA un pase LLM automático sobre el catálogo
    completo** — lección del Curator de Hermes: 91M tokens quemados (`ecosistema/16` §R7).

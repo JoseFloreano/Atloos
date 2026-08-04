@@ -4,7 +4,9 @@
 > **Banner (2026-08-01):** este doc es la foto de JULIO. Las mitigaciones que
 > propone ya fueron **aplicadas** (fixes A1-A7/R1-R9, sesión "aplica todos los
 > fixes") y el "nada está implementado aún" quedó obsoleto. Sigue siendo la
-> referencia del *método* de auditoría, no del estado actual.
+> referencia del *método* de auditoría, no del estado actual. **R4 (las skills
+> como vector de inyección desde OneDrive) quedó cerrado el 08-03**: la fuente
+> es el repo en git, con diff revisable — `ADR-20260803-skills-fuente-unica`.
 
 > **Fecha:** Julio 2026
 > **Alcance:** Docs 00–08, todos los archivos de `setup/` (incluidos los añadidos en la sesión de skills/memoria), y la arquitectura Cowork + Claude Code.

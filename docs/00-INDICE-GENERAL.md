@@ -99,6 +99,9 @@ La línea de trabajo activa. Los RFDs llevan su estado en la cabecera Y aquí.
   índice — no la ubicación. El ciclo de cosecha (skill `design-doc-harvest`,
   precedente: RFD 09 → `ADR-20260801-higiene-vault`) retira los RFDs cuando
   quedan implementados y con auditoría cerrada.
+- **Las skills viven en `setup/skills/` del repo**, fuente única desde el 08-03
+  (`ADR-20260803-skills-fuente-unica`). Los docs anteriores dicen
+  `claude-skills/`: es la carpeta de OneDrive ya retirada.
 - **Subserie nueva** = carpeta kebab-case con su propio `00-INDICE-*.md` (el patrón lo fijó `bd-y-nube/`).
 - **Citas entre docs: por RUTA** (`skills/10 §2`, `telegram/02 C4`), no por
   número a secas — hay números duplicados entre subseries (08, 10, 11, 16) y

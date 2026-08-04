@@ -1,31 +1,32 @@
-# Skills Modulares — Carpeta única en OneDrive para Claude Code y Cowork
+# Skills Modulares — una carpeta del repo para Claude Code y Cowork
 
-Sistema de skills compartido entre productos: **una carpeta en OneDrive es la fuente
-de verdad**, y cada producto la consume por su mecanismo nativo. Añadir una skill
-nueva = crear una carpeta + correr un script (o nada, si ya tienes el watcher).
+Sistema de skills compartido entre productos: **`setup/skills/` de este repo es la
+fuente única**, y cada producto la consume por su mecanismo nativo. Añadir una
+skill nueva = crear una carpeta + commitear + correr un script.
 
 ## La estructura (fuente de verdad)
 
 ```
-OneDrive/DevSetup/claude-skills/
+setup/skills/            ← en el repo ClaudeSetup, versionado en git
 ├── shared/            ← skills que sirven a AMBOS productos
 │   └── adr-writer/
 │       └── SKILL.md
 ├── claude-code/       ← solo Claude Code (asumen terminal/toolchain local)
 ├── cowork/            ← solo Cowork (asumen sandbox cloud, documentos, web)
-├── _template/         ← plantilla para crear skills nuevas
-│   └── SKILL.md
-└── _build/            ← generado por sync-skills (NO editar a mano)
-    ├── dev-skills/    ← plugin para Cowork
-    └── dev-skills.zip
+└── _template/         ← plantilla para crear skills nuevas
+    └── SKILL.md
 ```
 
-Esta carpeta se crea automáticamente la primera vez que corres `sync-skills.ps1`
-(seed desde `setup/skills/` del repo). OneDrive la replica a todas tus laptops.
+El plugin de Cowork se genera en `setup/_build/` (gitignorado, NO editar).
 
-> **Sin OneDrive (single-laptop):** los scripts caen automáticamente a
-> `%USERPROFILE%\DevSetup\claude-skills` (`~/DevSetup/claude-skills`) — todo lo
-> demás de este README aplica igual. Ver "Modo single-laptop" en `setup/README.md`.
+**El repo es la fuente única.** Editas aquí, commiteas, y `sync-skills` instala.
+Un `git pull` en otra laptop + `sync-skills` deja las skills al día: nada que
+espejar, nada que recordar. Funciona igual con OneDrive y sin él —
+`ADR-20260803-skills-fuente-unica`.
+
+> El espejo `OneDrive/DevSetup/claude-skills/` **se retiró**. Eran dos fuentes de
+> verdad: se quedaba atrás sin que nadie lo notara, y sus cambios no pasaban por
+> ningún diff revisable.
 
 ## Cómo llega cada skill a cada producto
 
@@ -114,14 +115,9 @@ ruido en cada invocación.
    Cowork: re-sube _build/dev-skills.zip solo si la skill es shared/ o cowork/.
 ```
 
-En las demás laptops: OneDrive sincroniza la carpeta sola; solo corre el paso 3.
-
-> ⚠️ **El sync lee de la FUENTE, no del repo.** Un `git pull` actualiza
-> `setup/skills/` del repo, pero `sync-skills` copia desde
-> `claude-skills/`. Si editas una skill en el repo, **espeja primero**
-> (`robocopy setup\skills\<cat> <fuente>\<cat> /MIR`, o `cp -r`) o el cambio no
-> llega a ninguna parte. El seed automático desde el repo solo ocurre la primera
-> vez, cuando la carpeta fuente aún no existe.
+En las demás laptops: `git pull` y el paso 3. Ya no hay nada que espejar — esa
+era exactamente la trampa del espejo retirado: un `pull` actualizaba el repo, el
+sync leía otra carpeta, y el cambio no llegaba a ninguna parte.
 
 ### Scripts auxiliares (`~/.claude/scripts/`)
 
@@ -131,7 +127,8 @@ En las demás laptops: OneDrive sincroniza la carpeta sola; solo corre el paso 3
 por ruta absoluta —corren desde el cwd de cualquier proyecto— y esa ruta
 necesita ser la misma en toda máquina. Antes apuntaba al repo **dentro de
 OneDrive**: inerte en modo single-laptop y atada al árbol de carpetas de una
-laptop concreta. Es el mismo patrón que `sync-hooks` con `~/.claude/hooks/`.
+laptop concreta — el hallazgo que destapó todo esto. Es el mismo patrón que
+`sync-hooks` con `~/.claude/hooks/`.
 
 **En Cowork no existe** (no es una máquina tuya): las skills que dependen del
 script deben decir qué hacer sin él, no asumir que corrió.

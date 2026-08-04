@@ -235,7 +235,7 @@ fi
 # ── 5b. Sincronizar skills (raíz de sync → Claude Code + plugin Cowork) ───
 header "Sincronizando skills"
 if [ -f "${SCRIPT_DIR}/sync-skills.sh" ]; then
-  bash "${SCRIPT_DIR}/sync-skills.sh" "${ONEDRIVE}" || warn "sync-skills falló; córrelo manualmente."
+  bash "${SCRIPT_DIR}/sync-skills.sh" || warn "sync-skills falló; córrelo manualmente."
 else
   warn "sync-skills.sh no encontrado junto a este script."
 fi
@@ -328,6 +328,6 @@ echo "  1. Completa el .env si quedó incompleto (key del provider, pins de vers
 echo "  2. SIMULACRO DE RESTORE (auditoría A3): en cuanto haya datos reales,"
 echo "     prueba restore-graph.sh — un backup no probado no existe."
 echo "  3. Copia .graphiti.json a cada proyecto."
-echo "  4. Cowork: sube claude-skills/_build/dev-skills.zip en Customize > Plugins."
+echo "  4. Cowork: sube setup/_build/dev-skills.zip en Customize > Plugins."
 echo "  5. Al cambiar de laptop: docker compose stop → backup-graph.sh → sync."
 echo ""

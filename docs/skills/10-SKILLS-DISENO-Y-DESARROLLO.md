@@ -35,6 +35,10 @@ Esto extiende el hallazgo R4 de la auditoría (`auditoria/09`): una skill es tex
 - **Repello AI** (feb 2026): 4 vectores documentados — injection en el SKILL.md, exfiltración de variables de entorno, subprocesos ocultos en archivos adjuntos (`scripts/`, `references/`), y activación condicional que evade pruebas.
 - **Cloud Security Alliance** (jun 2026): campaña real con 1,184 skills maliciosas en un registro; "tratar skills como npm en sus inicios".
 
+> **Nota (2026-08-03):** donde este doc diga `claude-skills/` como carpeta de
+> destino, hoy es `setup/skills/` del repo — el espejo de OneDrive se retiró
+> (`ADR-20260803-skills-fuente-unica`). El criterio no cambia, solo la ruta.
+
 **Protocolo obligatorio antes de copiar cualquier skill a `claude-skills/`:**
 
 1. **Lee el SKILL.md completo, línea por línea** — y TODO archivo en `references/` y `scripts/`. Si trae scripts que no entiendes, no la instalas.

@@ -41,13 +41,13 @@ projects.
 ## Skills
 
 - The `dev-skills` plugin (shared + cowork skills, synced from
-  `OneDrive/DevSetup/claude-skills/`) should be installed. Use its skills
+  `setup/skills/` del repo ClaudeSetup) should be installed. Use its skills
   automatically whenever a task matches their descriptions.
 - Saving durable knowledge → `memory-keeper` skill; architecture decisions
   → `adr-writer` skill.
 - The plugin's version is a date (YYYY.MM.DD). If it is more than ~30 days
   old, tell the user it may be stale and suggest re-uploading
-  `claude-skills/_build/dev-skills.zip` (Customize → Plugins).
+  `setup/_build/dev-skills.zip` (Customize → Plugins).
 
 ## What Cowork should NOT attempt here
 

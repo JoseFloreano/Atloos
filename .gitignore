@@ -27,3 +27,6 @@ __pycache__/
 *.pyc
 .DS_Store
 Thumbs.db
+
+# Artefacto de build del plugin de Cowork (lo genera sync-skills)
+setup/_build/

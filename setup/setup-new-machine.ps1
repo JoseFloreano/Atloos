@@ -240,7 +240,7 @@ try {
 Write-Header "Sincronizando skills"
 $syncSkills = Join-Path $PSScriptRoot "sync-skills.ps1"
 if (Test-Path $syncSkills) {
-    try { & $syncSkills -SkillsRoot "$DevSetup\claude-skills" }
+    try { & $syncSkills }   # fuente = setup/skills del repo (ADR skills-fuente-unica)
     catch { Write-Warn "sync-skills falló: $($_.Exception.Message). Córrelo manualmente." }
 } else { Write-Warn "sync-skills.ps1 no encontrado junto a este script." }
 
@@ -323,7 +323,7 @@ if (Test-Path $syncSkills) {
     $taskName2 = "ClaudeSkillsSync"
     if (-not (Get-ScheduledTask -TaskName $taskName2 -ErrorAction SilentlyContinue)) {
         $action2  = New-ScheduledTaskAction -Execute "powershell.exe" `
-            -Argument "-NonInteractive -ExecutionPolicy Bypass -File `"$syncSkills`" -SkillsRoot `"$DevSetup\claude-skills`" -NoCoworkBuild"
+            -Argument "-NonInteractive -ExecutionPolicy Bypass -File `"$syncSkills`" -NoCoworkBuild"
         $trigger2 = New-ScheduledTaskTrigger -AtLogOn
         Register-ScheduledTask -TaskName $taskName2 -Action $action2 -Trigger $trigger2 `
             -Description "Sincroniza skills de Claude al iniciar sesión" | Out-Null
@@ -355,5 +355,5 @@ Write-Info "1. Completa el .env si quedó incompleto (key del provider, pins de 
 Write-Info "2. SIMULACRO DE RESTORE (auditoría A3): en cuanto haya datos reales,"
 Write-Info "   prueba restore-graph.ps1 con un backup — un backup no probado no existe"
 Write-Info "3. Copia .graphiti.json a cada proyecto"
-Write-Info "4. Cowork: sube claude-skills\_build\dev-skills.zip en Customize > Plugins"
+Write-Info "4. Cowork: sube setup\_build\dev-skills.zip en Customize > Plugins"
 Write-Info "5. Al cambiar de laptop: docker compose stop → backup-graph.ps1 → sync"

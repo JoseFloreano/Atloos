@@ -1,23 +1,27 @@
 ﻿# ══════════════════════════════════════════════════════════════
-#  sync-skills.ps1 — Sincroniza skills desde OneDrive a Claude Code
+#  sync-skills.ps1 — Instala las skills del REPO en Claude Code
 #                    y empaqueta el plugin dev-skills para Cowork
 #
-#  Fuente de verdad:  OneDrive/DevSetup/claude-skills/{shared,claude-code,cowork}
+#  Fuente ÚNICA:      setup/skills/{shared,claude-code,cowork} de este repo.
+#                     El script vive en setup/, así que la resuelve sola: cero
+#                     configuración, y funciona igual con OneDrive o sin él.
 #  Destinos Code:     ~/.claude/skills/ + cada ~/.claude-*/skills/ (multi-cuenta)
-#  Destino Cowork:    claude-skills/_build/dev-skills(.zip) → subir en Customize→Plugins
+#  Destino Cowork:    setup/_build/dev-skills.zip → subir en Customize→Plugins
 #
-#  SIEMPRE copia, nunca symlinks (OneDrive en Windows no los soporta — H8).
+#  El espejo OneDrive/DevSetup/claude-skills se RETIRÓ (ADR-20260803-skills-
+#  fuente-unica): eran dos fuentes de verdad, y el espejo se quedaba atrás sin
+#  que nadie lo notara. Ahora los cambios se revisan por diff en git.
+#
+#  SIEMPRE copia, nunca symlinks (Windows no los soporta bien — H8).
 #  Es seguro correrlo cuantas veces quieras: solo gestiona las skills que él
 #  mismo instaló (manifest _onedrive-sync.json); no toca tus otras skills.
 #
 #  Uso:
 #    .\sync-skills.ps1
-#    .\sync-skills.ps1 -SkillsRoot "D:\OneDrive\DevSetup\claude-skills"
 #    .\sync-skills.ps1 -NoCoworkBuild
 # ══════════════════════════════════════════════════════════════
 
 param(
-    [string]$SkillsRoot = "",
     [switch]$NoCoworkBuild = $false
 )
 
@@ -26,34 +30,16 @@ function Write-OK   { param($m) Write-Host "  [OK] $m"   -ForegroundColor Green 
 function Write-Warn { param($m) Write-Host "  [WARN] $m" -ForegroundColor Yellow }
 function Write-Info { param($m) Write-Host "  [INFO] $m" -ForegroundColor Cyan }
 
-# ── Resolver la carpeta de skills (OneDrive o local single-laptop) ────────
-if (-not $SkillsRoot) {
-    # B2 (instalacion single-laptop): if-como-expresión con elseif en línea nueva NO parsea en PS —
-    # el salto de línea cierra la expresión. Forma de sentencia, siempre.
-    $od = $null
-    if ($env:OneDrive -and (Test-Path $env:OneDrive)) { $od = $env:OneDrive }
-    elseif (Test-Path "$env:USERPROFILE\OneDrive") { $od = "$env:USERPROFILE\OneDrive" }
-    if (-not $od) {
-        $od = $env:USERPROFILE
-        Write-Info "OneDrive no encontrado — usando raíz LOCAL (single-laptop): $od\DevSetup\claude-skills"
-    }
-    $SkillsRoot = Join-Path $od "DevSetup\claude-skills"
-}
-
-# ── Primera vez: crear estructura y seed desde el repo ────────────────────
-$categories = @("shared", "claude-code", "cowork")
+# ── La fuente es el repo: este script vive en setup/ ──────────────────────
+# Sin parámetro ni variable de entorno a propósito. Un interruptor para elegir
+# fuente es lo que mantenía vivas las dos, y había que acordarse de usarlo.
+$SkillsRoot = Join-Path $PSScriptRoot "skills"
 if (-not (Test-Path $SkillsRoot)) {
-    Write-Info "Creando estructura en $SkillsRoot"
-    foreach ($c in $categories + @("_template")) {
-        New-Item -ItemType Directory -Force -Path (Join-Path $SkillsRoot $c) | Out-Null
-    }
-    # Seed: si el script corre desde el repo, copiar plantilla y skills iniciales
-    $repoSkills = Join-Path $PSScriptRoot "skills"
-    if (Test-Path $repoSkills) {
-        Copy-Item "$repoSkills\*" $SkillsRoot -Recurse -Force
-        Write-OK "Seed inicial copiado desde el repo ($repoSkills)"
-    }
+    Write-Host "  [ERROR] No encuentro $SkillsRoot." -ForegroundColor Red
+    Write-Host "          Corre este script desde el repo ClaudeSetup (setup\sync-skills.ps1)." -ForegroundColor Red
+    exit 1
 }
+Write-Info "Fuente: $SkillsRoot"
 
 # ── Recolectar skills fuente (carpetas con SKILL.md) ──────────────────────
 function Get-Skills { param($cats)
@@ -84,14 +70,17 @@ foreach ($cfg in $configDirs) {
     $target = Join-Path $cfg "skills"
     New-Item -ItemType Directory -Force -Path $target | Out-Null
 
-    # Manifest: qué skills gestiona este script (para poder borrar las removidas)
+    # Manifest: qué skills gestiona este script (para poder borrar las removidas).
+    # Conserva el nombre heredado a propósito: renombrarlo dejaría huérfano el
+    # manifest de las máquinas ya instaladas y las skills retiradas se quedarían
+    # ahí para siempre. El nombre miente; romper la limpieza sería peor.
     $manifestPath = Join-Path $target "_onedrive-sync.json"
     $previous = @()
     if (Test-Path $manifestPath) {
         $previous = (Get-Content $manifestPath -Raw | ConvertFrom-Json).skills
     }
 
-    # Borrar skills gestionadas que ya no existen en OneDrive
+    # Borrar skills gestionadas que ya no existen en la fuente
     foreach ($old in $previous) {
         if (-not $codeSkills.ContainsKey($old)) {
             Remove-Item (Join-Path $target $old) -Recurse -Force -ErrorAction SilentlyContinue
@@ -135,7 +124,7 @@ if (-not $NoCoworkBuild) {
     Write-Host "`n▶ Empaquetando plugin dev-skills para Cowork" -ForegroundColor Blue
     $coworkSkills = Get-Skills @("shared", "cowork")   # cowork gana conflictos
 
-    $buildRoot  = Join-Path $SkillsRoot "_build"
+    $buildRoot  = Join-Path $PSScriptRoot "_build"   # artefacto: gitignorado
     $pluginDir  = Join-Path $buildRoot "dev-skills"
     if (Test-Path $pluginDir) { Remove-Item $pluginDir -Recurse -Force }
     New-Item -ItemType Directory -Force -Path (Join-Path $pluginDir ".claude-plugin") | Out-Null
@@ -149,7 +138,7 @@ if (-not $NoCoworkBuild) {
     # B4 (instalacion single-laptop): Out-File -Encoding UTF8 en PS 5.1 escribe BOM y RFC 8259 lo
     # prohíbe en JSON — el validador de plugins de Cowork lo rechaza. Sin BOM:
     $manifestJson = @{ name = "dev-skills"
-       description = "Skills personales de desarrollo (sincronizadas desde DevSetup/claude-skills)"
+       description = "Skills personales de desarrollo (fuente: setup/skills del repo ClaudeSetup)"
        version = (Get-Date -Format 'yyyy.MM.dd')
     } | ConvertTo-Json
     [IO.File]::WriteAllText((Join-Path $pluginDir ".claude-plugin\plugin.json"), $manifestJson,

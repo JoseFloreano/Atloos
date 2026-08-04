@@ -54,6 +54,10 @@
 
 ## 2. Protocolo de importación de skills de terceros
 
+> **Nota (2026-08-03):** donde este doc diga `claude-skills/` como carpeta de
+> destino, hoy es `setup/skills/` del repo — el espejo de OneDrive se retiró
+> (`ADR-20260803-skills-fuente-unica`). El criterio no cambia, solo la ruta.
+
 Motivación: R4 de la auditoría — todo lo que entra a `claude-skills/` son instrucciones auto-cargadas en ambos productos y todas las laptops; quien pueda escribir ahí puede inyectar comportamiento.
 
 1. Clonar la colección **fuera** de `claude-skills/` y leer completo cada SKILL.md y sus `references/`/`scripts/` (jamás instalar sin leer).

@@ -1,7 +1,7 @@
 ---
 name: skill-forge
 description: >
-  Crea, mejora y prueba skills de NUESTRO sistema (claude-skills con carpetas
+  Crea, mejora y prueba skills de NUESTRO sistema (setup/skills con carpetas
   shared/claude-code/cowork) aplicando las mejores prácticas oficiales de
   authoring y nuestras convenciones de sync/auditoría. Use when the user says
   "crea una skill", "nueva skill para X", "mejora esta skill", "la skill no
@@ -27,7 +27,7 @@ nuestras reglas de carpetas, sync y auditoría.
    (solo si se necesitan). Lo extenso NUNCA va en el cuerpo.
 3. **Triggers estrechos > amplios**: una skill que dispara de más contamina
    sesiones; revisar solape contra las skills existentes ANTES de escribir
-   (lee las descripciones de claude-skills/ y de Superpowers).
+   (lee las descripciones de `setup/skills/` y de Superpowers).
 
 ## Pasos
 
@@ -50,7 +50,7 @@ nuestras reglas de carpetas, sync y auditoría.
    falla, ajusta la descripción — no el cuerpo. Para evals serias con A/B y
    varianza: usa el `skill-creator` oficial (Cowork lo trae; en Code se
    instala de anthropics/skills).
-6. **Despliega**: carpeta → `claude-skills/<categoría>/` → `sync-skills`
+6. **Despliega**: carpeta → `setup/skills/<categoría>/` → commit → `sync-skills`
    (sin `-NoCoworkBuild` si es shared/cowork → re-subir dev-skills.zip) →
    commit al repo (regla de flujo git del README).
 
