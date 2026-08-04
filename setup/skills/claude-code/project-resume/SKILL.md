@@ -35,10 +35,12 @@ donde se quedó. **Solo lectura** — no escribe memoria en este paso.
    que aún no viviste) o si la tarea de hoy lo toca directamente.
    Si `_INDEX.md` no existe, el proyecto aún no está migrado: lee los ~3 ADRs
    más recientes como antes y avisa al usuario de que falta generar el índice.
-   El script vive en el repo ClaudeSetup y esta skill corre desde el cwd de
-   cualquier proyecto, así que se invoca por ruta absoluta (estable entre
-   laptops porque el repo viaja en OneDrive):
-   (`py "$HOME/OneDrive/Documentos/Mis_Documentos/Proyectos/Coding/Python/Otros/ClaudeSetup/setup/scripts/adr-index.py" <ruta ADRs>`).
+   Esta skill corre desde el cwd de cualquier proyecto, así que el script se
+   invoca por ruta absoluta. `sync-skills` lo instala en `~/.claude/scripts/`,
+   que es la misma ruta en toda máquina y **no depende de OneDrive**:
+   `py "$HOME/.claude/scripts/adr-index.py" <ruta ADRs>`
+   (PowerShell: `py "$env:USERPROFILE\.claude\scripts\adr-index.py" <ruta ADRs>`).
+   Si no está, corre `sync-skills` primero.
 4. Revisa `bugs/` **solo los `status: open`** (vocabulario cerrado:
    `open | fixed | invalid | wontfix`). Los cerrados se abren únicamente si la
    tarea de hoy los roza.

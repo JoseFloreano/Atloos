@@ -111,6 +111,25 @@ foreach ($cfg in $configDirs) {
     Write-OK "$($codeSkills.Count) skills → $target"
 }
 
+# ── 1b. Scripts auxiliares → ~/.claude/scripts/ ───────────────────────────
+# Las skills (adr-writer, project-resume, vault-drift-audit) invocan
+# adr-index.py por ruta absoluta, porque corren desde el cwd de cualquier
+# proyecto. Antes esa ruta era la del repo DENTRO de OneDrive: inerte en modo
+# single-laptop, y dependiente del arbol de carpetas de UNA laptop. Ahora la
+# ruta estable es ~/.claude/scripts/ y este paso la materializa en cada
+# maquina, igual que sync-hooks hace con ~/.claude/hooks/.
+$scriptsSource = Join-Path $PSScriptRoot "scripts"
+if (Test-Path $scriptsSource) {
+    Write-Host "`n▶ Instalando scripts auxiliares" -ForegroundColor Blue
+    foreach ($cfg in $configDirs) {
+        $target = Join-Path $cfg "scripts"
+        New-Item -ItemType Directory -Force -Path $target | Out-Null
+        $py = Get-ChildItem $scriptsSource -Filter "*.py" -File
+        foreach ($f in $py) { Copy-Item $f.FullName $target -Force }
+        Write-OK "$($py.Count) scripts → $target"
+    }
+}
+
 # ── 2. Cowork: empaquetar plugin dev-skills (shared + cowork) ─────────────
 if (-not $NoCoworkBuild) {
     Write-Host "`n▶ Empaquetando plugin dev-skills para Cowork" -ForegroundColor Blue

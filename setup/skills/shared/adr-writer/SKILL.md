@@ -66,14 +66,19 @@ productos (Claude Code y Cowork comparten el vault).
 4. Añade el wikilink `[[ADR-YYYYMMDD-tema]]` en `10-Projects/<proyecto>/_PROJECT.md`.
 5. **Regenera el índice**. Esta skill se instala globalmente y corre desde el
    cwd de cualquier proyecto, así que el script hay que invocarlo por ruta
-   absoluta — vive en el repo ClaudeSetup, y esa ruta es estable entre laptops
-   porque el repo viaja dentro de OneDrive:
+   absoluta. `sync-skills` lo instala en `~/.claude/scripts/`: misma ruta en
+   toda máquina, **con OneDrive o sin él**.
 
    ```bash
-   py "$HOME/OneDrive/Documentos/Mis_Documentos/Proyectos/Coding/Python/Otros/ClaudeSetup/setup/scripts/adr-index.py" "<vault>/10-Projects/<proyecto>/ADRs"
+   py "$HOME/.claude/scripts/adr-index.py" "<vault>/10-Projects/<proyecto>/ADRs"
    ```
 
-   (PowerShell: `py "$env:USERPROFILE\OneDrive\Documentos\Mis_Documentos\Proyectos\Coding\Python\Otros\ClaudeSetup\setup\scripts\adr-index.py" "<vault>\10-Projects\<proyecto>\ADRs"`)
+   (PowerShell: `py "$env:USERPROFILE\.claude\scripts\adr-index.py" "<vault>\10-Projects\<proyecto>\ADRs"`)
+
+   **En Cowork no hay `~/.claude/scripts/`** (no es una máquina tuya): escribe
+   el ADR igual y **deja anotado que el índice quedó pendiente de regenerar** —
+   se corrige en la siguiente sesión de laptop, o lo detecta
+   `vault-drift-audit`. No edites `_INDEX.md` a mano: se genera.
 
    Verifica que la línea del ADR nuevo aparece en `ADRs/_INDEX.md`. Si el script
    avisa de un `status:` ausente en otro ADR, arréglalo de paso: un ADR sin

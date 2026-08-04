@@ -96,6 +96,27 @@ for cfg in "${CONFIG_DIRS[@]}"; do
   ok "${#SKILLS[@]} skills → ${target}"
 done
 
+# ── 1b. Scripts auxiliares → ~/.claude/scripts/ ───────────────────────────
+# Las skills (adr-writer, project-resume, vault-drift-audit) invocan
+# adr-index.py por ruta absoluta, porque corren desde el cwd de cualquier
+# proyecto. Antes esa ruta era la del repo DENTRO de OneDrive: inerte en modo
+# single-laptop, y atada al árbol de carpetas de UNA laptop. Ahora la ruta
+# estable es ~/.claude/scripts/ y este paso la materializa en cada máquina,
+# igual que sync-hooks hace con ~/.claude/hooks/.
+SCRIPTS_SOURCE="$(cd "$(dirname "$0")" && pwd)/scripts"
+if [ -d "${SCRIPTS_SOURCE}" ]; then
+  echo -e "\n${BLUE}▶ Instalando scripts auxiliares${NC}"
+  for cfg in "${CONFIG_DIRS[@]}"; do
+    mkdir -p "${cfg}/scripts"
+    n=0
+    for f in "${SCRIPTS_SOURCE}"/*.py; do
+      [ -f "$f" ] || continue
+      cp "$f" "${cfg}/scripts/"; n=$((n+1))
+    done
+    ok "${n} scripts → ${cfg}/scripts"
+  done
+fi
+
 # ── 2. Cowork: empaquetar plugin dev-skills (shared + cowork) ─────────────
 if [ -z "${NO_COWORK_BUILD:-}" ]; then
   echo -e "\n${BLUE}▶ Empaquetando plugin dev-skills para Cowork${NC}"

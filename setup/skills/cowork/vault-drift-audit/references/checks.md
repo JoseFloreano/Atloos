@@ -10,11 +10,16 @@ esté conectado, el audit pide al usuario correrlo y reportar el resultado
 ## Índice de ADRs desfasado
 
 ```bash
-py "$HOME/OneDrive/Documentos/Mis_Documentos/Proyectos/Coding/Python/Otros/ClaudeSetup/setup/scripts/adr-index.py" "<vault>/10-Projects/<proyecto>/ADRs" --check
+py "$HOME/.claude/scripts/adr-index.py" "<vault>/10-Projects/<proyecto>/ADRs" --check
 ```
 
-El script vive en el repo ClaudeSetup; la ruta absoluta es estable entre
-laptops porque el repo viaja en OneDrive.
+`sync-skills` instala el script ahí: misma ruta en toda máquina, con OneDrive o
+sin él.
+
+> ⚠️ **Esta skill es de Cowork, donde `~/.claude/scripts/` NO existe** — no es
+> una máquina tuya. Ahí este check **no se puede ejecutar**: repórtalo como
+> "índice no verificado (requiere laptop)" en vez de darlo por bueno. Un check
+> que no corrió no es un check que pasó.
 
 Exit 2 = el índice no refleja los ADRs de la carpeta (alguien escribió uno a
 mano). Se arregla corriendo el mismo comando sin `--check`.

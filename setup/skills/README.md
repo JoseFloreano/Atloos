@@ -116,6 +116,26 @@ ruido en cada invocación.
 
 En las demás laptops: OneDrive sincroniza la carpeta sola; solo corre el paso 3.
 
+> ⚠️ **El sync lee de la FUENTE, no del repo.** Un `git pull` actualiza
+> `setup/skills/` del repo, pero `sync-skills` copia desde
+> `claude-skills/`. Si editas una skill en el repo, **espeja primero**
+> (`robocopy setup\skills\<cat> <fuente>\<cat> /MIR`, o `cp -r`) o el cambio no
+> llega a ninguna parte. El seed automático desde el repo solo ocurre la primera
+> vez, cuando la carpeta fuente aún no existe.
+
+### Scripts auxiliares (`~/.claude/scripts/`)
+
+`sync-skills` instala además los `.py` de `setup/scripts/` en
+`~/.claude/scripts/` de cada config dir. Existe porque varias skills
+(`adr-writer`, `project-resume`, `vault-drift-audit`) invocan `adr-index.py`
+por ruta absoluta —corren desde el cwd de cualquier proyecto— y esa ruta
+necesita ser la misma en toda máquina. Antes apuntaba al repo **dentro de
+OneDrive**: inerte en modo single-laptop y atada al árbol de carpetas de una
+laptop concreta. Es el mismo patrón que `sync-hooks` con `~/.claude/hooks/`.
+
+**En Cowork no existe** (no es una máquina tuya): las skills que dependen del
+script deben decir qué hacer sin él, no asumir que corrió.
+
 ## Reglas del sistema
 
 1. **Kebab-case** en nombres de carpeta: `adr-writer`, no `ADR Writer`.
