@@ -32,6 +32,9 @@ Cowork. **Solo lectura** — no escribe memoria ni commitea nada en este paso.
 2. Stage-a y lee `10-Projects/<nombre>/_PROJECT.md` desde la carpeta conectada.
    Si no existe, el proyecto no está enganchado → sugiere correr
    `project-onboard` desde Claude Code y para.
+   Si trae la línea `Backlog: N ítems → [[pendientes]]`, **menciónala sin stage-ar
+   el archivo** ("hay N más en el backlog"): el arranque debe costar lo mismo
+   que antes. Solo cárgalo si el usuario pregunta por el backlog.
 3. Stage-a **solo `ADRs/_INDEX.md`** y léelo: una línea por decisión con su
    `summary`. Stage-a un ADR completo únicamente si su fecha es ≥ la de la nota
    más reciente de `sessions/`, o si la tarea de hoy lo toca. Si `_INDEX.md` no

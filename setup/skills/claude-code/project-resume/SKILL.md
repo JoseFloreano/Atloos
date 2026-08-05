@@ -29,6 +29,9 @@ donde se quedó. **Solo lectura** — no escribe memoria en este paso.
 2. Lee `10-Projects/<nombre>/_PROJECT.md`. Si no existe, el proyecto no está
    enganchado → sugiere `project-onboard` y para. Si existe
    `codebase-map.md`, léelo también — es el mapa estructural del proyecto.
+   Si trae la línea `Backlog: N ítems → [[pendientes]]`, **menciónala sin abrir
+   el archivo** ("hay N más en el backlog"): el arranque debe costar lo mismo
+   que antes. Solo cárgalo si el usuario pregunta por el backlog.
 3. Lee `10-Projects/<nombre>/ADRs/_INDEX.md` — una línea por decisión, con su
    `summary`. **No abras los ADRs completos por defecto.** Abre uno entero solo
    si su fecha es ≥ la de la nota más reciente de `sessions/` (se decidió algo
