@@ -70,3 +70,40 @@ mtime (el vault se sincroniza por OneDrive y los mtime no son fiables).
 **Por qué así y no forzando `accepted` al nacer:** falsear el estado para que
 la auditoría lo vea sería mentirle al registro. La auditoría cubre el ciclo
 completo; el estado dice la verdad.
+
+---
+
+## Backlog `pendientes.md` — los 4 checks (RFD 12 §2.3)
+
+Solo aplican a proyectos que tengan `10-Projects/<proyecto>/pendientes.md`, o
+que deberían tenerlo. Sin este bloque, el backlog es un punto ciego: un archivo
+que nadie audita se convierte en el cementerio que el ADR de higiene mató.
+
+| Check | Cómo se mira | Hallazgo |
+|---|---|---|
+| **Zombi** | Ítem del backlog con `(alta: YYYY-MM-DD)` de **más de 30 días** y sin tocar | Proponer **borrar o re-priorizar**. Mismo espíritu que el `proposed` estancado: un pendiente que lleva un mes sin moverse casi nunca es un pendiente, es un deseo |
+| **Divergencia** | El mismo título aparece en `_PROJECT.md` **y** en `pendientes.md`; **o** la N de `Backlog: N ítems → [[pendientes]]` ≠ el conteo real | Las dos listas se están separando. **La N desfasada es el síntoma más temprano** y el más barato de detectar |
+| **Disolver** | Existe `pendientes.md` y el total (activos + backlog) es **≤8** | El backlog ya no se gana su existencia: proponer reabsorber y borrar el archivo |
+| **Crear** | `_PROJECT.md` tiene **más de 12** checkboxes de primer nivel y **no** hay `pendientes.md` | La sección va camino de romper el tope: proponer la válvula |
+
+**La fecha del zombi sale del `(alta:)` del ítem, no del mtime** — el vault se
+sincroniza por OneDrive y los mtime no son fiables (mismo motivo que en los
+ADRs). Un ítem sin `alta:` es en sí un hallazgo menor: no se puede auditar.
+
+**Se cuentan checkboxes de primer nivel** (`- [ ]` al margen izquierdo). Los
+sub-ítems indentados son detalle de su padre.
+
+⚠ **Cómo comparar títulos en el check de duplicados** — se aprendió fallando en
+la prueba sembrada del 2026-08-05:
+
+- Compara el **título completo**, no un prefijo. Truncar en el primer paréntesis
+  dejaba `"T4"`, que casa con cualquier cosa.
+- Busca **solo dentro de la sección `## Pendientes`** de `_PROJECT.md`, no en el
+  archivo entero: *Estado actual* menciona features por su nombre («T4 validado
+  como diseño») y eso no es un pendiente duplicado.
+
+Un check que grita en falso se ignora a las dos semanas, y entonces da igual que
+existiera. Prefiere no reportar a reportar ruido.
+
+Como todo en esta skill: **reporta y propone, no apliques**. Mover pendientes es
+escritura, y el único escritor del backlog es `session-close` o el coordinador.

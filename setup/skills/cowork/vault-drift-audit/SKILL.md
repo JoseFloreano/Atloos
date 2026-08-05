@@ -40,6 +40,9 @@ e invisible — se caza con revisiones periódicas, no en caliente.)
    desfasado (`adr-index.py --check`), `_PROJECT.md` por encima de 120 líneas o
    con secciones `## Hecho`, y notas de `sessions/` ya cosechadas con más de 30
    días — candidatas a `_archive/`.
+   **Backlog `pendientes.md`** (RFD 12): zombis con `alta:` de +30 días,
+   duplicados o N desfasada entre `_PROJECT.md` y el backlog, y los dos
+   umbrales — crear (>12 sin backlog) y disolver (≤8 con backlog).
 4. **Reporte por proyecto**, ordenado por severidad de drift: qué está
    desfasado, evidencia (fechas), y la actualización mínima propuesta.
 5. **Solo si el usuario aprueba**: aplica las actualizaciones propuestas
