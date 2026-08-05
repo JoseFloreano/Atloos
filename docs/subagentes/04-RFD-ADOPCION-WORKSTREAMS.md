@@ -1,12 +1,20 @@
 # RFD — Adopción de workstreams paralelos con subagentes
 
-> **Estado:** PROPUESTA — no aprobada, nada instalado.
-> **Fecha:** 2026-08-01 · **v3** (mismo día): las 3 preguntas abiertas
-> resueltas (piloto = AlphaDogs); **C1 invertido** en v2 (worktree manual, no
-> el flag nativo, porque la ruta nativa no es configurable); **C7 añadido** en
-> v3 (el anti-drift del vault con N frentes sobre el mismo proyecto).
-> W0 queda cerrado salvo declarar el comando de test.
-> **Contexto:** `00`–`03` de esta subserie · `ADR-20260801-puente-telegram` (worktree + gate de merge) del puente Telegram ·
+> **Estado:** **W1 ✓ de facto · W2 EJECUTADA · W3 no disparado.**
+> Pendiente de auditoría externa: hasta que cierre, el RFD **no se cosecha**.
+> **Fecha:** 2026-08-05 · **v4** — W1 ocurrió de facto el **2026-08-04**: una
+> jornada con **22 despachos** sobre dos planes y **8 ramas fusionadas sin un
+> solo conflicto de código**, usando el SDD interno de Superpowers. No se
+> planificó como piloto; dejó evidencia escrita
+> (`subagentes/05-LIMITACIONES-OBSERVADAS.md`). W2 se ejecutó a partir de esa
+> evidencia: `workstream-dispatch` y `workstream-merge-gate` en
+> `setup/skills/shared/`.
+> **v3** (2026-08-01): 3 preguntas resueltas (piloto = AlphaDogs); **C1
+> invertido** en v2 (worktree manual, no el flag nativo); **C7 añadido**.
+> **Contexto:** `00`–`03` de esta subserie · **`05-LIMITACIONES-OBSERVADAS.md`**
+> (evidencia empírica, 22 despachos) · **`06-INVESTIGACION-EXTERNA-MULTIAGENTE.md`**
+> (investigación externa; sus ①–⑩ están integrados en las skills) ·
+> `ADR-20260801-puente-telegram` (worktree + gate de merge) ·
 > doc 12 (concurrencia) · doc 13 §2 (plugin agent-teams) · R2 de la auditoría.
 > **Método:** evaluación de la investigación 00–03; formato de RFD del repo
 > (problema → objetivos → casos de diseño → alcance → criterios de éxito).
@@ -135,6 +143,17 @@ Por fases, y a propósito:
   vuelve el cuello de botella. Ahí entran `subagent-driven-development` y, si
   hace falta descomposición con ownership explícito, el plugin de wshobson.
 
+> **Actualización (2026-08-05).** El coordinador-agente **ya existe de facto**:
+> es el `subagent-driven-development` interno de Superpowers, que fue lo que
+> movió los 22 despachos del 08-04 sin que nadie lo decidiera como fase. Lo que
+> W2 añade NO es un orquestador propio —eso sería reconstruir lo que ya
+> funciona— sino una **capa encima**: `workstream-dispatch`, con lo que SDD no
+> trae y la evidencia exigió (estado del mundo generado, ownership por archivo,
+> presupuesto con número, predicción, y escalación por categoría con juez).
+> El plugin de wshobson **sigue sin instalarse**: sus tres mecanismos útiles
+> (file-ownership, contratos de interfaz, gate de partición) se adoptaron como
+> texto en la skill, sin traer su runtime (doc 06 §1.3).
+
 ### C3. Criterio de merge (contenido del gate)
 
 Heredado de C4 del `ADR-20260801-puente-telegram`, con una diferencia: allá el botón caduca a 5 min
@@ -203,32 +222,39 @@ doc — un beneficio colateral de haber elegido un proyecto del vault.
 | Fase | Contenido | Esfuerzo |
 |---|---|---|
 | **W0** | ~~Verificar C1~~ (§9.2) y ~~elegir repo piloto~~ (§9.1: AlphaDogs). Queda: declarar su comando de test y elegir los 2 frentes. | ~15 min |
-| **W1** | Piloto manual: 2 frentes reales en el proyecto elegido, sin instalar nada. Gate de merge aplicado **a mano**. Medir costo. | 1 sesión real |
-| **W2** | Solo si W1 salió bien: escribir `workstream-merge-gate` (`shared/`) destilando lo que se hizo a mano. ADR si cambia el flujo de git del proyecto. | ½ día |
-| **W3** | Solo si el criterio se saltó en la práctica: hook de enforcement (§4, opción B). `workstream-memory-briefing` solo si se llegó a orquestación programática. | ½ día |
+| **W1** | ✅ **Ocurrida de facto el 2026-08-04**: 22 despachos, 2 planes, 8 ramas fusionadas, 0 conflictos de código. No fue el piloto planificado (no fue AlphaDogs ni 2 frentes acordados), pero produjo la evidencia que W2 necesitaba — `05-LIMITACIONES-OBSERVADAS.md`. | 1 jornada real |
+| **W2** | ✅ **Ejecutada el 2026-08-05**: `workstream-dispatch` (+3 references) y `workstream-merge-gate` en `setup/skills/shared/`, destiladas del §3 del doc 05 y enriquecidas con los ①–⑩ del doc 06. **Sin ADR todavía**: la cosecha está gateada a la auditoría externa. | ½ día |
+| **W3** | ⛔ **NO disparado.** Su disparador es "el criterio de merge se saltó en la práctica", y no es lo que muestra la evidencia: los fallos del 08-04 fueron de **traspaso** (brief con premisa falsa, reporte sin artefacto, deriva entre paralelos), no del criterio de integración. Un hook que bloquea `git merge` no habría evitado ninguno. Sigue gateado a su disparador original. | — |
 
 Cada fase es un gate: si W1 no aporta valor medible, no hay W2 — y la
 investigación 00–03 queda como registro de por qué no.
 
+> **Lección sobre los gates mismos (2026-08-05):** W1 no ocurrió como se
+> planeó — ocurrió sola, en otro repo y sin declararse. El gate funcionó igual
+> porque lo que exigía era **evidencia**, no ceremonia. Un gate que hubiera
+> exigido "ejecutar el piloto tal como está escrito" habría declarado W1
+> pendiente teniendo 22 despachos documentados encima de la mesa.
+
 ## 7. Criterios de éxito
 
-1. **W0:** repo piloto elegido con comando de test declarado, y sus worktrees
-   resuelven fuera de OneDrive (C1).
-2. **W1 (aislamiento):** un archivo modificado y sin commitear en un frente
-   queda byte-idéntico tras trabajar en el otro (hash antes/después) — mismo
-   criterio que usó el `ADR-20260801-puente-telegram`.
-3. **W1 (memoria):** cada frente ve las Memory Rules de su proyecto
-   (comprobable pidiéndole que las cite).
-4. **W1 (valor):** el trabajo en paralelo terminó antes que la estimación
-   secuencial, o la diferencia fue lo bastante clara para justificar W2. Si
-   no, se documenta y se para.
-5. **W1 (costo):** hay una cifra propia de `ccusage` para comparar con la
-   estimación de terceros.
-6. **W1 (anti-drift, C7):** cada frente cierra con su nota en `sessions/` sin
-   pelearse por `_PROJECT.md`, y el hook Stop queda satisfecho en los dos.
-7. **W2:** el gate rechaza un merge sin verde en una prueba deliberada.
-8. **W3 (si llega):** el hook bloquea `git merge` hacia `main` sin evidencia
-   de verde, y no bloquea un merge legítimo.
+Estado al 2026-08-05. **Solo se marca lo que tiene artefacto**; lo demás queda
+abierto y dicho, porque W1 ocurrió sin instrumentarse como piloto.
+
+| # | Criterio | Estado | Evidencia |
+|---|---|---|---|
+| 1 | **W0:** repo piloto con comando de test declarado, worktrees fuera de OneDrive | ⚠️ parcial | Los worktrees resuelven fuera de OneDrive (C1, ya en uso). El piloto NO fue AlphaDogs |
+| 2 | **W1 aislamiento** | ✅ **CUMPLIDO** | **8 ramas fusionadas sin un solo conflicto de código** (doc 05 §2). Lo que sí colisionó fue lo *compartido*: `.git`, la máquina y las convenciones — no los archivos |
+| 3 | **W1 memoria:** cada frente cita sus Memory Rules | ⬜ abierto | No se comprobó; nadie se lo pidió a los frentes |
+| 4 | **W1 valor:** paralelo más rápido que secuencial | ⬜ abierto | No hubo brazo de control. La literatura avisa: a presupuesto igualado el single-agent iguala o supera (doc 06 §2.5) |
+| 5 | **W1 costo:** cifra propia de `ccusage` | ⬜ abierto | **No se midió.** Sin este número, atribuir mérito a la arquitectura es especulación (doc 06 §4.1: el gasto explica el 80% de la varianza) |
+| 6 | **W1 anti-drift (C7)** | ⬜ abierto | El piloto no fue un repo del vault |
+| 7 | **W2:** el gate rechaza un merge sin verde en prueba deliberada | ⬜ abierto | Las skills existen; **la prueba deliberada no se ha hecho** |
+| 8 | **W3 (si llega)** | — | No disparado |
+
+**Los tres criterios abiertos que más pesan** (4, 5 y 7): sin ellos, W2 se
+justifica por la evidencia *cualitativa* de los fallos —que es sólida y
+abundante— pero no por una ganancia medida. Está dicho a propósito: el auditor
+externo va a verificar artefactos, y aquí no los hay.
 
 ## 8. Riesgos de esta propuesta
 
@@ -260,5 +286,9 @@ investigación 00–03 queda como registro de por qué no.
 
 ---
 
-*RFD 04 de la subserie `subagentes/`. Promoverlo a decisión = ejecutar W0 y
-responder las tres preguntas del §9; registrar con `adr-writer` si se adopta.*
+*RFD 04 de la subserie `subagentes/`. **W1 ✓ de facto · W2 ejecutada · W3 no
+disparado.** La cosecha a ADR está **gateada a la auditoría externa** de la
+implementación de W2: la regla de `design-doc-harvest` exige condiciones de
+auditoría **cerradas**, no "hubo auditoría". Hasta entonces este RFD se queda
+en `docs/`, y los criterios abiertos del §7 (valor, costo, prueba deliberada
+del gate) se quedan abiertos.*

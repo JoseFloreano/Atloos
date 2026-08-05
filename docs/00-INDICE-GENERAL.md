@@ -91,7 +91,7 @@ La línea de trabajo activa. Los RFDs llevan su estado en la cabecera Y aquí.
 | [01 · Mecanismos nativos y externos](./subagentes/01-MECANISMOS-NATIVOS-Y-EXTERNOS.md) | `--worktree`, Agent Teams, Superpowers instalado, plugin wshobson |
 | [02 · Patrón propuesto y riesgos](./subagentes/02-PATRON-PROPUESTO-Y-RIESGOS.md) | Flujo en 4 pasos, gate de merge, costo y riesgos |
 | [03 · Skills propuestas](./subagentes/03-SKILLS-PROPUESTAS.md) | `workstream-merge-gate`, `workstream-memory-briefing`, plan de adopción |
-| [04 · RFD de adopción](./subagentes/04-RFD-ADOPCION-WORKSTREAMS.md) | ⭐ La ruta: fases W0–W3 con gates, dónde vive el gate de merge |
+| [04 · RFD de adopción](./subagentes/04-RFD-ADOPCION-WORKSTREAMS.md) | ⭐ La ruta W0–W3. **W1 ✓ de facto · W2 ejecutada · W3 no disparado** — sin cosechar hasta la auditoría externa |
 | [05 · Limitaciones observadas](./subagentes/05-LIMITACIONES-OBSERVADAS.md) | Evidencia empírica: 22 despachos, taxonomía de fallos y los 10 cambios a skills |
 | [06 · Investigación externa](./subagentes/06-INVESTIGACION-EXTERNA-MULTIAGENTE.md) | MAST, Superpowers 6, Agent Teams, wshobson; enriquecimientos para W2 |
 

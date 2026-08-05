@@ -6,7 +6,9 @@
 > Claude Code": varios subagentes trabajando cada uno en su workstream y su
 > rama, y un agente principal que hace el merge a `main`.
 > **Estado:** investigación CERRADA (docs finales). La ADOPCIÓN es lo que sigue
-> en propuesta (RFD 04 de esta carpeta) — nada instalado ni configurado todavía.
+> en propuesta (RFD 04 de esta carpeta). **Actualización 2026-08-05:** ya NO
+> es solo investigación — W2 dejó `workstream-dispatch` y
+> `workstream-merge-gate` instaladas en `setup/skills/shared/`.
 > **Método:** primero se agotó lo que el propio repo ya sabe (RFDs del puente
 > Telegram, doc 12, skill `agentic-system-design`, doc 13); solo después se
 > buscó afuera para llenar los huecos reales. Aplica el protocolo de auditoría
@@ -22,7 +24,7 @@
 | 01 | [Mecanismos nativos y externos](./01-MECANISMOS-NATIVOS-Y-EXTERNOS.md) | Qué existe ya: producto, Superpowers, plugin externo, lo propio |
 | 02 | [Patrón propuesto y riesgos](./02-PATRON-PROPUESTO-Y-RIESGOS.md) | Cómo componerlo, con qué gate se mergea, qué cuesta y qué rompe |
 | 03 | [Skills propuestas](./03-SKILLS-PROPUESTAS.md) | Qué NO crear (ya existe), qué sí, y el plan de adopción |
-| 04 | [RFD de adopción](./04-RFD-ADOPCION-WORKSTREAMS.md) | La ruta por fases W0–W3 con gates; gobierna la adopción |
+| 04 | [RFD de adopción](./04-RFD-ADOPCION-WORKSTREAMS.md) | ⭐ La ruta W0–W3. **W1 ✓ de facto (08-04) · W2 ejecutada (08-05) · W3 no disparado**; sin cosechar hasta la auditoría |
 | 05 | [Limitaciones observadas](./05-LIMITACIONES-OBSERVADAS.md) | Evidencia empírica: 22 despachos (2026-08-04); su §3 = spec de las skills de W2 |
 | 06 | [Investigación externa](./06-INVESTIGACION-EXTERNA-MULTIAGENTE.md) | Implementaciones, fallos y éxitos externos; enriquecimientos ①–⑩ para W2 |
 
