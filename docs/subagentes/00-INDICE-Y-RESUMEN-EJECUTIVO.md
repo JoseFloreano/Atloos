@@ -22,6 +22,9 @@
 | 01 | [Mecanismos nativos y externos](./01-MECANISMOS-NATIVOS-Y-EXTERNOS.md) | Qué existe ya: producto, Superpowers, plugin externo, lo propio |
 | 02 | [Patrón propuesto y riesgos](./02-PATRON-PROPUESTO-Y-RIESGOS.md) | Cómo componerlo, con qué gate se mergea, qué cuesta y qué rompe |
 | 03 | [Skills propuestas](./03-SKILLS-PROPUESTAS.md) | Qué NO crear (ya existe), qué sí, y el plan de adopción |
+| 04 | [RFD de adopción](./04-RFD-ADOPCION-WORKSTREAMS.md) | La ruta por fases W0–W3 con gates; gobierna la adopción |
+| 05 | [Limitaciones observadas](./05-LIMITACIONES-OBSERVADAS.md) | Evidencia empírica: 22 despachos (2026-08-04); su §3 = spec de las skills de W2 |
+| 06 | [Investigación externa](./06-INVESTIGACION-EXTERNA-MULTIAGENTE.md) | Implementaciones, fallos y éxitos externos; enriquecimientos ①–⑩ para W2 |
 
 ---
 
