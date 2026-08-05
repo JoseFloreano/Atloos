@@ -49,18 +49,18 @@ otra laptop.
      `memory-keeper`) ya escriben los episodios al grafo. Es **asíncrono**
      (~25s): no esperes confirmación ni lo busques al instante. Si Graphiti no
      está montado, omite en silencio (el vault es la fuente primaria).
-   - *Graphify* (estructura del código, local/Claude Code): el
-     `codebase-map.md` se regenera SOLO con el hook git post-commit
-     (`setup/hooks/git-post-commit-graph-report.sh`) — aquí NO se regenera
-     nada. Única verificación: si hoy hubo cambios estructurales y el repo
-     no tiene el hook (`.git/hooks/post-commit`), ofrece instalarlo
-     (cp + chmod); un `graphify .` manual vale solo como parche de esta vez.
-     En Cowork omite (es toolchain local).
+   - *Graphify* (local/Claude Code): el `codebase-map.md` lo regenera SOLO el
+     hook git post-commit (`setup/hooks/git-post-commit-graph-report.sh`) —
+     aquí no se regenera nada. Única verificación: si hubo cambios
+     estructurales y falta `.git/hooks/post-commit`, ofrece instalarlo. En
+     Cowork omite (es toolchain local).
 6. *(Solo Claude Code)* Si existe `.claude/vault-dirty.json` en el repo,
    bórralo — el cierre manual deja el flag del hook en cero.
-7. **Comprueba el tamaño de `_PROJECT.md`** (`wc -l`). Si pasa de **120
-   líneas**, di qué sección conviene rotar a `sessions/` y ofrécelo — el tope
-   duro es 150. **Avisa, no bloquees**: esto es una convención, no un hook.
+7. **Tamaño y backlog.** `wc -l` (blando 120, duro 150) y cuenta los checkboxes
+   de primer nivel: **>12** → propón crear `pendientes.md`; **≤8** entre activos
+   y backlog → propón disolverlo; si ya existe, **recalcula su N**. Mecánica:
+   [`references/backlog-pendientes.md`](references/backlog-pendientes.md).
+   **Avisa, no bloquees.**
 8. **Verifica y despide**: **relee las secciones que editaste** (el reporte
    de una edición no es la edición: un old_string que casó a medias deja
    fragmentos rotos), confirma qué se actualizó y responde con el "próximo
