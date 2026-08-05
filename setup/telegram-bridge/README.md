@@ -97,7 +97,8 @@ Escribirle al bot y que **Claude Code responda leyendo el repo que elijas**.
 Long polling saliente: sigue sin haber URL pública ni túnel.
 
 > **T1 es SOLO LECTURA.** El bot lee y conversa; no edita, no ejecuta comandos.
-> `/write on`, triage con modelo barato y botones inline llegan en T2.
+> `/write on` y el botón de merge llegan en T2. (El triage con
+> modelo barato sigue en el backlog, T3-bis.)
 
 ## Requisitos
 
@@ -147,6 +148,7 @@ Debe imprimir `Daemon en marcha (long polling)`. Los eventos van a
 | `/chat <n>` | Retoma la conversación n |
 | `/model [m]` | Ver o cambiar modelo (`opus`, `sonnet`, `haiku`, `fable`, `default`) |
 | `/status` | Proyecto, conversación, modo, rama, si hay invocación en vuelo |
+| `/progress [live\|off]` | Última etapa del trabajo en curso; `live` = panel que se auto-edita. No lo bloquea un vuelo en curso |
 
 Los de **escritura** (`/write`, `/diff`, `/commit`, `/test`, `/push`, `/merge`,
 `/done`) están en la sección T2, más abajo.
@@ -221,6 +223,7 @@ Puedes estar editando en la laptop mientras el bot desarrolla: no se ven.
 | `/commit [mensaje]` | Commitea en la rama. Sin mensaje, el agente propone uno | — |
 | `/test` | Corre el comando de test del proyecto dentro del worktree | — |
 | `/push` | Publica la rama; con `gh`, crea/actualiza el PR y manda el link | — |
+| `/pull` | Trae `main` a la rama de la conversación; si trajo cambios, el verde de `/test` caduca y hay que repetirlo | — |
 | `/merge` | Integra en `main` (squash) | **Sí** |
 | `/done` | Quita worktree, borra la rama y archiva la conversación | — |
 
@@ -237,7 +240,8 @@ Puedes estar editando en la laptop mientras el bot desarrolla: no se ven.
 
 ## Durante tareas largas
 
-- **Timeout de 90 minutos** en escritura (10 en lectura).
+- **Timeout de 90 minutos** en escritura (10 en lectura); hasta **60 turnos**
+  por invocación (15 en lectura).
 - **Checkpoint cada 30 minutos** con el tiempo transcurrido y la última etapa:
   el agente va anotando su avance en `.tg/progress.md` (excluido de los commits).
 - `/chat` y `/p` responden `⏳` mientras hay una invocación en curso — cambiar
@@ -274,10 +278,33 @@ posible). Se acepta el formato viejo (`"nombre": "ruta"`), sin tests.
 2. **Solo lectura real**: `--allowedTools Read,Grep,Glob` + `--permission-mode
    dontAsk` (deniega en vez de preguntar; en headless una pregunta colgaría el
    proceso). **Nunca** `--dangerously-skip-permissions`.
+   En **escritura** el modo es `acceptEdits` + una segunda barrera que limita
+   `Write`/`Edit` al repo del proyecto: `dontAsk` NO impone frontera de
+   directorio (verificado con canario — commit `2e44223`). Y en ambos modos se
+   **deniega la lectura** de rutas con secretos (`.env` del bridge, `~/.ssh`,
+   `~/.aws`) con rutas absolutas — los globs `Read(**/.env)` no funcionan.
 3. **`CLAUDE_TG_BOT=1`** en el entorno de cada invocación: el hook anti-drift
    `check-vault-updated.py` sale en silencio (no hay humano que cierre el vault).
 4. Los logs guardan eventos y longitudes, **no** el contenido de los mensajes ni
    el token.
+
+---
+
+# Fase T3 — memoria y tokens (`ADR-20260801-bot-memoria-y-perfil`)
+
+Cuatro piezas, todas del lado del daemon (el agente no gana permisos):
+
+- **Perfil de skills propio**: cada invocación corre con `CLAUDE_CONFIG_DIR`
+  apuntando a `%LOCALAPPDATA%\claude-tg-profile` (subset de ~15 skills) — las
+  ~29 del perfil normal costaban 4-5K tokens fijos por invocación.
+- **`CLAUDE.md` versión bot**: al crear el worktree se genera una copia SIN las
+  órdenes de vault/Graphiti (incumplibles desde el worktree; solo peso muerto).
+- **Briefing inyectado**: la primera invocación de cada conversación lleva un
+  extracto del `_PROJECT.md` (y `codebase-map` si existe) leído por el daemon —
+  el agente arranca sabiendo el estado del proyecto sin pedir permisos.
+- **Nota de sesión al vault**: en `/done`, el DAEMON escribe
+  `sessions/<fecha>-tg-<slug>.md` (rama, commits, etapas). El agente nunca toca
+  el vault; la memoria durable la escribe código nuestro.
 
 ---
 
