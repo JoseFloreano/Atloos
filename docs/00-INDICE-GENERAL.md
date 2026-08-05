@@ -25,6 +25,7 @@ La serie original: por qué esta arquitectura de memoria y no otra.
 | ~~09 · Higiene de contexto y ciclo de vida del vault~~ | ✅ **Implementado, auditado y cosechado** (2026-08-01) → la decisión vive en `ADR-20260801-higiene-vault` del vault. Tope de `_PROJECT.md`, índice de ADRs, ciclo de los RFDs |
 | [RFD 10 · Graphiti + FalkorDB: errores de integración](./arquitectura-memoria/10-RFD-GRAPHITI-INTEGRACION-ERRORES.md) | 🔵 **Draft** — 8 errores encontrados y propuesta de solución con skills en vez de MCP HTTP |
 | [11 · Graphiti: guía rápida de setup](./arquitectura-memoria/11-GRAPHITI-SETUP-GUIA-RAPIDA.md) | DeepSeek + Ollama; deriva del RFD 10 |
+| [RFD 13 · Graphiti: el estado real](./arquitectura-memoria/13-RFD-GRAPHITI-ESTADO-REAL.md) | 🔴 **Propuesta — pide decisión.** Qué es cierto hoy, los 4 diagnósticos falsos y la deriva del 08-04. **Léelo antes de tocar Graphiti** |
 | [12 · RFD backlog de pendientes](./arquitectura-memoria/12-RFD-BACKLOG-DE-PENDIENTES.md) | Válvula del tope de 120: `pendientes.md` con umbrales 12/8 y auditoría |
 
 ### 📁 [`cowork-y-multiagente/`](./cowork-y-multiagente/) — Los dos productos y su convivencia
