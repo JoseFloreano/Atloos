@@ -47,7 +47,7 @@ invocarlas manualmente ni configurar nada más.
 
 Las sesiones del daemon de Telegram **no son un cuarto directorio**, sino un
 **subconjunto** de `shared/` + `claude-code/`. Cada `description` entra al
-contexto en *cada* invocación, así que cargar las 29 cuesta tokens en tareas
+contexto en *cada* invocación, así que cargarlas TODAS cuesta tokens en tareas
 donde muchas no aplican jamás (decisión: `ADR-20260801-bot-memoria-y-perfil`, en el vault).
 
 **Criterio de inclusión.** Entra si sirve para *leer o escribir código desde un
@@ -81,6 +81,8 @@ worktree aislado*. Queda fuera si:
 | skill-forge | shared | ✗ | Mantiene el setup; requiere sync manual |
 | sql-conventions | shared | ✓ | Desarrollo |
 | web-security-review | shared | ✓ | Revisión, solo lectura |
+| workstream-dispatch | shared | ✗ | Coordina subagentes en la laptop; el bot es un solo agente en su worktree |
+| workstream-merge-gate | shared | ✗ | El merge del bot lo gobierna el daemon, no una skill |
 | api-evolution | claude-code | ✓ | Desarrollo |
 | dependency-audit | claude-code | ✗ | `npm audit`/`pip-audit` no están en la lista blanca |
 | flaky-test-hunter | claude-code | ✓ | Los comandos de test sí están permitidos |
@@ -92,10 +94,9 @@ worktree aislado*. Queda fuera si:
 | secrets-scan | claude-code | ✓ | Escaneo de solo lectura |
 | token-audit | claude-code | ✗ | Analiza el setup local, no el proyecto |
 
-**15 skills** entran al perfil bot (el universo del registro son `shared/` +
-`claude-code/`; las 2 de `cowork/` quedan fuera A PROPÓSITO — el bot corre sobre
-Claude Code — y por eso no tienen fila). El conteo vivo sale de esta tabla, no
-de esta frase.
+**El conteo vivo sale de la tabla, no de una frase**: cuenta los ✓. El universo
+del registro son `shared/` + `claude-code/`; las 2 de `cowork/` quedan fuera A
+PROPÓSITO —el bot corre sobre Claude Code— y por eso no tienen fila.
 
 **Mantenimiento**: toda skill nueva añade su fila **en el mismo PR** (misma regla
 que el registro de secretos del `setup/README.md`). La lista se revisa en el
