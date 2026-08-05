@@ -58,6 +58,10 @@ encontrar cuando un despacho dice "lee esto".
 
 - **Su único escritor es el coordinador.** Los subagentes lo LEEN.
 - El despacho **ordena leerlo** antes de empezar.
+- ⚠ **Tras una compactación, el coordinador lo relee —junto con `progress.md`—
+  ANTES de volver a despachar.** Sin ledger, "controllers have re-dispatched
+  entire completed task sequences": el coordinador olvida qué terminó y lo
+  vuelve a mandar (doc 06 ⑦).
 - ⚠ El workspace está gitignorado: es andamiaje por máquina. Lo que deba
   sobrevivir a la jornada va al vault o al mensaje de commit.
 
@@ -114,9 +118,14 @@ decisivo el **14,2%** de las veces (Who&When, doc 06 §2.4 [R]).
 
 ## 7 · Contrato de reporte y salida
 
-**Paso explícito de commit y push. SIEMPRE.** Un agente reportó 23 ficheros
-arreglados y suite verde tres veces, y **nunca commiteó** — porque su encargo,
-a diferencia de otros, no llevaba el paso (doc 05 §1.2).
+**Un commit atómico por tarea, y paso explícito de commit y push. SIEMPRE.**
+
+Atómico porque es lo que da trazabilidad de qué agente hizo qué (GSD, doc 06 ⑩):
+sin eso, reconstruirlo después es la atribución post-hoc que no funciona.
+
+Explícito porque un agente reportó 23 ficheros arreglados y suite verde tres
+veces, y **nunca commiteó** — su encargo, a diferencia de otros, no llevaba el
+paso (doc 05 §1.2).
 
 Al coordinador vuelven **≤15 líneas**:
 
