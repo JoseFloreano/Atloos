@@ -1,8 +1,22 @@
 # RFD — `pendientes.md`: la válvula del tope de 120 líneas
 
-> **Estado:** PROPUESTA — diseño aprobado por el usuario (2026-08-05),
-> pendiente de implementación. NO implementar junto con W2 de workstreams
-> (el implementador está ocupado); tiene su propio prompt cuando toque.
+> **Estado:** **IMPLEMENTADO (2026-08-05) — pendiente de auditoría externa.**
+> Hasta que cierre, este RFD **no se cosecha** y la enmienda al
+> `ADR-20260801-higiene-vault` (§4.4) **no se escribe**: la regla de
+> `design-doc-harvest` exige condiciones de auditoría CERRADAS.
+>
+> | Encargo | Commit |
+> |---|---|
+> | Plantilla `templates/pendientes.md` | vault |
+> | `session-close`: umbrales en ambas direcciones + `references/backlog-pendientes.md` | `b8ca2a1` |
+> | `vault-drift-audit`: los 4 checks del §2.3 | `4b607cc` |
+> | `project-resume`: menciona sin abrir (**las 2 variantes**) | `eefd25f` |
+> | Piloto `claude-setup` migrado | vault |
+>
+> **Piloto medido:** 131 → **116 líneas**, 13 pendientes → **6 activos + 6 en
+> backlog**. Arranque de `project-resume`: 8,6 KB (cargar el backlog sería +29%).
+> Prueba sembrada: zombi de 40 días y duplicado **cazados**, más la N desfasada.
+> Semillas retiradas y re-corrida limpia.
 > **Fecha:** 2026-08-05 · **Autor:** Cowork (auditor, nube).
 > **Contexto:** `ADR-20260801-higiene-vault` (vault) — este RFD lo ENMIENDA,
 > no lo reemplaza · plantillas en `ObsidianVault/templates/` · skills
