@@ -30,7 +30,9 @@ otra laptop.
    **Prohibido crear secciones `## Hecho` en `_PROJECT.md`.** Ese archivo
    describe cómo está el proyecto hoy, no cómo llegó hasta aquí.
 
-2. **`_PROJECT.md` del proyecto activo** — actualiza tres secciones, corto:
+2. **`_PROJECT.md` del proyecto activo** — **reléelo ENTERO justo antes de
+   editar**: pudo cambiar desde que arrancaste (el auditor y otras sesiones
+   también escriben en él; ya pasó). Actualiza tres secciones, corto:
    - *Estado actual*: 2-4 líneas de dónde quedó el proyecto HOY.
    - *Pendientes*: lo que quedó abierto (checkboxes), borrando lo ya cerrado.
    - *Próximo paso*: la primera acción concreta de la siguiente sesión — el
@@ -59,9 +61,11 @@ otra laptop.
 7. **Comprueba el tamaño de `_PROJECT.md`** (`wc -l`). Si pasa de **120
    líneas**, di qué sección conviene rotar a `sessions/` y ofrécelo — el tope
    duro es 150. **Avisa, no bloquees**: esto es una convención, no un hook.
-8. **Verifica y despide**: confirma qué se actualizó y responde con el
-   "próximo paso" anotado — así la sesión termina con el arranque de la
-   siguiente ya escrito.
+8. **Verifica y despide**: **relee las secciones que editaste** (el reporte
+   de una edición no es la edición: un old_string que casó a medias deja
+   fragmentos rotos), confirma qué se actualizó y responde con el "próximo
+   paso" anotado — así la sesión termina con el arranque de la siguiente ya
+   escrito.
 
 ## Qué NO hacer
 
