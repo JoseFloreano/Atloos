@@ -424,7 +424,10 @@ async def push_branch(worktree: str, branch: str) -> dict:
         return {"pushed": True}
 
     salida = (err or out)
-    rebasada = "non-fast-forward" in salida or "fetch first" in salida or "rejected" in salida
+    # P4: "rejected" a secas también lo escupe branch protection, y ahí el
+    # diagnóstico "divergió por el rebase" sería falso. Se exige la causa real
+    # que git nombra; el lease fallaría igual, pero el mensaje no mentiría.
+    rebasada = "non-fast-forward" in salida or "fetch first" in salida
     if not rebasada:
         return {"pushed": False, "reason": salida[:250]}
     if not branch.startswith(f"{BRANCH_PREFIX}/"):
@@ -483,15 +486,32 @@ async def pull_base(worktree: str, base: str) -> dict:
     else:
         objetivo = base
 
-    detras = await git(["rev-list", "--count", f"HEAD..{objetivo}"], worktree, check=False)
-    if detras.strip() in ("", "0"):
+    # P3: "" NO es "0". Si el comando falló, `check=False` devuelve cadena vacía
+    # y reportar "ya estabas al día" sería inventarse un estado.
+    detras = (await git(["rev-list", "--count", f"HEAD..{objetivo}"],
+                        worktree, check=False)).strip()
+    if not detras.isdigit():
+        return {"ok": False, "reason": f"no pude contar cuántos commits te faltan "
+                                       f"de {objetivo}; no toco la rama"}
+    if detras == "0":
         return {"ok": True, "sin_cambios": True, "detras": 0}
 
     rc, out, err = await run(["git", "rebase", objetivo], worktree, timeout=180)
     if rc != 0:
-        await run(["git", "rebase", "--abort"], worktree)
+        # P2: no basta con lanzar el abort — hay que comprobar que DEJÓ la rama
+        # como estaba. Si el abort falla y decimos "quedó intacta", mentimos y
+        # el siguiente comando se encuentra un rebase a medias. Mismo linaje que
+        # A1, que en merge_squash sí se verificó.
+        await run(["git", "rebase", "--abort"], worktree, timeout=60)
+        restaurada = (await head_sha(worktree) == antes) and await is_clean(worktree)
+        if not restaurada:
+            return {"ok": False, "conflicto": True, "detras": int(detras),
+                    "reason": f"{(err or out)[:200]}\n\n⚠️ Y el `rebase --abort` NO "
+                              f"dejó la rama como estaba: hay un rebase a medias en el "
+                              f"worktree. NO corras más comandos aquí — resuélvelo en "
+                              f"la laptop (`git rebase --abort` o `--skip`)."}
         return {"ok": False, "conflicto": True, "detras": int(detras),
-                "reason": f"{(err or out)[:200]}\n\nLa rama quedó intacta. "
+                "reason": f"{(err or out)[:200]}\n\nLa rama quedó intacta (verificado). "
                           f"Resuélvelo en la laptop o pide los cambios en otra rama."}
     return {"ok": True, "detras": int(detras), "antes": antes,
             "ahora": await head_sha(worktree)}

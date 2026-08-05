@@ -1059,9 +1059,17 @@ async def on_callback(update, context):
                 await reply(cfg, chat_id, f"❌ No pude publicar la rama: "
                                           f"{pushed.get('reason')}\nNo integro a medias.")
                 return
-            # El remoto debe quedar EXACTAMENTE en el HEAD que validó /test
+            # El remoto debe quedar EXACTAMENTE en el HEAD que validó /test.
+            # P1: si NO se puede saber (ls-remote falla por red o timeout) NO se
+            # integra. "No pude verificar → asumo que sí" es fail-open, y es
+            # justo el patrón que este bloque vino a matar.
             remoto = await gitops.remote_head(conv["worktree"], conv["branch"])
-            if remoto and not head_ahora.startswith(remoto[:len(head_ahora)]) \
+            if not remoto:
+                await reply(cfg, chat_id, "❌ No pude confirmar la punta remota de la "
+                                          "rama (¿red?). No integro sin verificarla: "
+                                          "reintenta el /merge en un momento.")
+                return
+            if not head_ahora.startswith(remoto[:len(head_ahora)]) \
                     and not remoto.startswith(head_ahora):
                 await reply(cfg, chat_id, f"❌ El remoto quedó en `{remoto[:7]}` y el "
                                           f"local en `{head_ahora}`. No integro con esa "
