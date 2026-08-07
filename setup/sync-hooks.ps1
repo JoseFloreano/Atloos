@@ -18,7 +18,8 @@
 param(
     [string]$HooksSource = "",
     [string]$PythonCmd   = "",
-    [switch]$NoWire      = $false
+    [switch]$NoWire      = $false,
+    [switch]$Prune       = $false    # el borrado es opt-in (RFD 10 C1)
 )
 
 $ErrorActionPreference = "Stop"
@@ -66,16 +67,42 @@ foreach ($cfg in $configDirs) {
     if (Test-Path $manifestPath) {
         try { $previous = (Get-Content $manifestPath -Raw | ConvertFrom-Json).hooks } catch { $previous = @() }
     }
-    foreach ($old in $previous) {
-        if ($sourceFiles.Name -notcontains $old) {
-            Remove-Item (Join-Path $target $old) -Force -ErrorAction SilentlyContinue
-            Write-Info "Removido hook obsoleto '$old'"
+    # Guard por CONJUNTOS (RFD 10 C1, espejo de sync-skills). El guard de la
+    # linea ~51 solo cubre la fuente TOTALMENTE vacia; una enumeracion PARCIAL
+    # lo pasa y borra igual. Radio de dano menor que en skills (son archivos
+    # sueltos, no arboles), pero el patron es el mismo y se cierra igual.
+    $faltantes = @($previous | Where-Object { $_ -and $sourceFiles.Name -notcontains $_ })
+    if ($faltantes.Count -gt 0) {
+        $sourceFiles = Get-ChildItem $HooksSource -Filter *.py -File   # reintento unico
+        $faltantes = @($previous | Where-Object { $_ -and $sourceFiles.Name -notcontains $_ })
+    }
+    if ($faltantes.Count -gt 0) {
+        if (-not $Prune) {
+            Write-Host "  [HUERFANOS] $($faltantes.Count) hooks instalados y NO en la fuente:" -ForegroundColor Red
+            foreach ($f in $faltantes) { Write-Host "      - $f" -ForegroundColor Red }
+            Write-Host "  Si los retiraste a proposito:  .\setup\sync-hooks.ps1 -Prune" -ForegroundColor Yellow
+        } else {
+            foreach ($old in $faltantes) {
+                Remove-Item (Join-Path $target $old) -Force -ErrorAction SilentlyContinue
+                Write-Info "Podado hook retirado '$old'"
+            }
         }
     }
-    foreach ($f in $sourceFiles) { Copy-Item $f.FullName (Join-Path $target $f.Name) -Force }
-    @{ syncedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm'); source = $HooksSource
-       hooks = @($sourceFiles.Name) } | ConvertTo-Json | Out-File $manifestPath -Encoding UTF8
-    Write-OK "$($sourceFiles.Count) hooks copiados"
+    # .tmp -> rename: los hooks son archivos sueltos, asi que aqui Move-Item
+    # -Force SI reemplaza atomicamente y no queda ventana destructiva.
+    foreach ($f in $sourceFiles) {
+        $dst = Join-Path $target $f.Name
+        Copy-Item $f.FullName "$dst.tmp" -Force
+        Move-Item "$dst.tmp" $dst -Force
+    }
+    if ($faltantes.Count -eq 0 -or $Prune) {
+        @{ syncedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm'); source = $HooksSource
+           hooks = @($sourceFiles.Name) } | ConvertTo-Json | Out-File $manifestPath -Encoding UTF8
+    } else {
+        Write-Warn "Manifest NO actualizado: sigue recordando los huerfanos."
+    }
+    $m = if ($previous) { $previous.Count } else { 0 }
+    Write-OK "$($sourceFiles.Count) hooks copiados  (manifest: $m)"
 
     if ($NoWire) { continue }
 

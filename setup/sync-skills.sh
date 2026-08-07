@@ -21,6 +21,7 @@
 #  Uso:
 #    ./sync-skills.sh
 #    NO_COWORK_BUILD=1 ./sync-skills.sh
+#    PRUNE=1 ./sync-skills.sh        # y SOLO entonces borra las huerfanas
 # ══════════════════════════════════════════════════════════════
 
 set -euo pipefail
@@ -67,22 +68,50 @@ for cfg in "${CONFIG_DIRS[@]}"; do
   target="${cfg}/skills"
   mkdir -p "${target}"
   manifest="${target}/_onedrive-sync.json"
+  manifest_tmp="${manifest}.tmp"
 
-  # Borrar skills gestionadas que ya no existen en la fuente.
+  # ── Guard por CONJUNTOS, no por conteos (RFD 10 C1) ─────────────────────
   # utf-8-sig al leer: el manifest lo puede haber escrito sync-skills.ps1, y
-  # PS 5.1 le mete BOM — sin esto json.load revienta y la limpieza no corre.
+  # PS 5.1 le mete BOM — sin esto json.load revienta y el guard no corre.
+  PREVIAS=""
   if [ -f "${manifest}" ] && command -v python3 >/dev/null 2>&1; then
-    for old in $(python3 -c "import json;print(' '.join(json.load(open('${manifest}', encoding='utf-8-sig'))['skills']))" 2>/dev/null); do
-      if [ -z "${SKILLS[$old]:-}" ]; then
-        rm -rf "${target:?}/${old}"
-        info "Removida skill obsoleta '${old}' de ${target}"
-      fi
-    done
+    PREVIAS=$(python3 -c "import json;print(' '.join(json.load(open('${manifest}', encoding='utf-8-sig'))['skills']))" 2>/dev/null || echo "")
+  fi
+  faltantes() { local f=""; for o in ${PREVIAS}; do [ -z "${SKILLS[$o]:-}" ] && f="${f} ${o}"; done; echo "${f# }"; }
+  FALTAN=$(faltantes)
+
+  # Reintento unico: cubre el flush pendiente tras un reset --hard, que es
+  # cuando muchas carpetas de la fuente se reescriben a la vez.
+  if [ -n "${FALTAN}" ]; then
+    echo -e "  ${YELLOW}[WARN]${NC} Faltan skills del manifest — releyendo la fuente…"
+    sleep 0.4
+    collect_skills shared claude-code
+    FALTAN=$(faltantes)
   fi
 
+  if [ -n "${FALTAN}" ]; then
+    if [ -z "${PRUNE:-}" ]; then
+      # NO se borra nada: una enumeracion corta es indistinguible de una
+      # retirada real. Se GRITA en cada corrida para que la huerfana no se
+      # acumule en silencio pagando su description en cada sesion.
+      echo -e "  ${RED}[HUERFANAS]${NC} instaladas y NO en la fuente:"
+      for f in ${FALTAN}; do echo -e "      ${RED}- ${f}${NC}"; done
+      echo -e "  ${YELLOW}Si las retiraste a proposito:  PRUNE=1 ./setup/sync-skills.sh${NC}"
+      echo -e "  ${YELLOW}Si NO las retiraste, es enumeracion parcial: NO uses PRUNE.${NC}"
+    else
+      for f in ${FALTAN}; do rm -rf "${target:?}/${f}"; info "Podada skill retirada '${f}'"; done
+    fi
+  fi
+
+  # .tmp -> rm -> mv. ENCOGE la ventana destructiva, no la elimina: sigue
+  # habiendo un rm antes del mv. Lo que se gana es que la copia ya termino
+  # cuando se borra; si el script muere en medio, el contenido esta en
+  # "<skill>.tmp" al lado y se recupera renombrando.
   for name in "${!SKILLS[@]}"; do
+    rm -rf "${target:?}/${name}.tmp"
+    cp -R "${SKILLS[$name]}" "${target}/${name}.tmp"
     rm -rf "${target:?}/${name}"
-    cp -R "${SKILLS[$name]}" "${target}/${name}"
+    mv "${target}/${name}.tmp" "${target}/${name}"
   done
 
   {
@@ -93,8 +122,17 @@ for cfg in "${CONFIG_DIRS[@]}"; do
       [ $first -eq 0 ] && echo -n ", "; echo -n "\"${name}\""; first=0
     done
     echo "]}"
-  } > "${manifest}"
-  ok "${#SKILLS[@]} skills → ${target}"
+  } > "${manifest_tmp}"
+  # Si quedaron huerfanas sin podar, NO se reescribe el manifest: si se
+  # reescribiera, la proxima corrida ya no recordaria que existieron.
+  if [ -z "${FALTAN}" ] || [ -n "${PRUNE:-}" ]; then
+    mv "${manifest_tmp}" "${manifest}"
+  else
+    rm -f "${manifest_tmp}"
+    echo -e "  ${YELLOW}[WARN]${NC} Manifest NO actualizado: sigue recordando las huerfanas."
+  fi
+  NPREV=$(echo ${PREVIAS} | wc -w)
+  ok "${#SKILLS[@]} skills → ${target}  (manifest: ${NPREV})"
 done
 
 # ── 1b. Scripts auxiliares → ~/.claude/scripts/ ───────────────────────────

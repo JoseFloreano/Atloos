@@ -16,13 +16,21 @@
 #  Es seguro correrlo cuantas veces quieras: solo gestiona las skills que él
 #  mismo instaló (manifest _onedrive-sync.json); no toca tus otras skills.
 #
+#  El borrado es SIEMPRE opt-in (-Prune). Por defecto el script no destruye
+#  nada: si encuentra skills instaladas que no estan en la fuente las GRITA en
+#  cada corrida con el comando para podarlas (RFD 10 C1). Motivo: una
+#  enumeracion parcial de la fuente es indistinguible de una retirada real, y
+#  en campo la corrida siguiente borro skills con [OK] y sin un solo error.
+#
 #  Uso:
 #    .\sync-skills.ps1
 #    .\sync-skills.ps1 -NoCoworkBuild
+#    .\sync-skills.ps1 -Prune           # y SOLO entonces borra las huerfanas
 # ══════════════════════════════════════════════════════════════
 
 param(
-    [switch]$NoCoworkBuild = $false
+    [switch]$NoCoworkBuild = $false,
+    [switch]$Prune = $false
 )
 
 $ErrorActionPreference = "Stop"
@@ -80,24 +88,65 @@ foreach ($cfg in $configDirs) {
         $previous = (Get-Content $manifestPath -Raw | ConvertFrom-Json).skills
     }
 
-    # Borrar skills gestionadas que ya no existen en la fuente
-    foreach ($old in $previous) {
-        if (-not $codeSkills.ContainsKey($old)) {
-            Remove-Item (Join-Path $target $old) -Recurse -Force -ErrorAction SilentlyContinue
-            Write-Info "Removida skill obsoleta '$old' de $target"
+    # ── Guard por CONJUNTOS, no por conteos (RFD 10 C1) ───────────────────
+    # El bug de campo: una enumeracion parcial hacia que la corrida SIGUIENTE
+    # borrase lo que no vio, con [OK] y sin un solo error. Comparar conteos no
+    # basta: +1 skill nueva y -1 subenumerada dan el mismo numero y borran igual.
+    $faltantes = @($previous | Where-Object { $_ -and -not $codeSkills.ContainsKey($_) })
+    if ($faltantes.Count -gt 0) {
+        # Reintento unico: cubre la hipotesis del flush pendiente tras un
+        # reset --hard, que es cuando muchas carpetas se reescriben a la vez.
+        Write-Warn "Faltan $($faltantes.Count) skills del manifest — releyendo la fuente…"
+        Start-Sleep -Milliseconds 400
+        $codeSkills = Get-Skills @("shared", "claude-code")
+        $faltantes = @($previous | Where-Object { $_ -and -not $codeSkills.ContainsKey($_) })
+    }
+
+    if ($faltantes.Count -gt 0) {
+        if (-not $Prune) {
+            # NO se borra nada. La skill puede estar retirada de verdad o puede
+            # ser una enumeracion corta: el script no puede distinguirlas, asi
+            # que elige no destruir y GRITA en cada corrida (RFD 10 C1: el costo
+            # de una huerfana instalada es su description en cada sesion, y no
+            # debe acumularse en silencio).
+            Write-Host "  [HUERFANAS] $($faltantes.Count) skills estan instaladas y NO en la fuente:" -ForegroundColor Red
+            foreach ($f in $faltantes) { Write-Host "      - $f" -ForegroundColor Red }
+            Write-Host "  Si las retiraste a proposito, podalas con:" -ForegroundColor Yellow
+            Write-Host "      .\setup\sync-skills.ps1 -Prune" -ForegroundColor Yellow
+            Write-Host "  Si NO las retiraste, esto es una enumeracion parcial: NO uses -Prune." -ForegroundColor Yellow
+        } else {
+            foreach ($old in $faltantes) {
+                Remove-Item (Join-Path $target $old) -Recurse -Force -ErrorAction SilentlyContinue
+                Write-Info "Podada skill retirada '$old' de $target"
+            }
         }
     }
 
-    # Copiar (reemplazo limpio por skill)
+    # Copia .tmp -> remove -> rename. ATENCION: esto ENCOGE la ventana
+    # destructiva, no la elimina — en Windows Move-Item falla si el destino
+    # existe, asi que sigue habiendo un remove antes del rename. Lo que se gana
+    # es que la copia ya termino cuando se borra: si el script muere en medio,
+    # el contenido esta en "<skill>.tmp" al lado y se recupera renombrando.
     foreach ($name in $codeSkills.Keys) {
         $dest = Join-Path $target $name
+        $tmp  = "$dest.tmp"
+        if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
+        Copy-Item $codeSkills[$name] $tmp -Recurse
         if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
-        Copy-Item $codeSkills[$name] $dest -Recurse
+        Move-Item $tmp $dest
     }
 
-    @{ syncedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm'); source = $SkillsRoot;
-       skills = @($codeSkills.Keys) } | ConvertTo-Json | Out-File $manifestPath -Encoding UTF8
-    Write-OK "$($codeSkills.Count) skills → $target"
+    # El manifest solo se reescribe si NO quedaron faltantes sin podar: si se
+    # reescribiera, la proxima corrida ya no recordaria que esas skills existian
+    # y la huerfana se volveria invisible.
+    if ($faltantes.Count -eq 0 -or $Prune) {
+        @{ syncedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm'); source = $SkillsRoot;
+           skills = @($codeSkills.Keys) } | ConvertTo-Json | Out-File $manifestPath -Encoding UTF8
+    } else {
+        Write-Warn "Manifest NO actualizado: sigue recordando las huerfanas."
+    }
+    $m = if ($previous) { $previous.Count } else { 0 }
+    Write-OK "$($codeSkills.Count) skills → $target  (manifest: $m)"
 }
 
 # ── 1b. Scripts auxiliares → ~/.claude/scripts/ ───────────────────────────
