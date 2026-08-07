@@ -6,7 +6,9 @@ Decisión: ADR-20260801-bot-memoria-y-perfil (vault).
 El daemon es código nuestro, no un LLM: puede tocar el vault
 sin abrir la puerta que T2 cerró. Dos direcciones:
 
-- **C1b (leer)**: extracto de `_PROJECT.md` + `codebase-map.md` que se antepone
+- **C1b (leer)**: extracto de `_PROJECT.md` + `codebase-map.md` (curado, con su
+  `updated:`) + resumen fresco de `codebase-map-snapshot.md` (D1 del RFD 10;
+  el curado da señal sin garantía de edad, el snapshot da frescura), que se antepone
   al primer mensaje de cada conversación. Sustituye a las órdenes de "lee el
   vault" que el bot recibía sin poder cumplir de forma fiable.
 - **C4 (escribir)**: nota de sesión en `/done`, con rama, commits y etapas.
@@ -22,7 +24,8 @@ from datetime import date
 from pathlib import Path
 
 PROJECT_BUDGET = 2000      # chars del extracto de _PROJECT.md
-MAP_BUDGET = 2000          # chars del extracto de codebase-map.md (presupuesto del ADR)
+MAP_BUDGET = 2000          # chars del extracto del codebase-map CURADO (presupuesto del ADR)
+SNAPSHOT_BUDGET = 800      # chars del resumen del snapshot generado (D1 del RFD 10)
 
 
 def vault_root() -> Path:
@@ -143,11 +146,21 @@ def project_briefing(project: str) -> str:
     cm = d / "codebase-map.md"
     if cm.is_file():
         try:
-            partes.append("### Mapa del codebase\n\n"
-                          + _trim(cm.read_text(encoding="utf-8", errors="replace"),
-                                  MAP_BUDGET))
+            texto = cm.read_text(encoding="utf-8", errors="replace")
+            # Se antepone su `updated:` para que el agente pese la EDAD de lo que
+            # lee: el curado no tiene generador que garantice su frescura (D1).
+            m = re.search(r"^updated:\s*(\S+)", texto, re.M)
+            edad = f" (curado, updated: {m.group(1)})" if m else " (curado, sin fecha)"
+            partes.append(f"### Mapa del codebase{edad}\n\n" + _trim(texto, MAP_BUDGET))
         except OSError:
             pass
+
+    # D1: la frescura la aporta el snapshot del hook, no el curado. Solo se
+    # añade si YA hay briefing o si el snapshot existe: la línea de ausencia es
+    # un aviso útil dentro de un briefing, no una razón para fabricar uno donde
+    # no lo había.
+    if partes or (d / "codebase-map-snapshot.md").is_file():
+        partes.append("### Snapshot del grafo\n\n" + snapshot_resumen(d))
 
     if not partes:
         return ""
@@ -156,6 +169,44 @@ def project_briefing(project: str) -> str:
             "el detalle completo, pídelo. No escribas en el vault; de eso se "
             "encarga el daemon al cerrar con /done.]\n\n"
             + "\n\n".join(partes) + "\n\n---\n\n")
+
+
+def snapshot_resumen(d: Path) -> str:
+    """Resumen FRESCO del `codebase-map-snapshot.md` que genera el hook (D1).
+
+    El snapshot es un volcado — en campo se midieron 111 KB. Aquí NO viaja la
+    topología: viajan la cabecera de generación (fecha/sha) y la sección de
+    resumen (conteo de nodos, módulos top), con tope de `SNAPSHOT_BUDGET`.
+
+    Por qué existe: el `codebase-map.md` curado aporta señal destilada pero sin
+    garantía de edad —su único escritor es humano—; el snapshot aporta frescura,
+    porque el hook lo regenera en cada commit. El briefing lleva los dos, cada
+    uno en su papel (D1 del RFD 10).
+
+    Si falta, lo dice: delata de paso que el hook post-commit no está instalado,
+    que es el fallo F6.
+    """
+    snap = d / "codebase-map-snapshot.md"
+    if not snap.is_file():
+        return "snapshot ausente (hook post-commit no instalado)"
+    try:
+        texto = snap.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return "snapshot ausente (hook post-commit no instalado)"
+
+    lineas, total = [], 0
+    for linea in texto.splitlines():
+        # Corta al primer encabezado de DETALLE: lo de arriba es la cabecera y
+        # el resumen; lo de abajo es la topología, que no debe viajar.
+        if lineas and re.match(r"^#{1,3}\s", linea) and not re.search(
+                r"resumen|summary|overview|totales?|mapa", linea, re.I):
+            break
+        if total + len(linea) + 1 > SNAPSHOT_BUDGET:
+            break
+        lineas.append(linea)
+        total += len(linea) + 1
+    resumen = "\n".join(lineas).strip()
+    return resumen or "snapshot presente pero sin sección de resumen legible"
 
 
 def write_session_note(project: str, branch: str, commits: list, estado: str,

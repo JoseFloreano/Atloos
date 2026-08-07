@@ -42,7 +42,8 @@ aislamiento activo.
    a la raíz del proyecto ajustando `project_id`/`group_id` al nombre. Si Graphiti
    no está montado, omite este paso.
 7. *(Opcional — si el repo usará Graphify)* instala el hook git post-commit que
-   mantiene `codebase-map.md` fresco en el vault:
+   mantiene `codebase-map-snapshot.md` fresco en el vault (el `codebase-map.md`
+   curado NO lo toca nadie automáticamente — RFD 10 C2):
    `cp setup/hooks/git-post-commit-graph-report.sh .git/hooks/post-commit` +
    `chmod +x` (ver `hooks/README.md`). Sin Graphify, omite sin avisar.
 8. **Verifica**: existe `10-Projects/<nombre>/_PROJECT.md`; el `CLAUDE.md` del

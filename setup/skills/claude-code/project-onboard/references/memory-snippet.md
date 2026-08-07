@@ -23,7 +23,7 @@
    UNA vez; si falla de nuevo hay otro escritor activo — PARA y avisa. NUNCA
    crees un archivo copia/variante (`X 2.md`, `-v2`, `(copia)`).
 
-At session start: `search_facts("recent decisions and known issues", group_ids=["<project-name>", "dev-global"])`, then read `10-Projects/<project-name>/_PROJECT.md` (y `codebase-map.md` si existe).
+At session start: `search_facts("recent decisions and known issues", group_ids=["<project-name>", "dev-global"])`, then read `10-Projects/<project-name>/_PROJECT.md` (y `codebase-map.md` si existe — es el mapa CURADO; el `codebase-map-snapshot.md` que genera el hook es un volcado, no lo leas entero).
 
 After completing each coding task, BEFORE reporting it done: update Pendientes/Estado — en `_PROJECT.md` (2-5 líneas) si trabajas solo, o en TU nota de sesión si hay multi-agente (regla 6). El hook Stop acepta ambas. Cierre completo → "cerramos" (`session-close`).
 

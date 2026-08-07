@@ -3,9 +3,15 @@
 #  git-post-commit-graph-report.sh — Hook post-commit de GIT (por repo)
 #
 #  Regenera el mapa del codebase con Graphify tras cada commit que toque
-#  CÓDIGO y lo copia al vault como 10-Projects/<proyecto>/codebase-map.md.
+#  CÓDIGO y lo copia al vault como 10-Projects/<proyecto>/codebase-map-snapshot.md.
 #  El grafo se actualiza en el COMMIT, no en el cierre de sesión —
 #  session-close ya no regenera nada, solo verifica que este hook exista.
+#
+#  ⚠ ESCRIBE EL SNAPSHOT, NUNCA EL CURADO (RFD 10 C2). Hasta 2026-08-06 este
+#  hook copiaba sobre `codebase-map.md`, que es un archivo CURADO A MANO: en
+#  campo se comió 3.152 bytes de lecturas humanas con 111.353 de volcado.
+#  Ley del único escritor aplicada a archivos: generado y curado no comparten
+#  fichero jamás. El curado lo escribe una persona; este snapshot, solo el hook.
 #
 #  Instalación (por repo, solo donde corre Graphify):
 #    cp setup/hooks/git-post-commit-graph-report.sh <repo>/.git/hooks/post-commit
@@ -22,8 +28,14 @@ git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null \
 
 # 2) Regenerar con Graphify si está instalado (AST local, rápido — H5).
 #    Si no está, degrada a copiar el último reporte existente.
+#    ⚠ `graphify .` NO genera GRAPH_REPORT.md por sí solo (verificado con
+#    0.9.5): escribe graph.json y te dice "next: run graphify cluster-only …".
+#    Sin el segundo paso este hook salía en silencio SIEMPRE — instalado y
+#    todo. Explica parte del "mapa congelado 9 días" del F6: no bastaba con
+#    instalarlo. `--no-viz` evita generar el .html en cada commit.
 if command -v graphify >/dev/null 2>&1; then
   graphify . >/dev/null 2>&1 || true
+  graphify cluster-only . --no-viz >/dev/null 2>&1 || true
 fi
 
 REPORT="graphify-out/GRAPH_REPORT.md"
@@ -38,8 +50,9 @@ for ROOT in "$OneDrive" "$USERPROFILE/OneDrive" "$HOME/OneDrive" "$USERPROFILE" 
   [ -n "$ROOT" ] || continue
   DEST="$ROOT/DevSetup/ObsidianVault/10-Projects/$NAME"
   if [ -d "$DEST" ]; then
-    cp "$REPORT" "$DEST/codebase-map.md" && echo "[graphify] codebase-map.md actualizado en vault: $NAME"
+    cp "$REPORT" "$DEST/codebase-map-snapshot.md" && echo "[graphify] codebase-map-snapshot.md actualizado en vault: $NAME"
     rm -f "$DEST/graph-report.md" 2>/dev/null  # migración del nombre viejo
+    # NO se toca codebase-map.md: es curado, y su único escritor es humano.
     exit 0
   fi
 done

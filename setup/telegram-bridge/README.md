@@ -300,7 +300,8 @@ Cuatro piezas, todas del lado del daemon (el agente no gana permisos):
 - **`CLAUDE.md` versión bot**: al crear el worktree se genera una copia SIN las
   órdenes de vault/Graphiti (incumplibles desde el worktree; solo peso muerto).
 - **Briefing inyectado**: la primera invocación de cada conversación lleva un
-  extracto del `_PROJECT.md` (y `codebase-map` si existe) leído por el daemon —
+  extracto del `_PROJECT.md` + el `codebase-map.md` curado + un resumen fresco
+  del `codebase-map-snapshot.md` (≤800 chars), leídos por el daemon —
   el agente arranca sabiendo el estado del proyecto sin pedir permisos.
 - **Nota de sesión al vault**: en `/done`, el DAEMON escribe
   `sessions/<fecha>-tg-<slug>.md` (rama, commits, etapas). El agente nunca toca

@@ -33,7 +33,9 @@ e invisible — se caza con revisiones periódicas, no en caliente.)
    **Drift = código con actividad posterior al vault por más de ~7 días.**
 3. **Señales internas** (siempre): pendientes con checkboxes intactos por >30
    días (pendientes zombis), `_PROJECT.md` sin sección "Próximo paso", y
-   `codebase-map.md` más viejo que el último cambio estructural conocido.
+   `codebase-map-snapshot.md` más viejo que el último cambio estructural — mide
+   la salud del hook. La frescura del `codebase-map.md` CURADO queda a juicio
+   humano: no tiene generador que la garantice.
    **ADRs: todos los estados, no solo `accepted`** — `proposed` estancado >14
    días y contradicciones sin `superseded` (tabla en `references/checks.md`).
    Además (detalle y comandos en `references/checks.md`): índice de ADRs

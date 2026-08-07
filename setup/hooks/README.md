@@ -24,7 +24,7 @@ Requiere Python 3 en el PATH (`python3` en macOS/Linux, `python` en Windows).
 
 | Hook | Evento | Qué garantiza |
 |------|--------|---------------|
-| `git-post-commit-graph-report.sh` | git `post-commit` (por repo) | El `codebase-map.md` del vault se regenera con Graphify en cada commit que toque código (commits solo de docs no disparan). El grafo deja de driftear entre cierres — `session-close` ya no regenera, solo verifica que este hook esté instalado |
+| `git-post-commit-graph-report.sh` | git `post-commit` (por repo) | El `codebase-map-snapshot.md` del vault se regenera con Graphify en cada commit que toque código (commits solo de docs no disparan). **Escribe el snapshot, NUNCA el `codebase-map.md` curado** (RFD 10 C2). `session-close` no regenera: verifica que el hook esté instalado y la edad del snapshot |
 
 Instalación por repo (solo donde corre Graphify):
 
@@ -34,7 +34,8 @@ chmod +x <repo>/.git/hooks/post-commit
 ```
 
 Nota de migración: versiones previas copiaban `graph-report.md`; el nombre
-canónico ahora es `codebase-map.md` (el que lee el snippet de memoria y
+canónico HUMANO es `codebase-map.md` — curado, lo escribe una persona; el
+generado por el hook es `codebase-map-snapshot.md` (el snippet de memoria lee el curado y
 `project-resume`). El hook borra el nombre viejo automáticamente.
 
 ## Instalación
