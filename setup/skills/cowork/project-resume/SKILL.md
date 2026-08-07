@@ -35,6 +35,11 @@ Cowork. **Solo lectura** — no escribe memoria ni commitea nada en este paso.
    Si trae la línea `Backlog: N ítems → [[pendientes]]`, **menciónala sin stage-ar
    el archivo** ("hay N más en el backlog"): el arranque debe costar lo mismo
    que antes. Solo cárgalo si el usuario pregunta por el backlog.
+   Compara **`Estado del repo:`** contra `origin/main`: si difieren, avisa
+   *"el vault va atrás — tómalo como orientación, no como verdad"*. Si el campo
+   no está (proyecto anterior a la convención), **dilo UNA vez**: `session-close`
+   lo añadirá al cerrar. Sin repo conectado no se puede comparar: reporta
+   **"no verificado"** — pero solo si el campo existe; si no, no fabriques ruido.
 3. Stage-a **solo `ADRs/_INDEX.md`** y léelo: una línea por decisión con su
    `summary`. Stage-a un ADR completo únicamente si su fecha es ≥ la de la nota
    más reciente de `sessions/`, o si la tarea de hoy lo toca. Si `_INDEX.md` no

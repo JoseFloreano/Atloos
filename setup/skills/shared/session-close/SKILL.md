@@ -27,8 +27,8 @@ otra laptop.
    `templates/session-import.md`). De `_PROJECT.md` se tocan **solo** tres
    secciones: Estado actual (en presente), Pendientes y Próximo paso.
 
-   **Prohibido crear secciones `## Hecho` en `_PROJECT.md`.** Ese archivo
-   describe cómo está el proyecto hoy, no cómo llegó hasta aquí.
+   **Prohibidas las secciones `## Hecho`**: ese archivo describe cómo está el
+   proyecto hoy, no cómo llegó hasta aquí.
 
 2. **`_PROJECT.md` del proyecto activo** — **reléelo ENTERO justo antes de
    editar**: pudo cambiar desde que arrancaste (el auditor y otras sesiones
@@ -44,22 +44,22 @@ otra laptop.
    - ¿Plan de Superpowers completado sin cosechar? → `design-doc-harvest`.
    - ¿Decisión tomada hoy sin ADR? → `adr-writer`.
    - ¿Bug no-obvio resuelto sin registrar? → `memory-keeper`.
-5. **Grafos (si están montados)** — complementan al vault, no lo reemplazan:
-   - *Graphiti* (memoria temporal): las cosechas del paso 4 (`adr-writer`/
-     `memory-keeper`) ya escriben los episodios al grafo. Es **asíncrono**
-     (~25s): no esperes confirmación ni lo busques al instante. Si Graphiti no
-     está montado, omite en silencio (el vault es la fuente primaria).
-   - *Graphify* (local/Claude Code): el `codebase-map.md` lo regenera SOLO el
-     hook git post-commit (`setup/hooks/git-post-commit-graph-report.sh`) —
-     aquí no se regenera nada. Única verificación: si hubo cambios
-     estructurales y falta `.git/hooks/post-commit`, ofrece instalarlo. En
-     Cowork omite (es toolchain local).
+5. **Grafos** — complementan al vault, no lo reemplazan:
+   - *Graphiti*: los episodios ya los escriben las cosechas del paso 4. Es
+     **asíncrono** (~25s): no esperes confirmación. Sin Graphiti, omite en
+     silencio: el vault es la fuente primaria.
+   - *Graphify*: si el repo lo usa, verifica **SIEMPRE** (no solo con cambios
+     estructurales) hook + edad del snapshot, y reporta el desfase en días →
+     [`references/grafos-y-estado-del-repo.md`](references/grafos-y-estado-del-repo.md).
 6. *(Solo Claude Code)* Si existe `.claude/vault-dirty.json` en el repo,
    bórralo — el cierre manual deja el flag del hook en cero.
-7. **Tamaño y backlog.** `wc -l` (blando 120, duro 150) y cuenta los checkboxes
-   de primer nivel: **>12** → propón crear `pendientes.md`; **≤8** entre activos
-   y backlog → propón disolverlo; si ya existe, **recalcula su N**. Mecánica:
-   [`references/backlog-pendientes.md`](references/backlog-pendientes.md).
+7. **Tamaño, backlog y estado del repo.** `wc -l` (blando 120, duro 150) y
+   cuenta los checkboxes de primer nivel: **>12** → propón crear
+   `pendientes.md`; **≤8** entre activos y backlog → propón disolverlo; si ya
+   existe, **recalcula su N**. En el mismo gesto actualiza (o añade si falta)
+   `Estado del repo: <sha corto> · <fecha>` con el `origin/main` real.
+   Mecánica: [`backlog`](references/backlog-pendientes.md) ·
+   [`estado del repo`](references/grafos-y-estado-del-repo.md).
    **Avisa, no bloquees.**
 8. **Verifica y despide**: **relee las secciones que editaste** (el reporte
    de una edición no es la edición: un old_string que casó a medias deja

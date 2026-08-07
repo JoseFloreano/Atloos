@@ -33,6 +33,10 @@ donde se quedó. **Solo lectura** — no escribe memoria en este paso.
    Si trae la línea `Backlog: N ítems → [[pendientes]]`, **menciónala sin abrir
    el archivo** ("hay N más en el backlog"): el arranque debe costar lo mismo
    que antes. Solo cárgalo si el usuario pregunta por el backlog.
+   Compara **`Estado del repo:`** contra `origin/main`: si difieren, avisa
+   *"el vault va atrás — tómalo como orientación, no como verdad"*. Si el campo
+   no está (proyecto anterior a la convención), **dilo UNA vez**: `session-close`
+   lo añadirá al cerrar.
 3. Lee `10-Projects/<nombre>/ADRs/_INDEX.md` — una línea por decisión, con su
    `summary`. **No abras los ADRs completos por defecto.** Abre uno entero solo
    si su fecha es ≥ la de la nota más reciente de `sessions/` (se decidió algo

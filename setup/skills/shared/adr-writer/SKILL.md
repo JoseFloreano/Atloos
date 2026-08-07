@@ -35,57 +35,39 @@ productos (Claude Code y Cowork comparten el vault).
    (similitud > 80%), actualízalo y marca el anterior como `superseded` — no dupliques.
 3. Crea `ADR-YYYYMMDD-tema-kebab.md` (fecha de hoy — NO uses numeración
    consecutiva: dos laptops offline generarían el mismo número y OneDrive
-   crearía archivos en conflicto):
+   crearía archivos en conflicto).
 
-   Frontmatter obligatorio (el índice de `ADRs/_INDEX.md` se genera de aquí —
-   ver `setup/scripts/adr-index.py`):
+   ⚠ **Excepción: un ADR COSECHADO se fecha con la fecha de la DECISIÓN**, no
+   con hoy. Fecharlo hoy rompe el orden del índice y miente sobre cuándo se
+   decidió. Añade dentro la línea *"🌾 Cosechado el YYYY-MM-DD de `<origen>`"*
+   para que se vea la diferencia entre cuándo se decidió y cuándo se registró:
 
-   ```yaml
-   ---
-   title: <título de la decisión>
-   date: YYYY-MM-DD
-   status: proposed
-   # status: proposed | accepted | rejected | superseded-by: ADR-YYYYMMDD-<tema>
-   summary: <UNA frase: qué se decidió. Es la celda que se lee en ADRs/_INDEX.md>
-   tags: [<tema>, <subsistema>]
-   project: <slug>
-   ---
-   ```
-
-   `summary` no es opcional: el script solo cae a `decision:` y luego a la
-   primera frase bajo `## Decisión` como último recurso para ADRs viejos que no
-   lo tienen — no es permiso para omitirlo en uno nuevo. Sin `summary`, quien
-   arranque una sesión ve el título del ADR en el índice y nada más. El
-   vocabulario de `status` es el de MADR, en inglés — nunca `estado:` en
-   español, porque el script (y `vault-drift-audit`) solo reconocen `status:`.
-
-   Secciones: **Contexto** (qué problema), **Decisión** (qué se eligió),
-   **Alternativas rechazadas** (y por qué), **Consecuencias** (trade-offs aceptados).
-   Máximo ~300 palabras — un ADR es un registro, no un ensayo.
+   Frontmatter obligatorio (`title`, `date`, `status`, `summary`, `tags`,
+   `project`) y las 4 secciones, en
+   [`references/formato-adr.md`](references/formato-adr.md). Las dos reglas que
+   más se saltan: **`summary` no es opcional** —es la celda que se lee en el
+   índice— y el vocabulario de `status` es **MADR en inglés**, nunca `estado:`
+   en español: el script solo reconoce `status:`.
 
 4. Añade el wikilink `[[ADR-YYYYMMDD-tema]]` en `10-Projects/<proyecto>/_PROJECT.md`.
-5. **Regenera el índice**. Esta skill se instala globalmente y corre desde el
-   cwd de cualquier proyecto, así que el script hay que invocarlo por ruta
-   absoluta. `sync-skills` lo instala en `~/.claude/scripts/`: misma ruta en
-   toda máquina, **con OneDrive o sin él**.
+
+   ⚠ **Con OTROS agentes vivos en el proyecto, NO toques `_PROJECT.md`**: deja
+   el wikilink **pendiente en tu nota de sesión** y `session-close` lo consolida.
+   Es la misma doctrina que aplica `check-vault-updated.py`, con la que este paso
+   se contradecía — en campo, con 7 worktrees vivos, cada agente improvisaba y el
+   conteo de ADRs se desincronizó.
+5. **Regenera el índice** por ruta absoluta — la skill corre desde el cwd de
+   cualquier proyecto y `sync-skills` instala el script en `~/.claude/scripts/`,
+   misma ruta en toda máquina, con OneDrive o sin él:
 
    ```bash
    py "$HOME/.claude/scripts/adr-index.py" "<vault>/10-Projects/<proyecto>/ADRs"
    ```
 
-   (PowerShell: `py "$env:USERPROFILE\.claude\scripts\adr-index.py" "<vault>\10-Projects\<proyecto>\ADRs"`)
-
-   **En Cowork no hay `~/.claude/scripts/`** (no es una máquina tuya): escribe
-   el ADR igual y **deja anotado que el índice quedó pendiente de regenerar** —
-   se corrige en la siguiente sesión de laptop, o lo detecta
-   `vault-drift-audit`. No edites `_INDEX.md` a mano: se genera.
-
-   Verifica que la línea del ADR nuevo aparece en `ADRs/_INDEX.md`. Si el script
-   avisa de un `status:` ausente en otro ADR, arréglalo de paso: un ADR sin
-   estado es invisible para la auditoría del vault.
-6. *(Solo si graphiti-memory está disponible)* guarda el episodio con
-   `group_id: "<proyecto>"` — nunca otro group_id — usando el formato de
-   `memory-instructions.md`. No esperes confirmación (es asíncrono).
+   **En Cowork no existe esa ruta**: escribe el ADR y **deja anotado que el
+   índice quedó pendiente**. No edites `_INDEX.md` a mano: se genera.
+6. *(Solo con graphiti-memory)* guarda el episodio con el `group_id` del
+   proyecto — nunca otro. Es asíncrono: no esperes confirmación.
 7. Verifica: el archivo existe, el wikilink está en `_PROJECT.md`, el índice
    quedó regenerado, y el status de cualquier ADR reemplazado quedó en
    `superseded`.

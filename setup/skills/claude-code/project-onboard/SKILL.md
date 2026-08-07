@@ -43,7 +43,11 @@ aislamiento activo.
    no está montado, omite este paso.
 7. *(Opcional — si el repo usará Graphify)* instala el hook git post-commit que
    mantiene `codebase-map-snapshot.md` fresco en el vault (el `codebase-map.md`
-   curado NO lo toca nadie automáticamente — RFD 10 C2):
+   curado NO lo toca nadie automáticamente — RFD 10 C2). ⚠ Antes de correr
+   `graphify claude install`, lee los 3 avisos de `setup/hooks/README.md`:
+   registra `PreToolUse` no documentados (peligroso con agentes en paralelo),
+   sirve para orientarse y no para decidir, y su hook cuenta en el
+   presupuesto de máquina:
    `cp setup/hooks/git-post-commit-graph-report.sh .git/hooks/post-commit` +
    `chmod +x` (ver `hooks/README.md`). Sin Graphify, omite sin avisar.
 8. **Verifica**: existe `10-Projects/<nombre>/_PROJECT.md`; el `CLAUDE.md` del

@@ -15,9 +15,15 @@ donde sale su −60% de costo (doc 06 ①, [AR]).
 
 ```
 Contexto: estamos endureciendo la compuerta de perímetro del repo X.
-Tu tarea: .superpowers/sdd/<plan>/task-3-brief.md   ← LEE SOLO ESTE
-Tu reporte: .superpowers/sdd/<plan>/task-3-report.md
+Tu tarea:  .superpowers/sdd/<plan>/task-3-brief.md      ← LEE SOLO ESTE
+Tu carpeta: .superpowers/sdd/<plan>/frentes/3/          ← TUYA, nadie más escribe
+Tu reporte: .superpowers/sdd/<plan>/frentes/3/report.md
 ```
+
+**Cada frente recibe su propia subcarpeta** (`frentes/<n>/`) para predicciones,
+notas y reporte. En campo un agente **sobrescribió el fichero de predicciones de
+otro** por compartir ruta: fallo de montaje, no de agente. Se parcheó a media
+jornada y dejó de pasar.
 
 El reporte largo va a archivo; al coordinador vuelven ≤15 líneas (bloque 7).
 
@@ -32,15 +38,39 @@ Lo que el brief **no puede saber** y hay que inyectar (doc 05 §1.3 y §3.2):
 - **Ramas vivas y qué ficheros toca cada una** — otro frente puede estar en los
   tuyos.
 - **Base real de la rama** (`git merge-base`), no la que asumió el plan.
-- **Conteo actual de la suite**: cuántos pasan/fallan HOY. Sin esto, un worktree
-  nuevo con ~256 fallos de artefactos ausentes se diagnostica como repo roto.
+- **DOS baselines de la suite**, no uno: el del **checkout principal** y el de un
+  **worktree recién creado**. No son el mismo número, y esa diferencia ES el
+  inventario que falta.
+- **Artefactos fuera de git**: `.env`, datasets, carpetas de datos — **ruta y
+  cómo obtenerlos**, no solo su nombre.
+- **Flags opt-in que mueven la suite**, con su estado actual.
 - **Colisiones vivas**: worktrees ocupados, ramas sin commitear en otro worktree.
 - **Trampas de entorno de ese día**: tests que solo fallan en orden de suite
-  completa, artefactos fuera de git que hay que copiar, etc.
+  completa, etc.
+
+> **El baseline no es un número: es un número más el estado de cuatro
+> interruptores.** En campo, **42 de 51 skips eran una sola variable**, y
+> **cuatro frentes perdieron una corrida entera** diagnosticando inventario
+> ausente como daño — uno reportó 256 rojos, otro 294.
 
 **Genéralo con comandos** (`git worktree list`, `git branch -v`, el runner de
-tests) y pega la salida. Escrito de memoria, este bloque miente: los números de
-línea los movió la tarea anterior.
+tests en ambos sitios) y pega la salida. Escrito de memoria, este bloque miente:
+los números de línea los movió la tarea anterior.
+
+### La regla que cierra el bloque 2: `[SUPUESTO]`
+
+**Toda afirmación de hecho lleva su comando de verificación, o se marca
+`[SUPUESTO]`** — y entonces el frente la verifica **antes** de construir encima.
+
+```
+La densidad se calcula en `metrics.py:88`  (verificado: grep -rn "densidad(" src/)
+[SUPUESTO] El endpoint /v1 no tiene otros consumidores — verifícalo antes de tocarlo.
+```
+
+Es el *"greppea quién consume"* del `subagentes/05` §1.1, aplicado **al lado del
+coordinador**: de diez despachos reales, **cuatro llevaban datos falsos**, y los
+cuatro eran del brief, no del agente. El riesgo no es la capacidad del modelo:
+es el traspaso.
 
 ---
 

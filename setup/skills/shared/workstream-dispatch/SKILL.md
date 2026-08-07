@@ -28,6 +28,9 @@ el mismo trabajo inútil, más caro.
 - Vas a despachar un subagente que **escribe** (implementador, arreglador).
 - Vas a despachar un **revisor** de trabajo ya hecho.
 - Coordinas 2+ frentes en paralelo y hay que repartir propiedad de archivos.
+- **También para despachar una auditoría adversarial de un DISEÑO aprobado,
+  ANTES del spec** — el crítico limpio, una fase antes. En campo tumbó un diseño
+  con 3 afirmaciones de carga falsas a costo de cero líneas escritas.
 
 ## Requisitos
 

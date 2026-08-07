@@ -140,3 +140,24 @@ nada" (fail-open); usa los arneses o bash.
 - **Fail-closed** ante group_id ausente/prohibido: exit 2 + mensaje accionable.
 - El multi-cuenta hereda el hook si copias `hooks/` + settings a cada
   `CLAUDE_CONFIG_DIR` (el sync de dotfiles ya contempla `settings.json`).
+
+## Graphify: tres cosas que conviene saber antes (RFD 10 C8)
+
+La herramienta es **externa** — este sync no la gestiona, y está bien así. Pero
+tres cosas se aprendieron usándola en campo y no están en su documentación:
+
+1. **`graphify claude install` registra `PreToolUse` en `.claude/settings.json`**,
+   además de la sección del `CLAUDE.md` que sí documenta. Esos hooks **inyectan
+   una instrucción imperativa en cada búsqueda de cada sesión** del repo
+   (*"MUST run graphify query before grepping"*). Con agentes en paralelo eso es
+   desviarles el método a media tarea: con 7 worktrees vivos se quitaron y se
+   dejó solo la sección del `CLAUDE.md`, que es inerte. **Con agentes en
+   paralelo, instala SOLO la sección.**
+2. **Sirve para orientarse, no para decidir.** Úsalo en la **primera media hora**
+   en un repo que no conoces (*"¿dónde vive esto y qué lo toca?"*) — ahí gana al
+   `grep`. **No esperes respuestas semánticas**: *"¿quién NECESITA este dato y
+   quién solo lo transporta?"* no lo contesta un grafo AST, porque un conteo de
+   ocurrencias no mide dependencia.
+3. **Su hook reconstruye en cada cambio de rama** — en una jornada se disparó
+   unas seis veces, compitiendo por RAM con tres subagentes. **Cuenta en el
+   presupuesto de máquina** del bloque 5 del despacho.

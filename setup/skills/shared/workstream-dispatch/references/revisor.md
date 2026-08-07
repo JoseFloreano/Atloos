@@ -29,6 +29,11 @@ de código (~72%) [R].
 
 ---
 
+> **Esto aplica igual a un DISEÑO, no solo a código.** Auditar un diseño
+> aprobado antes de escribir el spec es el mismo patrón —contexto limpio, no
+> confiar en el reporte— una fase antes. Ahí la "mutación" es atacar la
+> afirmación: *¿qué comando demostraría que esta carga es la que dice?*
+
 ## 2 · Contexto limpio
 
 El revisor **NO recibe el razonamiento del implementador**. Recibe:
