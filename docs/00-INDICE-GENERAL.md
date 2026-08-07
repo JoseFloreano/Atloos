@@ -96,6 +96,7 @@ La línea de trabajo activa. Los RFDs llevan su estado en la cabecera Y aquí.
 | [04 · RFD de adopción](./subagentes/04-RFD-ADOPCION-WORKSTREAMS.md) | ⭐ La ruta W0–W3. **W1 ✓ de facto · W2 ejecutada · W3 no disparado** — sin cosechar hasta la auditoría externa |
 | [05 · Limitaciones observadas](./subagentes/05-LIMITACIONES-OBSERVADAS.md) | Evidencia empírica: 22 despachos, taxonomía de fallos y los 10 cambios a skills |
 | [06 · Investigación externa](./subagentes/06-INVESTIGACION-EXTERNA-MULTIAGENTE.md) | MAST, Superpowers 6, Agent Teams, wshobson; enriquecimientos para W2 |
+| [07 · Primera campaña real](./subagentes/07-PRIMERA-CAMPANA-REAL.md) | Retrospectiva de campo del 08-06: qué del instrumental rindió y qué no |
 
 ## Convenciones
 

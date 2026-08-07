@@ -1,9 +1,30 @@
 # RFD — Endurecimiento del instrumental tras la primera campaña de campo
 
-> **Estado:** **APROBADA (v3, 2026-08-07)** — auditada por Opus (los 7
-> hallazgos incorporados, §9) y las 2 decisiones abiertas **resueltas por el
-> usuario** (§0). Lista para el prompt de implementación; la auditoría
-> externa de Cowork cierra el ciclo.
+> **Estado:** **IMPLEMENTADO (2026-08-07) — pendiente de auditoría externa.**
+> Hasta que cierre no se cosecha (regla de `design-doc-harvest`: condiciones
+> CERRADAS). v3 APROBADA tras la auditoría de Opus (§9) y el arbitraje de D1/D2.
+>
+> | Encargo | Commit |
+> |---|---|
+> | C1 · guard del sync + tests | `ea2a355` |
+> | C2 + D1 · snapshot, censo de 10, vaultio, enmienda ADR | `ee64846` |
+> | C3-C8 · plantilla, cosecha, `Estado del repo`, avisos | `c2cef49` |
+> | Reporte A promovido a `subagentes/07` + índices | este commit |
+>
+> **Los 8 criterios, con evidencia medida:** (1) 11/11 del arnés
+> `setup/scripts/tests/test-sync-guard.py` · (2) canario: curado `f17b6e0c…`
+> byte-idéntico y snapshot creado · (3) los 10 consumidores a su destino, cero
+> describen el curado como generado · (4) briefing 547→618 chars, extracto de
+> **119** (de 97.917 en disco) bajo el tope de 800 · (5) 8/8 skills ≤500,
+> `session-close` en **488** (partía de 489) · (6) los 7 bloques conservan
+> numeración · (7) **la condición 7 del RFD 04 sigue ABIERTA** · (8) ciclo D2
+> completo sobre `claude-setup`.
+>
+> **Delta (§7: gana el código):** `graphify .` no genera `GRAPH_REPORT.md` por
+> sí solo en 0.9.5 — pide un `cluster-only` aparte. El hook buscaba ese archivo
+> y **salía en silencio siempre, instalado y todo**: explica parte del F6 más
+> allá de "no estaba instalado". Añadido al hook; sin eso el criterio 2 era
+> inalcanzable.
 > **Fecha:** 2026-08-06 · **v3** 2026-08-07 (D1/D2 resueltas; la v2 con las
 > opciones completas queda en git) · **Autor:** Cowork (auditor, nube) ·
 > **Auditor del RFD:** Opus (laptop, con el código delante) — flujo

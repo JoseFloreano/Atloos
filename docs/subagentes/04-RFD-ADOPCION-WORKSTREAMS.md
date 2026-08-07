@@ -248,7 +248,7 @@ abierto y dicho, porque W1 ocurrió sin instrumentarse como piloto.
 | 4 | **W1 valor:** paralelo más rápido que secuencial | ⬜ abierto | No hubo brazo de control. La literatura avisa: a presupuesto igualado el single-agent iguala o supera (doc 06 §2.5) |
 | 5 | **W1 costo:** cifra propia de `ccusage` | ⬜ abierto | **No se midió.** Sin este número, atribuir mérito a la arquitectura es especulación (doc 06 §4.1: el gasto explica el 80% de la varianza) |
 | 6 | **W1 anti-drift (C7)** | ⬜ abierto | El piloto no fue un repo del vault |
-| 7 | **W2:** el gate rechaza un merge sin verde en prueba deliberada | ⬜ abierto | Las skills existen; **la prueba deliberada no se ha hecho** |
+| 7 | **W2:** el gate rechaza un merge sin verde en prueba deliberada | ⬜ **abierto** | Las skills existen; **la prueba deliberada no se ha hecho**. En campo el gate cazó una integración inválida real ([[07-PRIMERA-CAMPANA-REAL]]), pero eso **no cierra este criterio**: en uso real no se distingue "el gate lo paró" de "la suite estaba roja igualmente" |
 | 8 | **W3 (si llega)** | — | No disparado |
 
 **Los tres criterios abiertos que más pesan** (4, 5 y 7): sin ellos, W2 se

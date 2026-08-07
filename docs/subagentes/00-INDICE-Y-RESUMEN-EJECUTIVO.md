@@ -27,6 +27,7 @@
 | 04 | [RFD de adopción](./04-RFD-ADOPCION-WORKSTREAMS.md) | ⭐ La ruta W0–W3. **W1 ✓ de facto (08-04) · W2 ejecutada (08-05) · W3 no disparado**; sin cosechar hasta la auditoría |
 | 05 | [Limitaciones observadas](./05-LIMITACIONES-OBSERVADAS.md) | Evidencia empírica: 22 despachos (2026-08-04); su §3 = spec de las skills de W2 |
 | 06 | [Investigación externa](./06-INVESTIGACION-EXTERNA-MULTIAGENTE.md) | Implementaciones, fallos y éxitos externos; enriquecimientos ①–⑩ para W2 |
+| 07 | [Primera campaña real](./07-PRIMERA-CAMPANA-REAL.md) | Retrospectiva de campo (10 despachos, 6 ramas). Evidencia **complementaria** de W2 — no cierra la condición 7 |
 
 ---
 
