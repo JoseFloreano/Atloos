@@ -40,6 +40,7 @@ La serie original: por qué esta arquitectura de memoria y no otra.
 | Doc | Tema |
 |-----|------|
 | [09 · Auditoría del setup](./auditoria/09-AUDITORIA-SETUP.md) | Fortalezas, riesgos, matriz y mitigaciones (aplicadas) |
+| [10 · RFD endurecimiento de campo](./auditoria/10-RFD-ENDURECIMIENTO-DE-CAMPO.md) | 12 fallos de la primera campaña real (3 reportes); pendiente de auditoría por Opus |
 
 ### 📁 [`skills/`](./skills/) — Catálogos de skills investigados
 
