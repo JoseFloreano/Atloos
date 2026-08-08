@@ -1,9 +1,19 @@
 # RFD — Del caso a la clase: los cuatro fallos de la segunda campaña
 
-> **Estado:** **APROBADA v3 (2026-08-08)** — auditada por Cowork (APROBABLE; los
-> 5 hallazgos incorporados, §9) y **arbitrada por el usuario: D1 → (b), D2 →
-> (b)**, coincidiendo con la recomendación del RFD y el voto del auditor.
-> Queda listo para el prompt de implementación; **no se ha implementado nada**.
+> **Estado:** **IMPLEMENTADO — pendiente de auditoría externa (2026-08-08).**
+> Aprobada v3 el 08-08 (auditada por Cowork: APROBABLE, los 5 hallazgos
+> incorporados en §9) y **arbitrada por el usuario: D1 → (b), D2 → (b)**,
+> coincidiendo con la recomendación del RFD y el voto del auditor.
+>
+> | Caso | Estado | Evidencia |
+> |---|---|---|
+> | **C1** (F14) | ✅ | Disparador y expectativa con número en los **dos** sitios: `hooks/README.md` y la sustitución explícita en `project-onboard` §7 de la línea que escribe `graphify claude install`. `grep -rn "primera media hora" setup/` → **0**; los 4 archivos de `docs/` son historia y **no** se reescribieron |
+> | **C2** (F15) | ✅ | El bloque 2 de `plantilla-despacho.md` pide lo **presente** (disco + variables **con su valor**) y menciona el `os.environ.setdefault` del `conftest.py`. Los **7 bloques conservan numeración** |
+> | **C3** (F16, D1=b) | ✅ | `session-close` lee/escribe `<!-- umbral avisado: … -->`, escala desde la 2.ª vez con los días y borra la línea al descruzarse; `vault-drift-audit` cuenta las fechas (≥3 → hallazgo) **en `checks.md`**, no en el cuerpo. Presupuesto: 491/500 |
+> | **C4** (F17) | ✅ | `memory-keeper` gana el modo refutación; **ambas** variantes de `project-resume` dejan de servir un hecho tachado; check nuevo en `checks.md`. **Prueba sembrada corrida y retirada**: con el hecho falso en el foco, la sesión ciega reportó el valor correcto verificando contra la fuente, y el check cazó la divergencia del caso a medias |
+> | **C5** (F18, D2=b) | ✅ | Volcado a `%LOCALAPPDATA%\graphify-snapshots\<proyecto>\`, recorte al vault. **Canario con commit real: 158.633 → 568 bytes**, curado intacto. `vaultio.snapshot_resumen` devuelve **exactamente lo mismo que antes** (40 chars): ningún consumidor cambia |
+>
+> Auditoría externa pendiente. **No se ha cosechado nada** (04, 10 ni 12).
 > **Fecha:** 2026-08-07 · **v2** 2026-08-08 · **Autor:** Opus (laptop, con el
 > código delante) —
 > **flujo invertido respecto al RFD 10**: allí escribió el auditor y auditó el
