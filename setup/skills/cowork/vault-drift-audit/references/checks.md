@@ -114,8 +114,13 @@ escritura, y el único escritor del backlog es `session-close` o el coordinador.
 ## Rutas inalcanzables en las skills
 
 ```bash
+# DESDE EL REPO ClaudeSetup — es un test del repo, no un script instalado:
 py setup/scripts/tests/test-skill-paths.py     # 0 = limpio · 1 = hallazgos
 ```
+
+⚠ **En Cowork no se puede correr** (no hay repo conectado ni intérprete): igual
+que el `--check` del índice, repórtalo como **"no verificado (requiere laptop)"**
+en vez de darlo por bueno. Un check que no corrió no es un check que pasó.
 
 Caza la enfermedad que produjo el fallo del 2026-08-07: **una skill corre desde
 el cwd de CUALQUIER proyecto**, así que todo lo que mande ejecutar necesita una

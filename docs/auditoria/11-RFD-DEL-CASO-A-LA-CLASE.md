@@ -239,6 +239,15 @@ la auditoría externa del RFD 10.
   Cowork es el contrapeso — y el flujo invertido del RFD 10 ya demostró que
   funciona en las dos direcciones.
 
+> **Nota de campo, al redactar este RFD (2026-08-07):** el arnés
+> `test-skill-paths.py` —escrito ayer para cazar la clase de F13— cazó **una
+> línea mía de ayer**: el propio check que añadí a `vault-drift-audit` mandaba
+> correr el test por ruta del repo, en una skill que corre desde Cowork. Es la
+> **tercera** vez en dos días que esta clase muerde, y la primera que la caza una
+> máquina en vez de una jornada perdida. Sirve de evidencia para el patrón que
+> este RFD ataca: cuando el arreglo es una convención escrita, vuelve; cuando es
+> un arnés, no.
+
 ## 8. Trazabilidad
 
 F14→`subagentes/08` §2 · F15→§3 (workstream-dispatch) · F16→§3 (session-close) y
