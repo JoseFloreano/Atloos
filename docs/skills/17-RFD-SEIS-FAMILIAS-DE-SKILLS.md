@@ -366,24 +366,93 @@ forma determinista**, sin confiar en la configuración del agente. Es la misma
 tesis del `hooks/README.md`: *la compliance probabilística se degrada; el hook
 la convierte en garantía*.
 
-#### Veredicto sobre las guardias
+#### D2 resuelta: *"que no se caiga, y que se autocorrija sin intervención"*
 
-**Construible hoy — guardia de latido y triage, solo-lectura.** Vigila que lo
-que debe correr corra (el daemon, los backups, el sync), y cuando algo falla
-**investiga y reporta por Telegram con su evidencia**. No toca nada. Se monta
-sobre piezas que ya existen: mini-PC, daemon, `notify_telegram.py`, headless.
+Respuesta del usuario (2026-08-08). Contradice el primer veredicto de este RFD
+—*"remediación autónoma, no"*— así que se investigó otra vez en vez de defender
+la conclusión previa. **El usuario tiene razón, y mi primer veredicto estaba mal
+planteado**: la pregunta no es *"¿autonomía sí o no?"* sino **"¿autonomía sobre
+qué clase de problema?"**.
 
-**No construible todavía — remediación autónoma.** Los números no la sostienen,
-y el camino honesto es el que la propia industria usa: elegir **un** runbook de
-alta frecuencia y bajo riesgo, y automatizarlo **solo después** de haberlo visto
-resolverse a mano varias veces. Sin ese historial, es adivinar.
+Porque los números se contradicen entre sí, y ahí está la respuesta:
 
-⚠ **La pregunta que decide si esta pieza se construye o no:** *¿qué vigila?*
-Hoy no hay nada en producción con guardia. Si la respuesta es "el daemon de
-Telegram y los backups del vault", es una guardia pequeña y perfectamente útil.
-Si es "los servidores de un cliente", es otro proyecto. **Mientras no haya
-respuesta, esto es una solución buscando su problema** — y ese es el molde del
-que salieron las 12 skills muertas del §4.4.
+| Estudio | Dominio | Acierto |
+|---|---|---|
+| OpenRCA · CUJBench | diagnóstico abierto, multi-modal, trazas reales | **3,9 – 19,7%** |
+| Self-healing IaC (LLM multi-agente, 2026) | deriva de configuración contra un estado **declarado** | **96,8%** de detección · MTTR 6,9 min |
+| Multi-agente SRE (entorno simulado) | RCA + PR de arreglo | 96% RCA · **73%** de PRs válidos |
+
+No se contradicen: **miden problemas de anchura distinta**. La deriva de IaC
+acierta al 96% porque **no es diagnóstico, es un diff**: hay un estado declarado
+contra el que comparar. El 4% es lo que pasa cuando no lo hay.
+
+> **La autonomía es segura donde existe un estado correcto declarado.**
+> Donde hay que *inferir* qué debería estar pasando, no lo es.
+
+Y esa frase es la que este proyecto ya practica sin haberla escrito: el guard de
+`sync-skills` compara **conjuntos de nombres contra un manifest**, y
+`vault-drift-audit` compara el vault contra reglas explícitas. Ninguno diagnostica.
+
+#### Los tres niveles de la guardia
+
+| | Qué cubre | Quién decide | Autonomía |
+|---|---|---|---|
+| **N0 · Determinista** | el proceso se cayó, no responde, el deploy rompió | **systemd / el runtime — sin LLM** | **total** |
+| **N1 · Diff contra estado declarado** | falta un hook, el `.env` no está, skills desincronizadas, el backup no latió | comparación explícita; el LLM **como mucho** redacta el aviso | **acotada a restaurar el estado declarado** |
+| **N2 · Diagnóstico abierto** | "va lento", "error raro en los logs", "por qué falló esto" | **el humano** | ninguna: investiga y reporta |
+
+**N0 es autocorrección sin humano y no necesita IA en absoluto.** Para un
+mini-PC, `systemd` ya la da entera: `Restart=on-failure`, `RestartSec` de 1–3 s,
+`WatchdogSec` (20–60 s) para el proceso que sigue vivo pero colgado, y
+`StartLimitBurst` —que por defecto deja de reintentar tras 5 fallos en 10 s—
+como freno contra el bucle. Es lo más valioso de toda la familia 5, cuesta un
+fichero de unidad, y **no llevaba IA**. Empezar por aquí es lo que separa esta
+guardia de un juguete.
+
+**N1 es donde la IA aporta de verdad**, y es exactamente el 96%: no adivina, sino
+que compara contra lo declarado y restaura. Todo lo que este setup ya sabe
+declarar —manifest de skills, hooks instalados, `.env`, latido de los backups—
+cae aquí.
+
+**N2 se reporta y no se toca.** Es el 4–12%, y meterlo en la misma caja que N0/N1
+es lo que convierte una guardia útil en una que rompe cosas de madrugada.
+
+#### Las seis salvaguardas, y por qué no son opcionales
+
+El caso de referencia es el postmortem de AWS: **la automatización causó la caída
+y además dificultó la recuperación** — los balanceadores reemplazando instancias
+"defectuosas" empeoraron la carga, *el auto-healing hizo justo lo contrario de lo
+que debía*. AWS lo desactivó y volvió con límites de tasa, revisiones manuales y
+retirada de capacidad más lenta.
+
+1. **Toda acción de curación es reversible.** Regla explícita de la literatura:
+   *si la cura puede ser peor que la enfermedad, tiene que poder deshacerse*.
+2. **Enfriamiento y tope de acciones.** Mínimo entre intentos y máximo por
+   ventana. Es el `StartLimitBurst` de systemd generalizado.
+3. **Histéresis**, para que no oscile. **Ya la usas**: el backlog del RFD 12 crea
+   a >12 y disuelve a ≤8 precisamente por esto.
+4. **Verificación posterior a la acción**: comprobar que la curación *funcionó*,
+   no que el comando salió 0. Es la **primera ley** del proyecto —*el exit code
+   no es el estado*— aplicada a la guardia.
+5. **Interruptor de apagado.** Poder desactivar la autocuración durante
+   mantenimiento, sin editar código.
+6. **Piso mínimo: la guardia nunca borra ni desinstala.** Restaura y reinicia.
+   Es el mismo principio que hizo que `sync-skills` sin `-Prune` grite en vez de
+   podar, y lo que AWS añadió después de quedarse sin capacidad.
+
+#### Veredicto revisado
+
+**Sí a la autocorrección sin intervención humana — en N0 y N1, con las seis
+salvaguardas.** Es construible ya y no depende de que la IA acierte:
+N0 es configuración, N1 es comparación.
+
+**No en N2**, y esto no es cautela de más: es el único nivel donde los números
+dicen que la máquina se equivoca 8 de cada 10 veces. Ahí la guardia investiga y
+te escribe por Telegram — que es también lo que hace la industria entera.
+
+⚠ **Y una consecuencia incómoda del §4.5 anterior:** *más herramientas
+empeoraron el resultado*. Así que la guardia N2 **no** se lanza con acceso
+completo: arranca con lo mínimo y se le añade con un caso que lo justifique.
 
 ### 4.6 · RAG de producto — evaluar antes que elegir
 
@@ -427,6 +496,17 @@ número de partida, cualquier cambio parece una mejora.
 [Self-host Healthchecks: dead man's switch para cron](https://blog.elest.io/self-host-healthchecks-know-the-instant-a-cron-job-dies/) ·
 [Claude Code en CI/CD y automatización headless](https://hidekazu-konishi.com/entry/claude_code_cicd_and_headless_automation.html) ·
 [Claude Code headless mode (guía)](https://amux.io/guides/claude-code-headless/)
+
+**Fuentes de la revisión de D2** —
+[Self-Healing Infrastructure: agentes LLM sobre deriva de IaC (Zenodo)](https://zenodo.org/records/19234454) ·
+[A Self-Healing Framework for Reliable LLM-Based Autonomous Agents (arXiv)](https://arxiv.org/abs/2605.06737) ·
+[Sistema multi-agente autónomo para SRE (Atlantis Press, PDF)](https://www.atlantis-press.com/article/126020167.pdf) ·
+[Postmortem de AWS: cuando la automatización se vuelve en contra](https://www.constellationr.com/insights/news/aws-delivers-outage-post-mortem-when-automation-bites-back) ·
+[Autoremediation: qué automatizar y qué dejar en humano (SRE School)](https://sreschool.com/blog/autoremediation/) ·
+[Automated remediation in the SOC: what to automate, what to keep human](https://www.prophetsecurity.ai/blog/automated-remediation-what-to-automate-what-to-keep-human) ·
+[Patrones de self-healing en sistemas distribuidos](https://www.geeksforgeeks.org/computer-networks/important-self-healing-patterns-for-distributed-systems/) ·
+[systemd: watchdogs y políticas de auto-reinicio](https://oneuptime.com/blog/post/2026-03-04-systemd-service-watchdogs-auto-restart-rhel-9/) ·
+[systemd RestartSec y WatchdogSec](https://oneuptime.com/blog/post/2026-03-02-configure-systemd-restartsec-watchdogsec-ubuntu/)
 
 ---
 
@@ -600,7 +680,8 @@ Aplican a **cada familia**, no al RFD entero. Medibles, no opinables:
 
 - **DL / RNN** (§4.1). Aplazado con disparador escrito: el primer caso real en
   que `ml-problem-framing` responda "aquí sí hace falta DL".
-- **Remediación autónoma en las guardias** (§4.5). Los números no la sostienen.
+- **Remediación autónoma en N2** —diagnóstico abierto— de las guardias (§4.5).
+  Sí se hace en N0 y N1. En N2 los números dan 4–20% y la guardia solo reporta.
   Se gana con un runbook concreto tras verlo resolverse a mano varias veces.
 - **La memoria del propio setup** (§4.6). Decisión del usuario: la familia 6 es
   RAG de producto y nada más. `memory-keeper` y `context-engineering` no se tocan.
@@ -616,7 +697,7 @@ Aplican a **cada familia**, no al RFD entero. Medibles, no opinables:
 | | Decisión | Recomendación |
 |---|---|---|
 | **D1** | ¿Qué va primero tras F0: familia 3 (requisitos) o familia 1 (`ml-problem-framing`)? | **La 3**, salvo que haya una decisión de ML inminente — ese valor caduca y el de los requisitos no |
-| **D2** | **¿Qué vigila la guardia?** Bloquea §4.5 entero: sin respuesta es una solución buscando problema | Acotarla a lo propio: daemon de Telegram, backups del vault y los `sync`. Pequeña, útil y verificable |
+| ~~**D2**~~ | ~~¿Qué vigila la guardia?~~ **RESUELTA (2026-08-08)**: que el sistema no se caiga y se autocorrija sin intervención | Concedida en **N0 y N1** con las seis salvaguardas; **N2 reporta y no toca** (§4.5). El primer veredicto del RFD estaba mal planteado y se corrigió |
 | **D3** | ¿El tope de las skills nuevas baja a **450** (criterio 3)? | **Sí.** 8 de 33 skills están a ≤25 palabras del techo por haber nacido cerca de él |
 
 ---
