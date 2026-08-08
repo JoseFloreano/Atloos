@@ -28,6 +28,7 @@
 | 05 | [Limitaciones observadas](./05-LIMITACIONES-OBSERVADAS.md) | Evidencia empírica: 22 despachos (2026-08-04); su §3 = spec de las skills de W2 |
 | 06 | [Investigación externa](./06-INVESTIGACION-EXTERNA-MULTIAGENTE.md) | Implementaciones, fallos y éxitos externos; enriquecimientos ①–⑩ para W2 |
 | 07 | [Primera campaña real](./07-PRIMERA-CAMPANA-REAL.md) | Retrospectiva de campo (10 despachos, 6 ramas). Evidencia **complementaria** de W2 — no cierra la condición 7 |
+| 08 | [Segunda campaña real](./08-SEGUNDA-CAMPANA-REAL.md) | Jornada 2 (16 frentes, 9 ramas): **audita las correcciones del RFD 10**. 4/5 cumplidas; sus 4 fallos → `auditoria/11` |
 
 ---
 

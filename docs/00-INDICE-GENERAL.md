@@ -40,7 +40,8 @@ La serie original: por qué esta arquitectura de memoria y no otra.
 | Doc | Tema |
 |-----|------|
 | [09 · Auditoría del setup](./auditoria/09-AUDITORIA-SETUP.md) | Fortalezas, riesgos, matriz y mitigaciones (aplicadas) |
-| [10 · RFD endurecimiento de campo](./auditoria/10-RFD-ENDURECIMIENTO-DE-CAMPO.md) | 12 fallos de la primera campaña real (3 reportes); pendiente de auditoría por Opus |
+| [10 · RFD endurecimiento de campo](./auditoria/10-RFD-ENDURECIMIENTO-DE-CAMPO.md) | 12 fallos de la primera campaña. **IMPLEMENTADO 08-07**, pendiente de auditoría externa |
+| [11 · RFD del caso a la clase](./auditoria/11-RFD-DEL-CASO-A-LA-CLASE.md) | 🔴 **Propuesta — 2 decisiones abiertas.** Los 4 fallos que destapó auditar el RFD 10: todos son "arreglamos el caso, no la clase" |
 
 ### 📁 [`skills/`](./skills/) — Catálogos de skills investigados
 
@@ -97,6 +98,7 @@ La línea de trabajo activa. Los RFDs llevan su estado en la cabecera Y aquí.
 | [05 · Limitaciones observadas](./subagentes/05-LIMITACIONES-OBSERVADAS.md) | Evidencia empírica: 22 despachos, taxonomía de fallos y los 10 cambios a skills |
 | [06 · Investigación externa](./subagentes/06-INVESTIGACION-EXTERNA-MULTIAGENTE.md) | MAST, Superpowers 6, Agent Teams, wshobson; enriquecimientos para W2 |
 | [07 · Primera campaña real](./subagentes/07-PRIMERA-CAMPANA-REAL.md) | Retrospectiva de campo del 08-06: qué del instrumental rindió y qué no |
+| [08 · Segunda campaña real](./subagentes/08-SEGUNDA-CAMPANA-REAL.md) | Jornada 2: audita las correcciones del RFD 10 con números (4/5 cumplidas) |
 
 ## Convenciones
 
