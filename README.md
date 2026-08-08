@@ -150,7 +150,25 @@ NO_COWORK_BUILD=1 ./setup/sync-skills.sh
 solo gestiona lo que él mismo instaló, así que es seguro repetirlo. Cowork es el
 único paso manual: hay que subir el zip a mano en Customize → Plugins.
 
-**Los cuatro hooks anti-drift** — qué garantiza cada uno, cómo probarlos y qué
+**El borrado es siempre opt-in.** Sin `-Prune` el script **no destruye nada**:
+si detecta skills huérfanas las grita con el comando de poda y **no reescribe el
+manifest**, para que la corrida siguiente siga recordándolas. Nació de un fallo
+de campo en el que una enumeración parcial borró 2 skills imprimiendo `[OK]`,
+así que el guard compara **conjuntos de nombres**, no conteos: +1 nueva y −1
+subenumerada dan el mismo número.
+
+Además instala en **`~/.claude/scripts/`** —misma ruta en toda máquina,
+independiente de dónde esté clonado el repo— los scripts que las skills invocan:
+
+```bash
+ls ~/.claude/scripts/          # adr-index.py  notify_telegram.py  gate-test.py
+```
+
+Esa ruta estable no es cosmética: el 2026-08-07 `notify-telegram` falló desde
+otro proyecto por mandar buscar el script "en el repo ClaudeSetup", y no hay
+relación de rutas entre dos árboles distintos.
+
+**Los cinco hooks de Claude Code** — qué garantiza cada uno, cómo probarlos y qué
 se rompe si los tocas: [`setup/hooks/README.md`](./setup/hooks/README.md).
 
 | Hook | Evento | En una línea |
@@ -159,9 +177,18 @@ se rompe si los tocas: [`setup/hooks/README.md`](./setup/hooks/README.md).
 | `check-vault-updated.py` | Stop | Si hubo código y el vault no se actualizó, bloquea el cierre |
 | `memory-flush.py` | PreCompact | Pausa la compactación una vez si el vault sigue desfasado |
 | `validate-graphiti-group-id.py` | PreToolUse | Ningún episodio de Graphiti sin `group_id` válido |
+| `merge-gate-guard.py` | PreToolUse (Bash) | **W3 del RFD 04**: bloquea el merge a `main` que no pasó por la compuerta |
 
-Hay además un hook de **git** (`post-commit`) que regenera el `codebase-map.md`
-con Graphify en los commits que tocan código. Se instala por repo.
+Los tres primeros son anti-drift del vault; los dos últimos son compuertas. El
+`merge-gate-guard` existe porque en la prueba deliberada del 2026-08-07 la skill
+`workstream-merge-gate` **no llegó a correr** en 3 de 4 escenarios —ganó el
+trigger otra skill— y se colaron 2 merges a `main` sin confirmación. Una
+convención escrita volvió a fallar; un arnés, no.
+
+Hay además un hook de **git** (`post-commit`) que, en los commits que tocan
+código, regenera con Graphify un **`codebase-map-snapshot.md`** recortado (~2 KB)
+en el vault. **Nunca toca el `codebase-map.md` curado**: ese tiene un humano como
+único escritor. Se instala por repo.
 
 ---
 
@@ -213,14 +240,46 @@ Los archivos (`docker-compose.yml`, `config.yaml`, `.env.example`,
 
 ## Verificar que funciona
 
+**Los seis arneses.** Todos salen `rc=0` cuando el setup está sano, ninguno toca
+tu instalación real —trabajan sobre carpetas de laboratorio— y se corren desde
+la raíz del repo:
+
 ```bash
-claude mcp list                  # los MCP registrados y su salud
+py setup/scripts/tests/test-sync-guard.py        # el guard del sync no borra por accidente
+py setup/scripts/tests/test-skill-paths.py       # ninguna skill manda a una ruta inalcanzable
+py setup/scripts/tests/test-adr-index.py         # el índice de ADRs
+py setup/hooks/tests/test-mark-code-dirty.py     # el flag de código sucio
+py setup/hooks/tests/test-memory-flush.py        # la pausa de compactación
+py setup/hooks/tests/test-merge-gate-guard.py    # la compuerta de merge
+```
+
+Salida de la corrida del 2026-08-08, tras `sync-skills` + `sync-hooks`:
+
+```
+test-sync-guard.py          rc=0   Todo verde.
+test-skill-paths.py         rc=0   Sin hallazgos: todo lo ejecutable se resuelve por ruta estable.
+test-adr-index.py           rc=0   19/19 casos OK
+test-mark-code-dirty.py     rc=0   12/12 casos OK
+test-memory-flush.py        rc=0   11/11 casos OK
+test-merge-gate-guard.py    rc=0   11/11 casos OK
+```
+
+`test-skill-paths` merece un apunte: caza la **clase** de fallo del 08-07 —una
+skill que manda ejecutar algo por una ruta que no existe fuera de este repo— y
+en sus dos primeras corridas cazó dos líneas escritas por el propio agente que
+lo construyó. Si una línea es legítimamente del repo (un test, por ejemplo),
+se declara con `[repo]` en la misma línea: la excepción queda por escrito y es
+greppable.
+
+Lo demás:
+
+```bash
+claude mcp list                                  # los MCP registrados y su salud
 py setup/scripts/adr-index.py <ruta-ADRs> --check
 ```
 
 Del puente Telegram: manda un mensaje de prueba con `notify_telegram.py` (arriba)
-y comprueba que llega al móvil. Los hooks se prueban con la suite de
-`setup/hooks/tests/`, documentada en el README de hooks.
+y comprueba que llega al móvil.
 
 ---
 
