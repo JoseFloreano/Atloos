@@ -2,10 +2,11 @@
 
 Comandos y umbrales. El cuerpo de la skill solo dice QUÉ mirar; aquí está el CÓMO.
 
-Estos chequeos corren `adr-index.py`, que vive en el repo ClaudeSetup — hacen
-falta ese repo conectado a la sesión de Cowork para poder correrlos. Donde no
-esté conectado, el audit pide al usuario correrlo y reportar el resultado
-(igual que el cuerpo de la skill ya hace con los comandos de git en su paso 2).
+Estos chequeos corren `adr-index.py` desde **`~/.claude/scripts/`**, donde lo
+instala `sync-skills`: misma ruta en toda máquina y **sin depender de dónde esté
+clonado el repo**. En Cowork esa ruta **no existe** —no es una máquina tuya—, así
+que ahí el audit pide al usuario correrlo y reportar el resultado, igual que hace
+con los comandos de git en su paso 2.
 
 ## Índice de ADRs desfasado
 
@@ -107,3 +108,24 @@ existiera. Prefiere no reportar a reportar ruido.
 
 Como todo en esta skill: **reporta y propone, no apliques**. Mover pendientes es
 escritura, y el único escritor del backlog es `session-close` o el coordinador.
+
+---
+
+## Rutas inalcanzables en las skills
+
+```bash
+py setup/scripts/tests/test-skill-paths.py     # 0 = limpio · 1 = hallazgos
+```
+
+Caza la enfermedad que produjo el fallo del 2026-08-07: **una skill corre desde
+el cwd de CUALQUIER proyecto**, así que todo lo que mande ejecutar necesita una
+ruta **estable por máquina** (`~/.claude/scripts/`, que puebla `sync-skills`) —
+no la ruta del repo, y no *"búscalo en ClaudeSetup"*.
+
+Ese día `notify-telegram` mandó ejecutar un script "del repo ClaudeSetup" desde
+`alphadogs`, en la misma máquina y con el puente configurado. No hay relación de
+rutas entre los dos árboles: el agente no podía encontrarlo.
+
+**Por qué un arnés y no un grep**: el barrido del 08-03 buscó rutas
+*hardcodeadas* —el síntoma— y esta skill tenía una ruta *vaga*. Misma
+enfermedad, otro síntoma, y sobrevivió al grep.

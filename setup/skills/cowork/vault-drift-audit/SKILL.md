@@ -45,6 +45,8 @@ e invisible — se caza con revisiones periódicas, no en caliente.)
    **Backlog `pendientes.md`** (RFD 12): zombis con `alta:` de +30 días,
    duplicados o N desfasada entre `_PROJECT.md` y el backlog, y los dos
    umbrales — crear (>12 sin backlog) y disolver (≤8 con backlog).
+   **Rutas de las skills**: `test-skill-paths.py` — ninguna debe mandar ejecutar
+   nada por la ruta del repo ni por "búscalo en ClaudeSetup" (fallo del 08-07).
 4. **Reporte por proyecto**, ordenado por severidad de drift: qué está
    desfasado, evidencia (fechas), y la actualización mínima propuesta.
 5. **Solo si el usuario aprueba**: aplica las actualizaciones propuestas
