@@ -1,7 +1,8 @@
 # RFD — Seis familias de skills: investigar, adaptar, importar, crear
 
-> **Estado:** BORRADOR EN CURSO — **§1 y §2 escritas**, el resto pendiente.
-> Se redacta sección por sección, con revisión del usuario entre cada una.
+> **Estado:** **BORRADOR COMPLETO (2026-08-08)** — las 10 secciones escritas.
+> Pendiente de **auditoría externa** y del **arbitraje de D1–D3 (§10)**.
+> Aprobarlo NO es aprobar seis familias: es aprobar F0 y **una** de ellas.
 > **Fecha:** 2026-08-08 · **Autor:** Opus (laptop, con el inventario delante)
 > **Origen:** propuesta del usuario — 6 familias: (1) ML/DL/datasets,
 > (2) presentaciones de negocio en HTML, (3) diseñador de proyectos (RF/RNF/RN),
@@ -244,11 +245,26 @@ texto: es refactorizarlas.** Cualquier "le añadimos X" empieza por extraer
 material a `references/`. Es trabajo real y hay que presupuestarlo, no
 descubrirlo a medio camino.
 
-⚠ Es exactamente el hallazgo **M2** que el auditor encontró en
-`vault-drift-audit` (500/500 exactas) hace dos días. Dos hallazgos iguales en
-sitios distintos dejan de ser casualidad: **el tope de 500 se está tocando en
-todo el catálogo maduro** y no hay ninguna señal que avise antes de chocar. Eso
-merece su propia respuesta en §6, no un parche aquí.
+⚠ **Y no es una enfermedad de la familia 4.** Al medir las 33 skills del repo
+buscando el umbral de saturación (≥475 palabras), salieron **ocho — el 24% del
+catálogo**:
+
+| Skill | Palabras | `references/` |
+|---|---:|:---:|
+| `vault-drift-audit` | **500** | 1 |
+| `pipeline-designer` | 499 | 1 |
+| `data-quality-gates` | 497 | **0** |
+| `design-doc-harvest` | 495 | 1 |
+| `session-close` · `migration-auditor` | 488 | 2 · 1 |
+| `workstream-merge-gate` | 484 | **0** |
+| `schema-designer` | 475 | **0** |
+
+Tres de ellas —`design-doc-harvest`, `session-close`, `workstream-merge-gate`—
+no tienen nada que ver con bases de datos, y son de **las más usadas del
+sistema**. El patrón real es otro: **la saturación correlaciona con la
+madurez**. Una skill que se ha corregido cinco veces ha crecido cinco veces, y
+el tope no avisa hasta que ya no cabes. Eso no es un parche de la familia 4:
+es una señal que falta en todo el catálogo, y se diseña en §6.
 
 **La poda.** De las 12 piezas del catálogo de `bd-y-nube` que nunca se
 construyeron, el criterio para cerrarlas es la **dependencia**:
@@ -414,7 +430,197 @@ número de partida, cualquier cambio parece una mejora.
 
 ---
 
-> **Secciones pendientes:** §5 importar-vs-crear · §6 la respuesta a P2
-> (anti-podredumbre) — que ahora debe cubrir también **la saturación del tope
-> de 500** detectada en §4.4 · §7 orden y fases · §8 criterios de aceptación ·
-> §9 lo que NO se hace.
+## 5. Importar, crear, o robar el patrón
+
+El protocolo de importación **ya existe** y es bueno: `bd-y-nube/05` §2, seis
+pasos (clonar fuera, leer todo antes de instalar, copiar solo lo que se usa,
+adaptar dialecto y rutas, registrar procedencia con commit y fecha, verificar el
+trigger con una petición real). No hay que reescribirlo.
+
+Lo que le falta es lo de arriba otra vez: **dice CÓMO importar, no CUÁNDO**. Y
+la evidencia de que ese hueco cuesta está medida: de las **6 importaciones**
+planificadas en S1, se hicieron **0**. El protocolo es correcto y también es
+caro —leer una colección entera antes de instalar nada son horas— y sin un
+criterio que diga si vale la pena, "importar" se pospone indefinidamente.
+
+Pero hay un tercer camino que este repo **ya usó con éxito** y nunca nombró como
+método: `ecosistema/16-AHORRO-TOKENS-ROBADO-DE-HERMES-OPENCLAW.md`. Ahí no se
+importó nada: se leyó lo ajeno, se extrajo el patrón y se escribió lo propio.
+Frente a 0 importaciones, ese camino sí produjo resultados.
+
+| Modo | Cuándo | Coste | Qué se registra |
+|---|---|---|---|
+| **Crear** | el valor es una **decisión tuya**: convenciones, criterio, el eslabón que acota el problema | medio | nada externo |
+| **Robar el patrón** | el conocimiento es público y bueno, pero el envoltorio ajeno no encaja (dialecto, rutas, idioma del trigger) | **bajo** | la fuente en el cuerpo, como en `ecosistema/16` |
+| **Importar** | la pieza vale por su **exhaustividad verificable** y reescribirla perdería cobertura (checklists largos, taxonomías) | **alto** — protocolo completo de 6 pasos | procedencia: repo, commit, fecha |
+
+> Regla práctica: **si vas a reescribir más de la mitad, no estás importando —
+> estás robando el patrón.** Y entonces el protocolo de 6 pasos no aplica: basta
+> con leer la fuente y citarla.
+
+Aplicado a las seis familias:
+
+| Familia | Modo | Por qué |
+|---|---|---|
+| 1 · ML | `ml-problem-framing` **crear** · `ml-tabular-workflow` **robar** | el framing es juicio propio; fugas de datos, split temporal y baselines son conocimiento público y asentado |
+| 2 · Presentaciones | **crear** | la narrativa de negocio es criterio; y las restricciones de `Artifact` (CSP, sin CDN, tema doble) son nuestras, no de nadie |
+| 3 · Requisitos | **robar** el vocabulario, **crear** el traspaso | RF/RNF/RN es estándar de ingeniería; lo que no existe fuera es el handoff nominal a `schema-designer`/`api-design` |
+| 4 · Bases de datos | **ni una cosa ni otra: podar** | y `pii-guard` decide su modo cuando le toque, no antes |
+| 5 · Mantenimiento | **crear**, con **investigación** previa en las guardias | no hay nada que importar: lo que existe son productos SaaS, no skills |
+| 6 · RAG | **robar** fuerte | es la familia con más conocimiento público bueno y menos opinión propia |
+
+## 6. Anti-podredumbre — la respuesta a P2
+
+El diagnóstico está en el §1 y es incómodo de lo simple que es:
+
+> **Se construyó lo que cabía en la sesión que escribió el catálogo. Todo lo
+> demás quedó "para después", y "después" nunca llegó.**
+
+No fue falta de disciplina ni de tiempo: fue que **el catálogo era la unidad de
+aprobación**, y aprobar 17 piezas de golpe hace que las 12 no construidas se
+sientan igual de vivas que las 5 construidas — hasta que alguien las cita.
+
+### R1 · La familia es la unidad de entrega, no el catálogo
+
+**Este RFD no se aprueba entero.** Se aprueba **una familia**, se construye
+completa —skills, `references/`, prueba de trigger real— y solo entonces se abre
+la siguiente. Las otras cinco quedan como **propuesta fechada**, no como
+compromiso.
+
+Es el mismo principio del RFD 12 con el backlog: un pendiente que nadie va a
+tocar este mes no se lista como activo, se manda al backlog y se dice que está
+ahí. Cambiar de sitio no es perderlo; **fingir que está vivo, sí**.
+
+### R2 · Ninguna skill viva puede nombrar una que no existe
+
+Es el fallo concreto que se encontró en §1 y es de la misma clase que
+`notify-telegram`: **una instrucción que apunta a algo inalcanzable**. El arnés
+`test-skill-paths.py` no lo caza porque solo mira rutas de fichero.
+
+**Arnés nuevo — `test-skill-catalog.py`**, hermano del de rutas:
+
+1. **Referencia colgante.** Toda skill nombrada dentro de un `SKILL.md` debe
+   existir en `setup/skills/`. Si no existe, es hallazgo — **salvo que la
+   mención venga marcada como opcional** (*"si está instalada"*), que es una
+   excepción declarada y greppable, igual que el `[repo]` de ayer.
+2. **Saturación del cuerpo.** Cuerpo (sin frontmatter) **≥ 475 palabras** →
+   aviso de saturación, con el detalle de si tiene `references/` o no.
+
+El segundo check es la respuesta al §4.4, y nace con señal verdadera: hoy
+dispararía en **8 skills — el 24% del catálogo** (§4.4), tres de ellas fuera de
+la familia de bases de datos. No es un check decorativo esperando su primer caso.
+
+⚠ **Y aquí aplica lo que acabamos de aprender en el RFD 11**: un aviso que nadie
+atiende es F16 otra vez. Así que la saturación **no es solo un aviso**: entra en
+`vault-drift-audit` con la misma disciplina de escalada que D1(b) —la primera
+vez propone, a partir de la segunda lo dice con los días acumulados—. Un umbral
+sin escalada ya sabemos en qué se convierte.
+
+### R3 · El catálogo caduca, y se reusa el mecanismo que ya existe
+
+No hace falta inventar nada: `vault-drift-audit` ya declara **en el limbo** un
+ADR `proposed` con más de 14 días, y **zombi** un ítem de backlog con más de 30.
+La misma regla vale aquí.
+
+> Una familia propuesta y no construida en **60 días** se **borra del catálogo o
+> se re-justifica por escrito**. No se queda "pendiente".
+
+Sesenta y no treinta porque una familia es más cara que un pendiente. Lo que
+importa no es el número: es que **la propuesta tenga fecha de caducidad**, que es
+justo lo que le faltó a `bd-y-nube/05`.
+
+### R4 · El eslabón de arriba se entrega solo
+
+Es el O1 visto como defensa, y es la parte más barata de todo el RFD: la pieza
+que acota el problema (`ml-problem-framing`, el documento de requisitos, el
+triage de mantenimiento) **vale por sí sola aunque la de ejecución no se
+construya nunca**.
+
+Ese es el seguro real contra la podredumbre. Si de la familia 1 solo llega a
+existir `ml-problem-framing`, el resultado no es media familia: es una skill útil
+que además dirá, con casos reales, si la otra hacía falta.
+
+---
+
+## 7. Orden
+
+Por R1 se aprueba **una familia**, no el catálogo. Pero hay algo que va antes de
+la primera, y no es una familia.
+
+### F0 · Higiene del catálogo — antes de añadir nada
+
+Media jornada, y es el seguro de todo lo demás:
+
+1. Cerrar las dos referencias colgantes (`skill-forge:9` primero: manda en
+   indicativo hacia `cowork-plugin`, que no existe).
+2. Construir `test-skill-catalog.py` (§6 R2) y dejarlo en verde.
+3. Podar el catálogo de `bd-y-nube`: **borrar** las 12 piezas descartadas del
+   §4.4, con una nota de por qué. No marcarlas "pendiente".
+
+**Por qué primero y no después:** añadir seis familias a un catálogo que ya no
+sabe distinguir lo construido de lo propuesto es multiplicar el problema del §1.
+Con F0 hecho, cada familia nueva nace vigilada.
+
+### Después: una familia, completa
+
+**Recomendación — familia 3 (requisitos).** Es creación pura sin dependencias,
+se enchufa a una cadena que ya funciona (`schema-designer`, `api-design` la
+están esperando sin saberlo), y **aplica a cualquier proyecto futuro
+independientemente del dominio**. Es la que más veces se disparará.
+
+La familia 1 le disputa el sitio con un argumento legítimo: si hay una decisión
+de ML inminente en un proyecto vivo, `ml-problem-framing` gana la cola, porque
+su valor es evitar el proyecto equivocado y eso caduca. **Lo decide el usuario**
+(§10 D1).
+
+El resto queda como **propuesta fechada**, sujeta a la caducidad de R3.
+
+## 8. Criterios de aceptación
+
+Aplican a **cada familia**, no al RFD entero. Medibles, no opinables:
+
+1. **Cero referencias colgantes.** `test-skill-catalog.py` da 0 en su check 1.
+   Es bloqueante.
+2. **Trigger probado con una petición real**, y la petición literal escrita en
+   el commit — paso 6 del protocolo de `bd-y-nube/05` §2, que hasta hoy nunca
+   se ejerció por no haber importado nada.
+3. **Cuerpo ≤450 palabras** en toda skill nueva. **No 500**: el §4.4 demuestra
+   que las skills maduran creciendo, y una que nace en 495 no tiene dónde
+   corregirse. El margen es deliberado.
+4. **Toda skill que se EDITE en la fase sale ≤450 y con `references/`** si tenía
+   detalle que mover. Mismo criterio que el 5 del RFD 10: lo que se toca, se deja
+   cumpliendo.
+5. **Los tres arneses verdes**: `test-skill-catalog` 0, `test-skill-paths` 0,
+   `test-sync-guard` 11/11. Y `sync-skills` corre sin huérfanas.
+6. **El catálogo queda al día en el mismo commit**: lo construido se marca
+   construido; lo descartado se **borra**, no se aparca.
+7. **Cero cambios en Superpowers.** `git diff` sobre su carpeta, vacío.
+
+## 9. Lo que NO se hace
+
+- **DL / RNN** (§4.1). Aplazado con disparador escrito: el primer caso real en
+  que `ml-problem-framing` responda "aquí sí hace falta DL".
+- **Remediación autónoma en las guardias** (§4.5). Los números no la sostienen.
+  Se gana con un runbook concreto tras verlo resolverse a mano varias veces.
+- **La memoria del propio setup** (§4.6). Decisión del usuario: la familia 6 es
+  RAG de producto y nada más. `memory-keeper` y `context-engineering` no se tocan.
+- **Las 12 piezas podadas** de `bd-y-nube` y **los 4 hooks de S2**. No quedan
+  "pendientes": se borran del catálogo.
+- **Las skills de Superpowers.** Regla de W2, otra vez: nuestras piezas van
+  encima, no dentro.
+- **Aprobar las seis familias de golpe.** Es exactamente lo que hizo
+  `bd-y-nube/05`, y es la causa del §1.
+
+## 10. Decisiones abiertas
+
+| | Decisión | Recomendación |
+|---|---|---|
+| **D1** | ¿Qué va primero tras F0: familia 3 (requisitos) o familia 1 (`ml-problem-framing`)? | **La 3**, salvo que haya una decisión de ML inminente — ese valor caduca y el de los requisitos no |
+| **D2** | **¿Qué vigila la guardia?** Bloquea §4.5 entero: sin respuesta es una solución buscando problema | Acotarla a lo propio: daemon de Telegram, backups del vault y los `sync`. Pequeña, útil y verificable |
+| **D3** | ¿El tope de las skills nuevas baja a **450** (criterio 3)? | **Sí.** 8 de 33 skills están a ≤25 palabras del techo por haber nacido cerca de él |
+
+---
+
+*RFD 17 de la subserie `skills/`. **Borrador completo, pendiente de auditoría
+externa y del arbitraje de D1–D3.** Aprobarlo NO es aprobar seis familias: es
+aprobar F0 y **una** de ellas (R1). Nada de esto está implementado.*
