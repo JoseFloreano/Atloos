@@ -1,8 +1,10 @@
 # RFD — Del caso a la clase: los cuatro fallos de la segunda campaña
 
-> **Estado:** PROPUESTA — **2 decisiones abiertas (D1, D2) que arbitra el
-> usuario**. Pendiente de auditoría externa (Cowork).
-> **Fecha:** 2026-08-07 · **Autor:** Opus (laptop, con el código delante) —
+> **Estado:** PROPUESTA **v2 (2026-08-08)** — auditada por Cowork
+> (APROBABLE; los 5 hallazgos incorporados, §9). **Siguen abiertas D1 y D2, que
+> arbitra el usuario**; el auditor votó (b) en ambas.
+> **Fecha:** 2026-08-07 · **v2** 2026-08-08 · **Autor:** Opus (laptop, con el
+> código delante) —
 > **flujo invertido respecto al RFD 10**: allí escribió el auditor y auditó el
 > implementador; aquí al revés, y Cowork audita al final.
 > **Origen:** `subagentes/08-SEGUNDA-CAMPANA-REAL.md` — retrospectiva de la
@@ -54,7 +56,7 @@ Numeración continua desde el RFD 10 (F1–F12) y el fix de rutas (F13).
 
 | # | Fallo | Evidencia |
 |---|---|---|
-| **F18** | El **snapshot generado vive en el vault** y se reescribe en cada commit | **212 KB** dentro de OneDrive, regenerados varias veces al día. Es el patrón que H2/A1 prohibieron para FalkorDB y que motivó sacar el `.git` del vault. No lo introdujo el RFD 10 —antes pasaba igual— pero **lo institucionalizó** al darle nombre propio |
+| **F18** | El **snapshot generado vive en el vault** y se reescribe en cada commit | **212 KB** regenerados varias veces al día. ⚠ *Corregido por la auditoría (M3): ese vault **no está en este OneDrive** —esa laptop es full local— así que el churn de sincronización es **de la clase, no medido allí**. Verificar si su vault sincroniza.* El patrón sí es el que H2/A1 prohibieron y que motivó sacar el `.git` del vault. No lo introdujo el RFD 10 —antes pasaba igual— pero **lo institucionalizó** al darle nombre propio |
 
 ## 3. Objetivos
 
@@ -130,8 +132,28 @@ aviso y el archivo a **2,8× del límite duro** dan la razón al reporte:
 | Respeta "avisa, no bloquees" | sí | **sí** — sigue sin ejecutar sin OK | **no** |
 | Riesgo | el log eterno que ya tenemos | que el usuario lo ignore igual, pero **con constancia escrita** | mueve pendientes sin que nadie lo pida |
 
-**Recomendación: (b).** Es el mínimo que convierte el log en registro. (c)
-rompería el contrato de todo el ritual por un caso.
+**Recomendación: (b)** — y el auditor coincide. Es el mínimo que convierte el
+log en registro; (c) rompería el contrato de todo el ritual por un caso.
+
+⚠ **Dónde vive la constancia (hallazgo I1).** «A partir de la 2.ª vez» exige
+memoria entre cierres, y **`session-close` no tiene estado**: sin definir dónde
+se apunta, (b) es inimplementable y cada agente improvisa. La constancia va
+**donde ya está mirando**, junto a la línea del backlog en `_PROJECT.md`:
+
+```
+Backlog: 6 ítems → [[pendientes]]
+<!-- umbral avisado: 2026-08-05, 2026-08-07 -->
+```
+
+- `session-close` **lee** ese comentario antes de avisar: si ya hay fechas, el
+  aviso cambia de tono y dice **cuántos días lleva** cruzado.
+- **Añade la de hoy** al avisar; **borra la línea entera** cuando el umbral deja
+  de estar cruzado (el contador se reinicia solo, sin ritual aparte).
+- `vault-drift-audit` **las cuenta**: 3 o más fechas → hallazgo propio, *"umbral
+  avisado N veces sin acción"*.
+
+Es un comentario HTML: invisible al leer el vault, trivial de parsear, y muere
+con el problema que lo creó.
 
 ⚠ Y hay un hallazgo debajo: ese proyecto tiene **tres ficheros de pendientes**
 (`PENDIENTES.md` de 128 KB + dos fechados) que **no son** el `pendientes.md` del
@@ -165,7 +187,9 @@ ADRs ([`adr-writer:35`](../../setup/skills/shared/adr-writer/SKILL.md)).
 3. **`project-resume` no debe servir un hecho refutado como bueno**: si la línea
    está tachada, la menciona como refutada o no la menciona.
 4. **`vault-drift-audit` gana un check**: un hecho refutado cuyo original sigue
-   sin marcar en algún sitio → divergencia.
+   sin marcar en algún sitio → divergencia. ⚠ **Va en `references/checks.md`, no
+   en el cuerpo** (hallazgo M2): la skill está a **500/500 palabras exactas** y
+   no admite una línea más.
 
 **Por qué no borrar**: borrar deja el hueco sin explicación y el mismo error
 vuelve. La regla del repo es la misma que con la corrección del RFD 10 de
@@ -173,8 +197,12 @@ Graphiti: *se corrige en vez de taparse, y se ve qué se creyó y por qué era f
 
 ### C5 · El snapshot generado sale del vault (F18) — **D2, decides tú**
 
-El hook escribe **212 KB** de volcado dentro de OneDrive y los reescribe en cada
-commit ([`git-post-commit-graph-report.sh:53`](../../setup/hooks/git-post-commit-graph-report.sh)).
+El hook escribe el volcado **en la carpeta del proyecto dentro del vault** y lo
+reescribe en cada commit
+([`git-post-commit-graph-report.sh:53`](../../setup/hooks/git-post-commit-graph-report.sh)).
+En campo se midieron **212 KB**; que eso además viaje por OneDrive depende de
+cada laptop —la de `recomendador-cobranza` es full local (M3)—, pero **en las
+nuestras sí viaja**, y ahí es el patrón que H2/A1 prohibieron.
 
 | | (a) Dejarlo | (b) **Snapshot a `%LOCALAPPDATA%`, resumen al vault** | (c) Solo resumen |
 |---|---|---|---|
@@ -202,15 +230,36 @@ sincronizada, artefactos terminados dentro— y no rompe a ningún consumidor.
 **Entra:** C1–C5 con sus verificaciones; promover el reporte de la jornada 2 a
 `subagentes/08-SEGUNDA-CAMPANA-REAL.md` (banner, sin reescribir) —**hecho ya al
 redactar este RFD**, para que sea auditable sin adjuntos sueltos.
-**No entra:** C6; las cosechas pendientes (RFD 04, 10, 12), que siguen gateadas a
-la auditoría externa del RFD 10.
+**No entra:** C6; y las cosechas — pero **corregido por la auditoría (I2)**: la
+del **RFD 12** está liberada desde el 08-05 y la del **RFD 10** desde el 08-07,
+cuando su auditoría externa cerró APROBADA. **Solo la del RFD 04 sigue gateada**,
+por la prueba deliberada del gate.
+
+> ⚠ **Discrepancia de artefacto, para que el auditor la cierre.** El cierre de la
+> auditoría del RFD 10 **no tiene registro**: el header del propio RFD 10 sigue
+> diciendo *"pendiente de auditoría externa"*, el pendiente sigue abierto en
+> `_PROJECT.md:104`, y no hay nota en `sessions/` ni commit del vault que lo
+> recoja. La afirmación se acepta —el auditor es quien lo aprueba— pero **falta
+> el artefacto**, y esta es literalmente la clase de fallo que el proyecto
+> persigue desde el caso Graphiti: *el reporte no es el artefacto*. Con el
+> registro puesto, la cosecha doble (10 + 12) queda desbloqueada.
 
 ## 6. Criterios de éxito
 
 1. **F14**: la instrucción vive en los **dos** sitios —nuestra doc y la línea que
    `graphify claude install` escribe en el `CLAUDE.md`— con el disparador
    («antes de tu primer `grep`») y la expectativa («candidatos, no respuesta»).
-   Verificable con `grep`: cero apariciones de *"primera media hora"*.
+
+   ⚠ **Verificable en `setup/` VIVO, no en todo el repo** (hallazgo M1, y su
+   ironía es la lección): *"primera media hora"* aparece hoy en 5 archivos, y
+   **4 son historia** —los RFD 10 y 11 y los reportes `subagentes/07` y `08`—
+   que **no se reescriben**: son el registro de lo que se creyó. El criterio tal
+   como estaba escrito era incumplible, y es **exactamente la clase B1 que este
+   RFD denuncia**, cometida en su propio criterio de éxito.
+
+   ```bash
+   grep -rn "primera media hora" setup/    # debe dar 0
+   ```
 2. **F15**: el bloque 2 pide explícitamente lo **presente** (disco + variables con
    su valor) y menciona el `os.environ.setdefault` del `conftest.py`.
 3. **F16** (según D1): el segundo cierre consecutivo con el umbral cruzado
@@ -255,8 +304,27 @@ F14→`subagentes/08` §2 · F15→§3 (workstream-dispatch) · F16→§3 (sessi
 Las cinco calificaciones del §1 de ese reporte son la evaluación de las cinco
 recomendaciones de `subagentes/07` §5.
 
+## 9. Registro de la auditoría (Cowork, 2026-08-08)
+
+Veredicto: **APROBABLE** — 2 hallazgos importantes, 3 menores, ninguno
+bloqueante. Nota completa: [[2026-08-08-auditoria-rfd11]].
+
+| Hallazgo | Qué encontró | Resolución |
+|---|---|---|
+| **I1** 🟠 | D1(b) exigía memoria entre cierres y `session-close` **no tiene estado**: sin decir dónde vive la constancia, la opción es inimplementable | Concedido. C3 gana el comentario fechado `<!-- umbral avisado: … -->` junto a la línea del backlog, que el cierre lee y el drift-audit cuenta |
+| **I2** 🟠 | El §5 daba por gateadas las tres cosechas: falso desde el 08-07 — solo la del RFD 04 lo sigue estando | Concedido, **con un hallazgo de vuelta**: ese cierre **no tiene artefacto** (header del RFD 10, pendiente del `_PROJECT.md` y `sessions/` dicen lo contrario). Anotado en §5 |
+| **M1** | El criterio 1 exigía «cero apariciones de *primera media hora*» y hay 5 archivos, 4 de ellos **historia que no se reescribe**: incumplible tal cual | Concedido. Acotado a `setup/` vivo. **Es la clase B1 cometida en mi propio criterio de éxito**, y el auditor lo señaló con la ironía merecida |
+| **M2** | `vault-drift-audit` está a **500/500 palabras exactas**: el check de C4 no cabe en el cuerpo | Concedido. C4 lo manda a `references/checks.md` |
+| **M3** | Los «212 KB dentro de OneDrive» no son medibles: ese vault **no está en este OneDrive** (laptop full local) | Concedido. F18 y C5 dicen ahora que el churn es **de la clase**, no medido allí. D2(b) se sostiene igual |
+
+**Voto del auditor:** D1(b) con I1 resuelto, y D2(b) — coincide con la
+recomendación de este RFD en ambas.
+
+El auditor verificó además la nota de campo del §7 contra `725ca39`: el arnés
+cazándose a sí mismo es real, no retórica.
+
 ---
 
-*RFD 11 de la subserie `auditoria/`. Aprobarlo = arbitrar D1 y D2 + auditoría sin
-hallazgos bloqueantes. Implementarlo = prompt aparte, con la auditoría externa de
-Cowork al final, como siempre.*
+*RFD 11 de la subserie `auditoria/`, **v2**. Aprobarlo = **arbitraje de D1 y D2
+por el usuario** (la auditoría ya cerró sin bloqueantes). Implementarlo = prompt
+aparte, con la auditoría externa al final, como siempre.*
