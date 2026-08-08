@@ -87,6 +87,29 @@ que nadie audita se convierte en el cementerio que el ADR de higiene mató.
 | **Disolver** | Existe `pendientes.md` y el total (activos + backlog) es **≤8** | El backlog ya no se gana su existencia: proponer reabsorber y borrar el archivo |
 | **Crear** | `_PROJECT.md` tiene **más de 12** checkboxes de primer nivel y **no** hay `pendientes.md` | La sección va camino de romper el tope: proponer la válvula |
 
+### Quinto check: el umbral avisado sin acción (RFD 11 C3)
+
+Distinto origen que los 4 de arriba, misma familia. Bajo la línea del backlog
+(o al final de `## Pendientes`), `session-close` deja constancia de cada aviso:
+
+```
+Backlog: 6 ítems → [[pendientes]]
+<!-- umbral avisado: 2026-08-05, 2026-08-07, 2026-08-08 -->
+```
+
+```bash
+grep -o "umbral avisado:[^-]*-->" "<vault>/10-Projects/<proyecto>/_PROJECT.md"
+```
+
+**Cuenta las fechas. 3 o más → hallazgo**: *"umbral avisado N veces sin
+acción"*, con los días desde la primera. No es un aviso más: es la prueba de
+que avisar no está funcionando y hay que decidir —crear el backlog, disolverlo
+o cambiar el umbral—. Menos de 3, silencio: la reincidencia empieza a contar a
+la tercera, no a la segunda.
+
+Si el comentario existe pero el umbral **ya no está cruzado**, el hallazgo es
+otro: `session-close` debió borrar la línea y no lo hizo.
+
 **La fecha del zombi sale del `(alta:)` del ítem, no del mtime** — el vault se
 sincroniza por OneDrive y los mtime no son fiables (mismo motivo que en los
 ADRs). Un ítem sin `alta:` es en sí un hallazgo menor: no se puede auditar.
@@ -108,6 +131,31 @@ existiera. Prefiere no reportar a reportar ruido.
 
 Como todo en esta skill: **reporta y propone, no apliques**. Mover pendientes es
 escritura, y el único escritor del backlog es `session-close` o el coordinador.
+
+---
+
+## Refutación a medias (RFD 11 C4)
+
+Un hecho refutado se marca donde nació **y donde se propagó**. Si solo se marcó
+en un sitio, el vault se contradice consigo mismo — que es exactamente el caso
+Graphiti, corregido a mano en tres sitios.
+
+```bash
+grep -rn "REFUTADO" "<vault>/10-Projects/<proyecto>/"
+```
+
+Por cada refutación encontrada, comprueba que el hecho original esté marcado
+(`~~tachado~~` + enlace) **en todos** los sitios donde aparezca:
+`_PROJECT.md`, `ADRs/_INDEX.md`, `pendientes.md`, otras notas de `sessions/`.
+
+| Señal | Hallazgo |
+|---|---|
+| `REFUTADO` en una nota, pero el hecho sigue **sin tachar** en `_PROJECT.md` o en un índice | **Divergencia**: el arranque seguirá sirviendo el hecho falso como bueno |
+| Línea tachada **sin enlace** a la refutación | Se sabe que es falso pero no por qué — el error deja de enseñar |
+| `REFUTADO` **sin** "Medido en:" | Es una opinión con formato de medición. Reportar |
+
+Buscar la cadena `REFUTADO` es barato y no tiene falsos positivos plausibles:
+nadie la escribe por accidente.
 
 ---
 

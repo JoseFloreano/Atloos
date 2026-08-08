@@ -16,6 +16,7 @@ de ejecutarse** y Claude recibe el motivo para autocorregirse.
 | `validate-graphiti-group-id.py` | PreToolUse sobre `mcp__graphiti*` | Ningún `add_episode` sin `group_id` válido; ninguna búsqueda sin `group_ids`. Bloquea `main`, vacío y placeholders |
 | `mark-code-dirty.py` | PostToolUse sobre `Write\|Edit\|MultiEdit` | Marca flag cuando la sesión edita CÓDIGO **de este proyecto** — insumo del siguiente. No cuentan: los `.md`, ni nada fuera de `CLAUDE_PROJECT_DIR` (scratchpad, otras working dirs, otro repo). Esa segunda condición faltaba y provocaba falsos positivos en los 3 hooks anti-drift: un `commit-msg.txt` temporal sellaba el flag y el hook Stop exigía actualizar un vault que ya estaba al día |
 | `check-vault-updated.py` | Stop | Anti-drift del vault: si hubo código editado y `_PROJECT.md` no se actualizó después, bloquea el cierre (exit 2) pidiendo SOLO pendientes/estado. **Una vez por sesión**, respeta `stop_hook_active`, silencio total en proyectos sin onboarding. Sale en silencio si `CLAUDE_TG_BOT=1` (sesiones del daemon de Telegram: no hay humano para cerrar el vault y bloquear colgaría la respuesta del bot — ADR puente-telegram §7). El cierre completo es de la skill `session-close` |
+| `merge-gate-guard.py` | PreToolUse sobre `Bash` | **W3 del RFD 04.** Bloquea (exit 2) todo `git merge` cuyo **destino efectivo** sea `main`/`master` sin evidencia determinista de verde: un `.claude/gate-verde.json` cuyo `sha` sea el HEAD actual de la rama que se integra — la evidencia la escribe `scripts/gate-test.py` y solo con exit 0 de la suite. **Por qué existe**: en la prueba deliberada del 2026-08-07 el `workstream-merge-gate` salió 2/4 y la causa medida no fue que la skill fallara, sino que **no llegó a correr** (ganó `superpowers:finishing-a-development-branch`, sin confirmación humana ni squash) — se colaron 2 merges a `main` sin OK. Una convención escrita vuelve a fallar; un arnés, no. **Destino EFECTIVO, no rama actual**: los dos merges venían como `git checkout main && git merge x`, así que mirar el HEAD del momento dejaría pasar justo el caso que lo motivó. Fuera de las ramas protegidas no interviene, y no suplanta a la skill: no juzga la calidad del verde, ni el worktree, ni pide la confirmación (un hook no puede preguntar) |
 | `memory-flush.py` | PreCompact (`manual` y `auto`) | Anti-drift en la compactación (R5 del `ecosistema/16`): con el mismo flag, si el vault sigue desfasado **pausa la compactación una vez** y pide volcar pendientes/decisiones antes de que el contexto se resuma. Sin flag → silencio. PreCompact **no admite `additionalContext`**: su único canal hacia Claude es exit 2, que en este evento significa "blocks compaction" — de ahí la pausa. Marca `precompact_flushed` para no repetirla (una auto-compactación bloqueada en bucle ahogaría la sesión) |
 
 Requiere Python 3 en el PATH (`python3` en macOS/Linux, `python` en Windows).
@@ -125,6 +126,7 @@ los `.py` de la raíz de `hooks/`.
 ```powershell
 py setup\hooks\tests\test-mark-code-dirty.py    # 12 casos
 py setup\hooks\tests\test-memory-flush.py       # 11 casos
+py setup\hooks\tests\test-merge-gate-guard.py   # 8 casos (repos git reales)
 ```
 
 Córrelos ante **cualquier** cambio en el sistema anti-drift: los tres hooks
@@ -137,6 +139,10 @@ nada" (fail-open); usa los arneses o bash.
 
 - **Fail-open** ante entrada ilegible: si el JSON del hook no parsea, no
   bloquea (un bug del hook no debe tumbar el resto de herramientas).
+- **Fail-closed en `merge-gate-guard`** ante un merge a rama protegida que no se
+  puede verificar (rama sin nombrar, evidencia ilegible): ahí la duda se
+  resuelve parando — es el sentido de una compuerta. Fuera de `main`, ni se
+  entera.
 - **Fail-closed** ante group_id ausente/prohibido: exit 2 + mensaje accionable.
 - El multi-cuenta hereda el hook si copias `hooks/` + settings a cada
   `CLAUDE_CONFIG_DIR` (el sync de dotfiles ya contempla `settings.json`).
@@ -153,11 +159,22 @@ tres cosas se aprendieron usándola en campo y no están en su documentación:
    desviarles el método a media tarea: con 7 worktrees vivos se quitaron y se
    dejó solo la sección del `CLAUDE.md`, que es inerte. **Con agentes en
    paralelo, instala SOLO la sección.**
-2. **Sirve para orientarse, no para decidir.** Úsalo en la **primera media hora**
-   en un repo que no conoces (*"¿dónde vive esto y qué lo toca?"*) — ahí gana al
-   `grep`. **No esperes respuestas semánticas**: *"¿quién NECESITA este dato y
-   quién solo lo transporta?"* no lo contesta un grafo AST, porque un conteo de
-   ocurrencias no mide dependencia.
+2. **Tiene un disparador, no una franja horaria.** La instrucción es:
+
+   > **Antes de tu primer `grep` de exploración en una sesión, corre
+   > `graphify query`. Su salida es la LISTA DE CANDIDATOS, no la respuesta:
+   > confírmala con `Read` y da por hecho que le faltan sitios.**
+
+   Decir "úsalo pronto" no nombra un momento, y se incumplió **2 jornadas de 2**
+   con la herramienta al día. `grep` sí es un momento reconocible.
+
+   **La expectativa va calibrada con números, no con adjetivos**: sobre la
+   pregunta más cara de la jornada devolvió **5 de 9 sitios en 1,7 s** (contra
+   ~40 min a mano) pero **omitió los dos decisivos**, y **49 de 65 `loc=` eran
+   `L1`** — señala el fichero, no la línea. Es una **primera pasada con
+   omisiones garantizadas**. Y **no esperes respuestas semánticas**: *"¿quién
+   NECESITA este dato y quién solo lo transporta?"* no lo contesta un grafo AST,
+   porque un conteo de ocurrencias no mide dependencia.
 3. **Su hook reconstruye en cada cambio de rama** — en una jornada se disparó
    unas seis veces, compitiendo por RAM con tres subagentes. **Cuenta en el
    presupuesto de máquina** del bloque 5 del despacho.

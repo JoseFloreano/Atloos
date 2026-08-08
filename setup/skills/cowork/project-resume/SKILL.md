@@ -54,6 +54,11 @@ Cowork. **Solo lectura** — no escribe memoria ni commitea nada en este paso.
    and known issues", group_ids=["<nombre>", "dev-global"])`.
 6. **Resume al usuario** en pocas líneas: estado actual, decisiones clave, bugs
    conocidos y pendientes; pregunta en qué quiere continuar.
+
+   ⚠ **Un hecho tachado NO se sirve como bueno.** Si una línea está
+   `~~tachada~~` o lleva `❌ REFUTADO`, o la omites, o la das explícitamente
+   por refutada — nunca como estado vigente. Es el fallo del caso Graphiti:
+   un hecho falso sobrevivió porque cada arranque lo repitió.
 7. No modifiques nada aquí. Hallazgos → `memory-keeper`; decisiones →
    `adr-writer`; y recuerda que en Cowork todo cambio al vault debe
    **commitearse de vuelta** a la carpeta conectada al final.

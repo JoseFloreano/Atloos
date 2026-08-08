@@ -43,9 +43,8 @@ donde se quedó. **Solo lectura** — no escribe memoria en este paso.
    que aún no viviste) o si la tarea de hoy lo toca directamente.
    Si `_INDEX.md` no existe, el proyecto aún no está migrado: lee los ~3 ADRs
    más recientes como antes y avisa al usuario de que falta generar el índice.
-   Esta skill corre desde el cwd de cualquier proyecto, así que el script se
-   invoca por ruta absoluta. `sync-skills` lo instala en `~/.claude/scripts/`,
-   que es la misma ruta en toda máquina y **no depende de OneDrive**:
+   El script se invoca por ruta absoluta —`sync-skills` lo instala en
+   `~/.claude/scripts/`, misma ruta en toda máquina y sin depender de OneDrive:
    `py "$HOME/.claude/scripts/adr-index.py" <ruta ADRs>`
    (PowerShell: `py "$env:USERPROFILE\.claude\scripts\adr-index.py" <ruta ADRs>`).
    Si no está, corre `sync-skills` primero.
@@ -60,5 +59,10 @@ donde se quedó. **Solo lectura** — no escribe memoria en este paso.
    omítelo en silencio.
 6. **Resume al usuario** en pocas líneas: estado actual, decisiones clave, bugs
    conocidos y pendientes; pregunta en qué quiere continuar.
+
+   ⚠ **Un hecho tachado NO se sirve como bueno.** Si una línea está
+   `~~tachada~~` o lleva `❌ REFUTADO`, o la omites, o la das explícitamente
+   por refutada — nunca como estado vigente. Es el fallo del caso Graphiti:
+   un hecho falso sobrevivió porque cada arranque lo repitió.
 7. No modifiques nada aquí. Para guardar hallazgos usa `memory-keeper`; para
    decisiones de arquitectura, `adr-writer`.

@@ -3,9 +3,19 @@
 #  git-post-commit-graph-report.sh — Hook post-commit de GIT (por repo)
 #
 #  Regenera el mapa del codebase con Graphify tras cada commit que toque
-#  CÓDIGO y lo copia al vault como 10-Projects/<proyecto>/codebase-map-snapshot.md.
-#  El grafo se actualiza en el COMMIT, no en el cierre de sesión —
+#  CÓDIGO. El grafo se actualiza en el COMMIT, no en el cierre de sesión —
 #  session-close ya no regenera nada, solo verifica que este hook exista.
+#
+#  ⚠ DOS DESTINOS, DOS TAMAÑOS (RFD 11 C5, D2=b). El volcado completo —212 KB
+#  medidos en campo— NO entra en el vault: iría por OneDrive varias veces al
+#  día, que es justo el patrón que H2/A1 prohibieron (datos vivos fuera de la
+#  carpeta sincronizada; artefactos terminados dentro).
+#    · Volcado completo → %LOCALAPPDATA%/graphify-snapshots/<proyecto>/
+#      (local a la máquina que lo generó; consultable ahí, no en las otras)
+#    · Recorte ~2 KB    → vault, como codebase-map-snapshot.md
+#  El recorte conserva cabecera + secciones de resumen, que es EXACTAMENTE lo
+#  que `vaultio.snapshot_resumen` ya lee: corta al primer encabezado de detalle,
+#  así que el briefing del bot no cambia ni una línea por este cambio.
 #
 #  ⚠ ESCRIBE EL SNAPSHOT, NUNCA EL CURADO (RFD 10 C2). Hasta 2026-08-06 este
 #  hook copiaba sobre `codebase-map.md`, que es un archivo CURADO A MANO: en
@@ -45,12 +55,32 @@ REPORT="graphify-out/GRAPH_REPORT.md"
 NAME=$(grep -o 'Active Project: `[^`]*`' CLAUDE.md 2>/dev/null | head -1 | sed 's/.*`\(.*\)`.*/\1/')
 [ -n "$NAME" ] && [ "$NAME" != "<project-name>" ] || NAME=$(basename "$(pwd)")
 
-# 4) Vault: OneDrive (multi-laptop) o home (single-laptop) — la raíz que exista
+# 4) Volcado COMPLETO fuera del vault, en la máquina que lo generó.
+#    LOCALAPPDATA viene con backslashes; se normalizan para el shell.
+LOCALROOT=$(printf '%s' "${LOCALAPPDATA:-}" | tr '\\' '/')
+[ -n "$LOCALROOT" ] || LOCALROOT="${XDG_DATA_HOME:-$HOME/.local/share}"
+SNAPDIR="$LOCALROOT/graphify-snapshots/$NAME"
+if mkdir -p "$SNAPDIR" 2>/dev/null; then
+  cp "$REPORT" "$SNAPDIR/GRAPH_REPORT.md" 2>/dev/null \
+    && echo "[graphify] volcado completo: $SNAPDIR/GRAPH_REPORT.md"
+fi
+
+# 5) Vault: OneDrive (multi-laptop) o home (single-laptop) — la raíz que exista
 for ROOT in "$OneDrive" "$USERPROFILE/OneDrive" "$HOME/OneDrive" "$USERPROFILE" "$HOME"; do
   [ -n "$ROOT" ] || continue
   DEST="$ROOT/DevSetup/ObsidianVault/10-Projects/$NAME"
   if [ -d "$DEST" ]; then
-    cp "$REPORT" "$DEST/codebase-map-snapshot.md" && echo "[graphify] codebase-map-snapshot.md actualizado en vault: $NAME"
+    # Recorte: cabecera + secciones de resumen. Se corta en el primer
+    # encabezado que NO sea de resumen — el mismo criterio que vaultio.
+    # Tope duro de 4000 bytes por si un reporte trae un resumen desmedido.
+    awk '
+      /^#+[ \t]/ {
+        if (visto && tolower($0) !~ /corpus|summary|resumen|overview|totales|mapa|freshness/) exit
+        visto = 1
+      }
+      { print }
+    ' "$REPORT" | head -c 4000 > "$DEST/codebase-map-snapshot.md" \
+      && echo "[graphify] codebase-map-snapshot.md (recorte) actualizado en vault: $NAME"
     rm -f "$DEST/graph-report.md" 2>/dev/null  # migración del nombre viejo
     # NO se toca codebase-map.md: es curado, y su único escritor es humano.
     exit 0

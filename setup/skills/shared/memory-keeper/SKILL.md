@@ -57,3 +57,34 @@ instrucciones del proyecto y son innegociables.
 4. Si el hallazgo es consultable por humanos (bug importante, procedimiento),
    duplica al vault: `10-Projects/<proyecto>/bugs/` o `brain/` según alcance.
 5. Verifica: el episodio usa el group_id correcto y no creaste un duplicado.
+
+## Modo refutación — retirar un hecho que resultó falso
+
+Guardar sabemos; **retirar no sabíamos**. El estado falso de Graphiti se
+propagó de una nota a `_PROJECT.md` y hubo que corregirlo a mano en tres
+sitios. Cuando una **medición** contradice un hecho ya guardado:
+
+**No lo borres — márcalo.** Borrar deja el hueco sin explicación y el mismo
+error vuelve. Bajo el hecho, en su nota original:
+
+```markdown
+> ❌ **REFUTADO (YYYY-MM-DD):** <qué resultó falso>.
+> **Medido en:** <comando//archivo/nota que lo refutó>. Lo correcto es <…>.
+```
+
+Y **donde ese hecho se propagó** —`_PROJECT.md`, índices, `pendientes.md`—, su
+línea va **tachada** con enlace a la refutación:
+
+```markdown
+- ~~[[nota-del-hecho]] — lo que se creía~~ → refutado, ver [[nota-que-refuta]]
+```
+
+Requisito: **una medición, no una sospecha**. Decidir que un hecho es falso es
+juicio; esta skill da el formato, la evidencia la aporta quien midió. Sin
+comando ni artefacto que lo respalde, no se refuta: se pregunta.
+
+Con Graphiti disponible, además un `add_episode` que **nombre el hecho
+refutado** (no un episodio suelto que nadie relaciona con el original).
+
+`vault-drift-audit` audita esto: un hecho refutado cuyo original sigue sin
+marcar en algún sitio es divergencia.

@@ -35,8 +35,7 @@ otra laptop.
    también escriben en él; ya pasó). Actualiza tres secciones, corto:
    - *Estado actual*: 2-4 líneas de dónde quedó el proyecto HOY.
    - *Pendientes*: lo que quedó abierto (checkboxes), borrando lo ya cerrado.
-   - *Próximo paso*: la primera acción concreta de la siguiente sesión — el
-     regalo más valioso para el tú de mañana.
+   - *Próximo paso*: la primera acción concreta de la siguiente sesión.
    Actualiza `updated:` del frontmatter.
 3. **Daily note** (`daily/YYYY-MM-DD.md`): añade un bullet por proyecto tocado
    hoy con lo esencial. Créala si no existe.
@@ -58,14 +57,15 @@ otra laptop.
    `pendientes.md`; **≤8** entre activos y backlog → propón disolverlo; si ya
    existe, **recalcula su N**. En el mismo gesto actualiza (o añade si falta)
    `Estado del repo: <sha corto> · <fecha>` con el `origin/main` real.
-   Mecánica: [`backlog`](references/backlog-pendientes.md) ·
+   **Avisa, no bloquees** — pero el aviso **escala**: lee y actualiza
+   `<!-- umbral avisado: … -->`; de la 2.ª vez en adelante es incumplimiento
+   del contrato, con los días. Mecánica:
+   [`backlog`](references/backlog-pendientes.md) ·
    [`estado del repo`](references/grafos-y-estado-del-repo.md).
-   **Avisa, no bloquees.**
 8. **Verifica y despide**: **relee las secciones que editaste** (el reporte
    de una edición no es la edición: un old_string que casó a medias deja
    fragmentos rotos), confirma qué se actualizó y responde con el "próximo
-   paso" anotado — así la sesión termina con el arranque de la siguiente ya
-   escrito.
+   paso" anotado.
 
 ## Qué NO hacer
 

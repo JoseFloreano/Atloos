@@ -48,6 +48,23 @@ Lo que el brief **no puede saber** y hay que inyectar (doc 05 §1.3 y §3.2):
 - **Trampas de entorno de ese día**: tests que solo fallan en orden de suite
   completa, etc.
 
+**Y su reverso — qué SOBRA.** Los tres rojos de la jornada 2 no fueron cosas
+ausentes, fueron cosas **presentes**: un padrón que la suite no esperaba, una
+variable en el `.env`, un fixture con fechas mentirosas. Preguntar solo por lo
+que falta deja fuera la mitad del inventario:
+
+- **Qué hay en disco que la suite NO espera**: padrones, datasets de pruebas
+  anteriores, artefactos dejados por otro frente.
+- **Qué variables de entorno están puestas** y mueven el comportamiento —
+  **con su valor**, no solo su nombre. `DEBUG=1` y `DEBUG=0` no son el mismo
+  inventario.
+- **La mitigación, que en campo se escribió después de perder la corrida**:
+  `os.environ.setdefault(...)` en `conftest.py` para **neutralizar el entorno**,
+  de modo que la suite no dependa de lo que haya en la máquina.
+
+> **El inventario no es una lista de lo que falta: es la DIFERENCIA entre la
+> máquina y lo que la suite supone.**
+
 > **El baseline no es un número: es un número más el estado de cuatro
 > interruptores.** En campo, **42 de 51 skips eran una sola variable**, y
 > **cuatro frentes perdieron una corrida entera** diagnosticando inventario

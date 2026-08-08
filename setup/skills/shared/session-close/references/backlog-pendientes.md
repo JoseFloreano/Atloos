@@ -53,6 +53,44 @@ Si el backlog existe, **recalcula la N de la línea de enlace en cada cierre**.
 Una N desfasada es el **primer síntoma** de que las dos listas divergieron, y
 es justo lo que `vault-drift-audit` busca. Cuesta un conteo.
 
+## Cuando el umbral se cruza OTRA VEZ — la constancia (RFD 11 C3, D1=b)
+
+Avisar sin que nadie actúe no es una compuerta, es un log. Tres días con el
+mismo aviso y el archivo a 2,8× del límite duro lo demostraron. El aviso
+**escala por reincidencia**, y para eso hace falta memoria entre cierres —
+que `session-close` no tiene.
+
+**Dónde vive.** Un comentario HTML bajo la línea del backlog en `_PROJECT.md`:
+
+```
+Backlog: 6 ítems → [[pendientes]]
+<!-- umbral avisado: 2026-08-05, 2026-08-07 -->
+```
+
+Invisible al leer el vault, trivial de parsear, y **muere con el problema que
+lo creó**. Si aún no hay línea de backlog (caso "proponer CREAR"), va al final
+de `## Pendientes`, en el mismo sitio donde iría esa línea.
+
+**Mecánica, en cada cierre:**
+
+1. **Lee** el comentario ANTES de avisar.
+2. **1.ª vez** (sin comentario, o sin fechas): propón, como siempre.
+3. **2.ª y siguientes** con el mismo umbral cruzado: dilo como
+   **incumplimiento del contrato**, no como sugerencia, y **con el número de
+   días** — de la primera fecha a hoy. Sigue sin ejecutar nada sin OK: "avisa,
+   no bloquees" se mantiene; lo que cambia es que ahora queda registro.
+4. **Añade la fecha de hoy** a la lista cada vez que avises (no dupliques si ya
+   está la de hoy).
+5. **Borra la línea entera** en cuanto el umbral deja de estar cruzado. El
+   contador se reinicia solo, sin ritual aparte.
+
+**Nombra el caso de debajo.** Si el proyecto tiene ficheros de pendientes que
+**no son** el `pendientes.md` de este contrato (`PENDIENTES.md`, copias
+fechadas…), dilo en el aviso: el umbral no falló solo, es que **el RFD 12 nunca
+se aplicó ahí**. Consolidarlos es trabajo de ese proyecto, no de este ritual.
+
+`vault-drift-audit` **cuenta esas fechas**: 3 o más → hallazgo propio.
+
 ## Lo que NO se hace aquí
 
 - **Lo hecho se borra, no se tacha.** Sin `## Hecho`, sin tachados. La historia
