@@ -37,6 +37,13 @@ ESTABLES = re.compile(
     r"~/\.claude/|\$HOME/\.claude/|%USERPROFILE%\\\.claude\\|\$env:USERPROFILE\\\.claude\\",
     re.I)
 
+# Exención DECLARADA, en la propia línea. Existe porque los tests del repo se
+# corren desde el repo y eso es legítimo — pero tiene que decirlo donde el check
+# la ve. Poner el contexto en la línea de ARRIBA no basta: el check es por línea
+# y el arreglo semántico no se enteró del sintáctico (pasó el 2026-08-07).
+# Es greppable a propósito: `grep -rn "\[repo\]" setup/skills/` lista las vivas.
+EXENTA = re.compile(r"\[repo\]")
+
 # Un comando que el agente ejecutaría.
 COMANDO = re.compile(r"(?:^|[\s`(])(?:py|python3?|bash|sh|pwsh|powershell|\./)\s+\S", re.I)
 
@@ -56,7 +63,8 @@ def revisa(archivo: Path):
     rel = archivo.relative_to(RAIZ.parent).as_posix()
     for n, linea in enumerate(archivo.read_text(encoding="utf-8").splitlines(), 1):
         # Una línea que ya da la ruta estable está bien, aunque mencione otras.
-        if ESTABLES.search(linea):
+        # Y una que declara `[repo]` asume la excepción por escrito.
+        if ESTABLES.search(linea) or EXENTA.search(linea):
             continue
 
         # 1) Ruta absoluta de una máquina: siempre es bug.
@@ -100,8 +108,10 @@ ejecutar debe resolverse por una ruta estable por máquina —hoy
 "búscalo en ClaudeSetup".
 
 Si algún hallazgo es un falso positivo (documentación que no manda ejecutar
-nada), reescribe la línea para que no parezca un comando: un arnés que grita en
-falso se ignora a las dos semanas.""")
+nada), reescribe la línea para que no parezca un comando. Y si de verdad es un
+comando que se corre DESDE EL REPO —un test, por ejemplo—, decláralo en la
+MISMA línea con `[repo]`: queda greppable y deja de saltar. Un arnés que grita
+en falso se ignora a las dos semanas.""")
     return 1
 
 
