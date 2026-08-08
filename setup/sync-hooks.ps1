@@ -34,6 +34,7 @@ $HookMap = @(
     @{ File = "mark-code-dirty.py";            Event = "PostToolUse"; Matcher = "Write|Edit|MultiEdit" }
     @{ File = "check-vault-updated.py";        Event = "Stop";        Matcher = $null }
     @{ File = "memory-flush.py";               Event = "PreCompact";  Matcher = $null }
+    @{ File = "merge-gate-guard.py";           Event = "PreToolUse";  Matcher = "Bash" }
 )
 
 if (-not $HooksSource) { $HooksSource = Join-Path $PSScriptRoot "hooks" }
