@@ -1,6 +1,8 @@
 # RFD — Graphiti: el estado real, y qué hacer con la deriva del 08-04
 
-> **Estado:** PROPUESTA — pide una decisión del usuario. Nada implementado.
+> **Estado:** ✅ **DECIDIDA (2026-08-08) — opción A**, ratificada en
+> `ADR-20260808-graphiti-ratificado-pospuesto` (vault). Lo durable ya está en
+> ese ADR: este RFD queda **listo para cosechar** (`design-doc-harvest`).
 > **Fecha:** 2026-08-05 · **Autor:** Claude Code (laptop).
 > **Para quién:** cualquier agente que vaya a tocar Graphiti. **Léelo antes de
 > levantar un contenedor o elegir un embedder.**
