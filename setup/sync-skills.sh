@@ -142,19 +142,23 @@ done
 # single-laptop, y atada al árbol de carpetas de UNA laptop. Ahora la ruta
 # estable es ~/.claude/scripts/ y este paso la materializa en cada máquina,
 # igual que sync-hooks hace con ~/.claude/hooks/.
+# Fuentes: setup/scripts/*.py y el notificador del puente. El notificador NO
+# vive en scripts/ (es del bridge) pero lo necesita la skill notify-telegram,
+# que corre desde el cwd de CUALQUIER proyecto: sin copia en ruta estable, un
+# agente en otro repo no tiene forma de encontrarlo.
 SCRIPTS_SOURCE="${SETUP_DIR}/scripts"
-if [ -d "${SCRIPTS_SOURCE}" ]; then
-  echo -e "\n${BLUE}▶ Instalando scripts auxiliares${NC}"
-  for cfg in "${CONFIG_DIRS[@]}"; do
-    mkdir -p "${cfg}/scripts"
-    n=0
-    for f in "${SCRIPTS_SOURCE}"/*.py; do
-      [ -f "$f" ] || continue
-      cp "$f" "${cfg}/scripts/"; n=$((n+1))
-    done
-    ok "${n} scripts → ${cfg}/scripts"
+NOTIF="${SETUP_DIR}/telegram-bridge/notify_telegram.py"
+echo -e "
+${BLUE}▶ Instalando scripts auxiliares${NC}"
+for cfg in "${CONFIG_DIRS[@]}"; do
+  mkdir -p "${cfg}/scripts"
+  n=0
+  for f in "${SCRIPTS_SOURCE}"/*.py "${NOTIF}"; do
+    [ -f "$f" ] || continue
+    cp "$f" "${cfg}/scripts/"; n=$((n+1))
   done
-fi
+  ok "${n} scripts → ${cfg}/scripts"
+done
 
 # ── 2. Cowork: empaquetar plugin dev-skills (shared + cowork) ─────────────
 if [ -z "${NO_COWORK_BUILD:-}" ]; then

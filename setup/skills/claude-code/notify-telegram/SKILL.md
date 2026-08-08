@@ -22,9 +22,18 @@ el resultado en el móvil.
 
 ## Requisitos
 
-- Script `notify_telegram.py` del repo ClaudeSetup, en
-  `setup/telegram-bridge/`. Resuélvelo así: variable de entorno
-  `TELEGRAM_NOTIFY_SCRIPT` si existe; si no, esa ruta dentro del repo del setup.
+- Script en **`~/.claude/scripts/notify_telegram.py`** (Windows:
+  `%USERPROFILE%\.claude\scripts\notify_telegram.py`). Es la **misma ruta en
+  toda máquina y no depende de dónde esté clonado el repo**: `sync-skills` lo
+  instala ahí. Si falta, corre `sync-skills` una vez.
+  *(Escape hatch: `TELEGRAM_NOTIFY_SCRIPT` gana si está definida — nada la
+  define por defecto, es para instalaciones raras.)*
+
+  > ⚠ **No busques el repo ClaudeSetup para ejecutarlo.** Esta skill corre desde
+  > el cwd de cualquier proyecto y no hay relación de rutas que lleve de uno a
+  > otro. El 2026-08-07 falló exactamente así: desde `alphadogs`, en la máquina
+  > donde el puente estaba configurado, con las credenciales puestas — lo único
+  > que faltaba era una ruta alcanzable.
 - Credenciales en el entorno o en un `.env` local (el script las busca solo).
 - **Fallback obligatorio**: si el script no existe o falla por falta de
   credenciales (exit 1), **dilo en una línea** y entrega la respuesta completa
@@ -39,7 +48,8 @@ el resultado en el móvil.
    *qué se hizo* · *resultado* (✅/❌, números concretos: tests, archivos) ·
    *qué queda pendiente*. Sin markdown decorativo: se envía como texto plano.
 3. **Ejecuta el script** (intérprete `py` en Windows):
-   `py <ruta>/notify_telegram.py "<resumen>"`
+   `py "$HOME/.claude/scripts/notify_telegram.py" "<resumen>"`
+   (PowerShell: `py "$env:USERPROFILE\.claude\scripts\notify_telegram.py" "<resumen>"`)
    Si hay un artefacto que el usuario querrá leer entero (informe, log, diff),
    añade `--file <ruta>`. No hace falta trocear: el script manda resumen +
    adjunto solo si el texto pasa de 4096 caracteres.

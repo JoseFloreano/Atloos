@@ -156,15 +156,28 @@ foreach ($cfg in $configDirs) {
 # single-laptop, y dependiente del arbol de carpetas de UNA laptop. Ahora la
 # ruta estable es ~/.claude/scripts/ y este paso la materializa en cada
 # maquina, igual que sync-hooks hace con ~/.claude/hooks/.
-$scriptsSource = Join-Path $PSScriptRoot "scripts"
-if (Test-Path $scriptsSource) {
+# Fuentes: setup/scripts/*.py y el notificador del puente. El notificador NO
+# vive en scripts/ (es del bridge) pero lo necesita la skill notify-telegram,
+# que corre desde el cwd de CUALQUIER proyecto: sin copia en ruta estable, un
+# agente en otro repo no tiene forma de encontrarlo — paso el 2026-08-07 desde
+# alphadogs, con el puente configurado y todo.
+$scriptFuentes = @()
+$dirScripts = Join-Path $PSScriptRoot "scripts"
+if (Test-Path $dirScripts) {
+    $scriptFuentes += Get-ChildItem $dirScripts -Filter "*.py" -File
+}
+$notif = Join-Path (Join-Path $PSScriptRoot "telegram-bridge") "notify_telegram.py"
+if (Test-Path $notif) { $scriptFuentes += Get-Item $notif }
+
+if ($scriptFuentes.Count -gt 0) {
     Write-Host "`n▶ Instalando scripts auxiliares" -ForegroundColor Blue
     foreach ($cfg in $configDirs) {
         $target = Join-Path $cfg "scripts"
         New-Item -ItemType Directory -Force -Path $target | Out-Null
-        $py = Get-ChildItem $scriptsSource -Filter "*.py" -File
-        foreach ($f in $py) { Copy-Item $f.FullName $target -Force }
-        Write-OK "$($py.Count) scripts → $target"
+        foreach ($f in $scriptFuentes) {
+            Copy-Item $f.FullName (Join-Path $target $f.Name) -Force
+        }
+        Write-OK "$($scriptFuentes.Count) scripts → $target"
     }
 }
 
