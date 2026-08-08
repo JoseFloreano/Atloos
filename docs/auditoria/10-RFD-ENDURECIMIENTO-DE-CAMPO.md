@@ -1,6 +1,11 @@
 # RFD — Endurecimiento del instrumental tras la primera campaña de campo
 
-> **Estado:** **IMPLEMENTADO (2026-08-07) — pendiente de auditoría externa.**
+> **Estado:** **IMPLEMENTADO Y AUDITADO — APROBADO (2026-08-07), cosecha
+> LIBERADA** por la auditoría externa de Cowork
+> ([[2026-08-07-auditoria-rfd10-endurecimiento]], vault). Registro añadido el
+> 08-08 al cerrar la discrepancia que señaló el RFD 11 §5: el veredicto
+> existía en el vault pero este header no lo recogía — el reporte no es el
+> artefacto, tampoco el del auditor.
 > Hasta que cierre no se cosecha (regla de `design-doc-harvest`: condiciones
 > CERRADAS). v3 APROBADA tras la auditoría de Opus (§9) y el arbitraje de D1/D2.
 >
