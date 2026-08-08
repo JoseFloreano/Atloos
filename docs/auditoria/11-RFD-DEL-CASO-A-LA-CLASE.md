@@ -1,8 +1,9 @@
 # RFD — Del caso a la clase: los cuatro fallos de la segunda campaña
 
-> **Estado:** PROPUESTA **v2 (2026-08-08)** — auditada por Cowork
-> (APROBABLE; los 5 hallazgos incorporados, §9). **Siguen abiertas D1 y D2, que
-> arbitra el usuario**; el auditor votó (b) en ambas.
+> **Estado:** **APROBADA v3 (2026-08-08)** — auditada por Cowork (APROBABLE; los
+> 5 hallazgos incorporados, §9) y **arbitrada por el usuario: D1 → (b), D2 →
+> (b)**, coincidiendo con la recomendación del RFD y el voto del auditor.
+> Queda listo para el prompt de implementación; **no se ha implementado nada**.
 > **Fecha:** 2026-08-07 · **v2** 2026-08-08 · **Autor:** Opus (laptop, con el
 > código delante) —
 > **flujo invertido respecto al RFD 10**: allí escribió el auditor y auditó el
@@ -119,7 +120,7 @@ El bloque 2 gana su reverso:
 > El inventario no es una lista de lo que falta: es la **diferencia** entre la
 > máquina y lo que la suite supone.
 
-### C3 · El umbral del backlog deja de ser solo aviso (F16) — **D1, decides tú**
+### C3 · El umbral del backlog deja de ser solo aviso (F16) — **D1 = (b)**
 
 [`session-close:56-61`](../../setup/skills/shared/session-close/SKILL.md) dice
 **propón**. Es deliberado —"avisa, no bloquees"— pero tres días con el mismo
@@ -195,7 +196,7 @@ ADRs ([`adr-writer:35`](../../setup/skills/shared/adr-writer/SKILL.md)).
 vuelve. La regla del repo es la misma que con la corrección del RFD 10 de
 Graphiti: *se corrige en vez de taparse, y se ve qué se creyó y por qué era falso*.
 
-### C5 · El snapshot generado sale del vault (F18) — **D2, decides tú**
+### C5 · El snapshot generado sale del vault (F18) — **D2 = (b)**
 
 El hook escribe el volcado **en la carpeta del proyecto dentro del vault** y lo
 reescribe en cada commit
@@ -262,13 +263,13 @@ por la prueba deliberada del gate.
    ```
 2. **F15**: el bloque 2 pide explícitamente lo **presente** (disco + variables con
    su valor) y menciona el `os.environ.setdefault` del `conftest.py`.
-3. **F16** (según D1): el segundo cierre consecutivo con el umbral cruzado
+3. **F16**: el segundo cierre consecutivo con el umbral cruzado
    produce un mensaje distinto al primero, con el número de días.
 4. **F17**: `memory-keeper` documenta el formato de refutación; `project-resume`
    no sirve un hecho tachado como bueno; `vault-drift-audit` gana su check.
    **Prueba sembrada**: refutar un hecho de laboratorio y ver que las tres piezas
    se comportan.
-5. **F18** (según D2): tras un commit, el volcado no está en el vault y sí su
+5. **F18**: tras un commit, el volcado no está en el vault y sí su
    resumen; el briefing del bot sigue midiendo ≤800 chars de extracto.
 6. `wc -w` de todo cuerpo de skill editado **≤500**.
 7. Los 7 bloques de la plantilla conservan numeración.
@@ -320,11 +321,16 @@ bloqueante. Nota completa: [[2026-08-08-auditoria-rfd11]].
 **Voto del auditor:** D1(b) con I1 resuelto, y D2(b) — coincide con la
 recomendación de este RFD en ambas.
 
+**Arbitraje del usuario (2026-08-08): D1 → (b), D2 → (b).** Las tres opiniones
+—RFD, auditor y usuario— convergen, así que ninguna alternativa queda viva. Se
+anota aquí porque una decisión arbitrada de la que no queda artefacto es la I2
+otra vez: al RFD 10 le pasó el mismo día.
+
 El auditor verificó además la nota de campo del §7 contra `725ca39`: el arnés
 cazándose a sí mismo es real, no retórica.
 
 ---
 
-*RFD 11 de la subserie `auditoria/`, **v2**. Aprobarlo = **arbitraje de D1 y D2
-por el usuario** (la auditoría ya cerró sin bloqueantes). Implementarlo = prompt
-aparte, con la auditoría externa al final, como siempre.*
+*RFD 11 de la subserie `auditoria/`, **v3 APROBADA**: auditoría cerrada sin
+bloqueantes y D1/D2 arbitradas. Implementarlo = prompt aparte, con la auditoría
+externa al final, como siempre. Nada de esto está implementado todavía.*
