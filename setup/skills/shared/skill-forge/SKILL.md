@@ -6,14 +6,14 @@ description: >
   authoring y nuestras convenciones de sync/auditoría. Use when the user says
   "crea una skill", "nueva skill para X", "mejora esta skill", "la skill no
   dispara", "optimiza la descripción", or al detectar un gap que merece skill
-  propia. Para plugins completos de Cowork usa cowork-plugin; esto es para
-  skills del sistema propio.
+  propia. Para plugins completos de Cowork usa `cowork:cowork-plugin` (skill
+  bundled de Cowork, no está en Claude Code); esto es para skills propias.
 ---
 
 # Skill Forge
 
-Meta-skill adaptada a nuestro setup: combina el proceso del `skill-creator`
-oficial de Anthropic y el hallazgo clave de `writing-skills` (Superpowers) con
+Meta-skill adaptada a nuestro setup: combina el proceso del `bundled:skill-creator`
+oficial de Anthropic y el hallazgo clave de `superpowers:writing-skills` (Superpowers) con
 nuestras reglas de carpetas, sync y auditoría.
 
 ## Las 3 reglas que más fallan (aprendidas del ecosistema)
@@ -33,7 +33,7 @@ nuestras reglas de carpetas, sync y auditoría.
 
 1. **Justifica el gap**: ¿qué falla hoy sin la skill? ¿Ya lo cubre Superpowers
    o una skill existente? (los duplicados se descartan — `skills/11` mostró que casi
-   todo el "debugging metodológico" externo duplicaba systematic-debugging).
+   todo el "debugging metodológico" externo duplicaba el de Superpowers).
 2. **Decide carpeta** con la tabla de skills/README.md: metodología pura →
    `shared/`; toolchain/MCP local → `claude-code/`; sandbox/documentos/web →
    `cowork/`. Nombre kebab-case único.
@@ -41,6 +41,9 @@ nuestras reglas de carpetas, sync y auditoría.
    con fallback declarado (la misma skill debe servir en Code y Cowork o
    declarar por qué no), Pasos imperativos numerados, paso final de
    verificación, sección "Qué NO hacer" si hay anti-patrones conocidos.
+   **Toda skill que nombres va entre backticks y con namespace**
+   (`superpowers:`, `bundled:`, `cowork:`, `mcp:`); sin prefijo = propia y
+   debe existir. Lo comprueba `test-skill-catalog.py`.
 4. **Integra con el sistema**: si produce conocimiento durable → termina en
    `memory-keeper`/`adr-writer`; si toca el vault → respeta el aislamiento por
    proyecto; si es de terceros adaptada → protocolo de auditoría (`skills/10` §2)
@@ -48,7 +51,7 @@ nuestras reglas de carpetas, sync y auditoría.
 5. **Prueba de triggers (mínimo viable)**: 3 frases que DEBEN dispararla y 2
    que NO deben (las vecinas más cercanas). Corre las 5 en sesión nueva; si
    falla, ajusta la descripción — no el cuerpo. Para evals serias con A/B y
-   varianza: usa el `skill-creator` oficial (Cowork lo trae; en Code se
+   varianza: usa el `bundled:skill-creator` oficial (Cowork lo trae; en Code se
    instala de anthropics/skills).
 6. **Despliega**: carpeta → `setup/skills/<categoría>/` → commit → `sync-skills`
    (sin `-NoCoworkBuild` si es shared/cowork → re-subir dev-skills.zip) →

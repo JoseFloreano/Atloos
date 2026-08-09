@@ -18,10 +18,9 @@ CONDICIONES / PELIGROSA**, punto por punto.
 
 ## Requisitos
 
-- El SQL/archivo real de la migración (no audites descripciones), el tamaño
-  aproximado de las tablas Y su tráfico de escritura — el riesgo es
-  filas × tráfico concurrente, no solo filas. Si no lo sabes, pídelo o asume
-  tabla grande y caliente.
+- El SQL real (no audites descripciones), el tamaño de las tablas Y su
+  tráfico de escritura — el riesgo es filas × tráfico concurrente, no solo
+  filas. Si no lo sabes, pídelo o asume tabla grande y caliente.
 - Detalles por motor en `references/engine-notes.md` — ábrelo si el motor no
   es PostgreSQL o ante cualquier duda de un caso concreto.
 
@@ -57,10 +56,11 @@ CONDICIONES / PELIGROSA**, punto por punto.
 Tabla con los 6 puntos (una línea cada uno) y veredicto final. Todo "CON
 CONDICIONES" lleva su condición cuantificada ("segura si <~1M filas y sin
 escritura sostenida; por encima, variante online"). Si hay condiciones o
-peligro, entrega la migración reescrita en versión segura. Esta skill es la
-revisión; la garantía dura es el hook `validate-migration-review` (Fase S2) —
-si no está instalado, adviértelo en el veredicto. Riesgo aceptado a
+peligro, entrega la migración reescrita en versión segura. Riesgo aceptado a
 sabiendas → `memory-keeper`.
+
+⚠ **Revisión, no garantía: ningún hook impone este paso** — nada impide
+ejecutar una migración sin revisarla. Dilo en el veredicto.
 
 ## Qué NO hacer
 
@@ -68,9 +68,5 @@ sabiendas → `memory-keeper`.
 - No des veredicto sin haber visto el SQL real.
 
 ---
-*Procedencia: checklist base (5 puntos) del patrón comunitario
-`migration-auditor` (catálogo web de Agensi, sin repo público; consultado
-jul 2026) vía `docs/bd-y-nube/02-SKILLS-BASES-DE-DATOS.md` §1.3. Punto 6 y
-matices de mecanismo añadidos en auditoría propia contra documentación
-oficial de PostgreSQL/MySQL/SQLite (ago 2026, doc 06 de la subserie).
-Reescrito propio, sin código de terceros.*
+*Procedencia, atribución y por qué aquí no se promete una garantía dura:
+`references/procedencia.md`.*

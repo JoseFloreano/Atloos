@@ -35,6 +35,10 @@ $HookMap = @(
     @{ File = "check-vault-updated.py";        Event = "Stop";        Matcher = $null }
     @{ File = "memory-flush.py";               Event = "PreCompact";  Matcher = $null }
     @{ File = "merge-gate-guard.py";           Event = "PreToolUse";  Matcher = "Bash" }
+    # Segundo hook en Stop, junto a check-vault-updated.py. Los dos corren, son
+    # independientes y el orden lo fija este array (el cableado APENDE, así que
+    # check-vault-updated va primero). Ver hooks/tests/test-goal-evidence-guard.py.
+    @{ File = "goal-evidence-guard.py";        Event = "Stop";        Matcher = $null }
 )
 
 if (-not $HooksSource) { $HooksSource = Join-Path $PSScriptRoot "hooks" }

@@ -11,7 +11,7 @@ description: >
 # GDB + Sanitizers Runbook (C/C++)
 
 Elige la herramienta por síntoma y extrae el diagnóstico. Complementa a
-`systematic-debugging` (el protocolo) poniendo la instrumentación nativa; para
+`superpowers:systematic-debugging` (el protocolo) poniendo la instrumentación nativa; para
 fuzzing/coverage ver las skills `tob-*` (Trail of Bits).
 
 ## Requisitos
@@ -45,7 +45,7 @@ fuzzing/coverage ver las skills `tob-*` (Trail of Bits).
 4. **gdb cuando necesites estado vivo**: `gdb --args ./bin <args>` → `run`,
    y al parar: `bt full`, `frame N`, `print var`, `watch var` (para corrupción),
    `info threads` + `thread apply all bt` (hilos). Post-mortem: `gdb ./bin core`.
-5. **Confirma la causa** con la fase 3 de `systematic-debugging` (hipótesis única
+5. **Confirma la causa** con la fase 3 de `superpowers:systematic-debugging` (hipótesis única
    + test mínimo que falla) — un stack trace es evidencia, no diagnóstico.
 6. **Fix + verificación doble**: el test nuevo pasa Y el binario instrumentado
    corre limpio (cero reportes de ASan/UBSan, no solo "ya no crashea").

@@ -40,7 +40,7 @@ Patrón común: Vercel para el front + Railway/Fly para el back.
 
 **Default:** Postgres managed (Neon/Supabase free tier para empezar) +
 migraciones con la herramienta del ORM en paso explícito de release (no
-auto-mágicas) + skill `migration-architect` para las riesgosas.
+auto-mágicas) + la skill `migration-auditor` para las riesgosas.
 
 ## 4. Dominio, TLS y borde
 

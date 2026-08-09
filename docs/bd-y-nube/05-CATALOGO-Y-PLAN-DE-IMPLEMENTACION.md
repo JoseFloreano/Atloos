@@ -5,50 +5,77 @@
 > **Insumos:** Docs 01–04 de esta subserie, reglas de `setup/skills/README.md` y `_template/SKILL.md`, anti-patrones del doc 06 y hallazgos R2/R4 de la auditoría (`auditoria/09`).
 > **Formato:** Igual que el doc 06 de la serie principal — catálogo, protocolo, fases con checkboxes, métricas y anti-patrones.
 
+> ## ⚠ Podado el 2026-08-09 (F0 del RFD 17)
+>
+> Este catálogo aprobó **17 piezas de golpe** y se construyeron 5. Las 12
+> restantes siguieron listadas un año como si estuvieran vivas, hasta que dos
+> skills maduras empezaron a citarlas: `sql-conventions` mandaba a
+> `warehouse-query-optimize`, y ella y `migration-auditor` afirmaban que *"la
+> garantía dura"* era un hook de la Fase S2 **que nunca se construyó**.
+>
+> **El criterio de la poda es la dependencia**: se borra lo que exige una
+> herramienta o un MCP que no está en uso; sobrevive como *candidata* la
+> metodología pura, que funciona con lo que ya hay.
+>
+> Lo borrado está abajo con su motivo, **no en una lista de pendientes**: un
+> pendiente que nadie va a tocar y se lista como activo es lo que produjo esto.
+> El ritual completo fue `borrar → grep de referencias entrantes → redirigir →
+> grep final = 0`, el mismo que ya se usaba para cosechar RFDs. Lo vigila
+> `setup/scripts/tests/test-skill-catalog.py`.
+
 ---
 
 ## 1. Catálogo consolidado
 
 ### `shared/` — metodología pura (funciona en Claude Code y Cowork, sin dependencias)
 
-| Skill | Origen | Prioridad |
+| Skill | Origen | Estado |
 |-------|--------|:---------:|
-| `sql-conventions` | Propia (nadie conoce tus convenciones) | 🔴 Alta |
-| `schema-designer` | Propia; patrón ERD-antes-de-SQL del ecosistema | 🔴 Alta |
-| `data-quality-gates` | Propia; patrón de 4 capas de validación | 🔴 Alta |
-| `migration-auditor` | Importada + adaptada (checklist locks/pérdida/rollback/índices) | 🟠 Media |
-| `pipeline-designer` | Propia; patrón ETL canónico (paginación, rate limit, fallos parciales, upsert) | 🟠 Media |
-| `<provider>-standards` (solo proveedores en uso) | Propia con plantilla del doc 04 §3 | 🟠 Media |
-| `cloud-cost-tagger` | Propia | 🟡 Baja |
-| `pii-guard` | Propia (o extraída de Altimate) | 🟡 Baja |
-| `warehouse-cost-review` | Parcialmente importable de Altimate | 🟡 Baja |
-
-### `claude-code/` — toolchain local y MCPs localhost
-
-| Skill | Origen | Dependencias declaradas (con fallback) |
-|-------|--------|----------------------------------------|
-| `dbt-workflow` | Importar Altimate (`dbt-skills`) | dbt local; warehouse/dbt-core MCP → fallback `dbt compile` |
-| `terraform-safe-apply` | Importar terraform-skill + plan-review de devops-skills | terraform/tofu local; **hooks obligatorios** (doc 04 §4) |
-| `spark-optimizer` | Propia (doc 03 §2.2) | spark local — fallback: análisis estático del código |
-| `warehouse-query-optimize` | Importar Altimate (`query-optimize`) | MCP warehouse read-only → fallback: análisis del plan pegado |
-| `lineage-check` | Propia | dbt-core/OpenMetadata MCP → fallback: grep de refs |
-| `db-explorer` | Propia | MCP DB read-only (Toolbox) → fallback: generar SQL para ejecución manual |
+| `sql-conventions` | Propia (nadie conoce tus convenciones) | ✅ **Construida** |
+| `schema-designer` | Propia; patrón ERD-antes-de-SQL del ecosistema | ✅ **Construida** |
+| `data-quality-gates` | Propia; patrón de 4 capas de validación | ✅ **Construida** |
+| `migration-auditor` | Importada + adaptada (checklist locks/pérdida/rollback/índices) | ✅ **Construida** |
+| `pipeline-designer` | Propia; patrón ETL canónico (paginación, rate limit, fallos parciales, upsert) | ✅ **Construida** |
+| `pii-guard` | Propia (o extraída de Altimate) | 🕐 Candidata — metodología pura; aplica hoy (cobranza, recetas) |
+| `<provider>-standards` | Plantilla del doc 04 §3 | 🕐 Plantilla condicional — se instancia si un proveedor entra en uso |
 
 ### `cowork/` — investigación, documentos, sandbox cloud
 
-| Skill | Origen | Nota |
+| Skill | Origen | Estado |
 |-------|--------|------|
-| `data-doc-writer` | Propia | Diccionarios de datos, ERDs, docs de lineage como entregables |
-| `cloud-architecture-review` | Propia | Comparativas de servicios con web research |
+| `data-doc-writer` | Propia | 🕐 Candidata — diccionarios de datos y ERDs como entregable |
+| `cloud-architecture-review` | Propia | 🕐 Candidata — comparativas con web research, sin dependencias |
 
-### Hooks nuevos (garantías — mismo principio que `validate-graphiti-group-id.py`)
+**Las candidatas caducan.** Por R3 del RFD 17, una pieza propuesta y no
+construida en **60 días** se borra o se re-justifica por escrito. Reloj desde
+esta poda: **vencen el 2026-10-08.**
 
-| Hook | Garantiza | Tipo |
-|------|-----------|------|
-| `validate-migration-review` | Ninguna migración se ejecuta sin pasar el checklist | PreToolUse |
-| `block-terraform-apply-without-plan` | Ningún apply sin plan-review reciente; destroy siempre bloqueado | PreToolUse |
-| `tf-fmt-validate` | fmt + validate tras editar `.tf` | PostToolUse |
-| `sql-lint` (opcional) | Lint de SQL al guardar | PostToolUse |
+### Borradas el 2026-08-09 — exigen herramienta o MCP que no está en uso
+
+| Pieza | Iba a ser | Dependencia que no existe |
+|---|---|---|
+| `dbt-workflow` | claude-code | dbt local + MCP de warehouse/dbt-core |
+| `terraform-safe-apply` | claude-code | terraform/tofu local |
+| `terraform-module-author` | claude-code | terraform local |
+| `spark-optimizer` | claude-code | Spark local |
+| `warehouse-query-optimize` | claude-code | MCP de warehouse read-only |
+| `warehouse-cost-review` | shared | Warehouse con datos de coste |
+| `lineage-check` | claude-code | MCP dbt-core/OpenMetadata |
+| `db-explorer` | claude-code | MCP de DB read-only (Toolbox) |
+| `cloud-cost-tagger` | shared | Cuenta de nube con facturación en uso |
+| `validate-migration-review` | hook PreToolUse | Requería la Fase S1 completa |
+| `block-terraform-apply-without-plan` | hook PreToolUse | terraform en uso |
+| `tf-fmt-validate` | hook PostToolUse | terraform en uso |
+| `sql-lint` | hook PostToolUse | (era opcional ya entonces) |
+
+⚠ **Ninguna de estas se cita ya desde una skill viva.** Las dos citas que
+existían se cerraron en la misma poda: la de `sql-conventions` se borró, y las
+dos que prometían la "garantía dura" del hook ahora dicen la verdad —que
+ningún hook impone ese paso—. El porqué, en
+`setup/skills/shared/migration-auditor/references/procedencia.md`.
+
+Si alguna dependencia entra en uso, la pieza se re-propone **desde cero y con
+fecha**. Resucitarla desde esta tabla sería volver a aprobar 17 de golpe.
 
 ---
 
@@ -81,36 +108,20 @@ Motivación: R4 de la auditoría — todo lo que entra a `claude-skills/` son in
 
 **Resultado**: Claude aplica tus convenciones de datos en ambos productos.
 
-### Fase S1 — Importaciones (1 día)
+### Fases S1, S2 y S3 — **canceladas el 2026-08-09**
 
-**Objetivo**: capitalizar el trabajo del ecosistema.
+Las tres dependían de herramientas que nunca entraron en uso: dbt, Snowflake,
+terraform, Spark, MCPs de warehouse. De la S1 solo se hizo lo que no dependía
+de nada —adaptar `migration-auditor` al motor propio—, y está hecho.
 
-- [ ] Ejecutar el protocolo §2 sobre Altimate (si el stack incluye dbt/Snowflake) → `dbt-workflow`, `warehouse-query-optimize`
-- [ ] Ejecutar el protocolo §2 sobre terraform-skill (+ plan-review de devops-skills) → `terraform-safe-apply`, `terraform-module-author`
-- [ ] Adaptar `migration-auditor` al motor propio → `shared/`
+La **S2 merece una nota**, porque es la que hizo daño. Prometía *"apply y
+migraciones imposibles de ejecutar saltándose la revisión"*, y dos skills
+maduras acabaron citando ese resultado como si existiera. **Nunca se escribió
+una línea de esos hooks.** Un resultado prometido en un plan no es una
+garantía; una skill que lo cita como tal miente con la mejor intención.
 
-**Resultado**: skills probadas por terceros, adaptadas y auditadas, en el catálogo propio.
-
-### Fase S2 — Garantías (½ día, requiere Fase S1)
-
-**Objetivo**: convertir las reglas de mayor riesgo en garantías deterministas.
-
-- [ ] `block-terraform-apply-without-plan` + `tf-fmt-validate` en `hooks/`
-- [ ] `validate-migration-review`
-- [ ] Documentar los hooks en `hooks/README.md` (mismo formato que el existente)
-
-**Resultado**: apply y migraciones imposibles de ejecutar saltándose la revisión.
-
-### Fase S3 — MCPs y skills dependientes (según necesidad, no antes)
-
-**Objetivo**: conectar datos en vivo solo cuando una skill lo requiera.
-
-- [ ] MCP Toolbox read-only para la DB principal → habilita `db-explorer` y validación en `dbt-workflow`
-- [ ] `spark-optimizer`, `lineage-check` según stack activo
-- [ ] `<provider>-standards` del proveedor realmente en uso
-- [ ] `data-doc-writer` y `cloud-architecture-review` en `cowork/`
-
-**Resultado**: el trío completo skill+MCP+hook operando, sin MCPs ociosos.
+Si mañana entra terraform o un warehouse, se abre una propuesta nueva con su
+fecha. **No se reanuda esta.**
 
 ---
 
@@ -119,10 +130,11 @@ Motivación: R4 de la auditoría — todo lo que entra a `claude-skills/` son in
 | Métrica | Baseline (sin skills) | Objetivo |
 |---------|----------------------|----------|
 | Correcciones de convenciones por sesión de datos | Recurrentes | ≈ 0 |
-| Migraciones que llegan a producción sin checklist | Posible | 0 (bloqueado por hook) |
-| `terraform apply` sin plan revisado | Posible | 0 (bloqueado por hook) |
-| Modelos dbt sin tests ni docs generados | Habitual | Raro (skill los genera en paralelo) |
 | MCPs conectados por defecto en una sesión | — | Solo los que la tarea requiere |
+
+⚠ Las tres métricas de "0, bloqueado por hook" **se retiraron el 2026-08-09**:
+medían hooks que no existen. Una métrica cuyo mecanismo no se construyó no
+mide nada — se lee como cumplida porque nadie la comprueba.
 
 ---
 

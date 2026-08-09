@@ -53,4 +53,5 @@ mantenimiento. La decisión REST vs GraphQL es un ADR, no un default.
 - `references/api-design-checklist.md` — el checklist operativo completo.
 - Para profundizar (leídas en la investigación, adoptables aparte): Google AIP
   empaquetados (ekkx/google-aip-skills — sin licencia declarada, solo lectura),
-  wshobson `api-design-principles`, ECC `api-design`.
+  "api-design-principles" de wshobson y "api-design" de ECC (trabajo ajeno
+  citado, no skills de este catálogo).

@@ -15,7 +15,7 @@ description: >
 # Workstream Dispatch
 
 Superpowers ya trae el ciclo controller → implementer → reviewer
-(`subagent-driven-development`, SDD). **Esta skill no lo repite: añade lo que
+(`superpowers:subagent-driven-development`, SDD). **Esta skill no lo repite: añade lo que
 SDD no trae** y que 22 despachos reales del 2026-08-04 demostraron que hace
 falta (`docs/subagentes/05-LIMITACIONES-OBSERVADAS.md`).
 
@@ -34,7 +34,7 @@ el mismo trabajo inútil, más caro.
 
 ## Requisitos
 
-- SDD de Superpowers instalado (`sdd-workspace`, `task-brief`). Sin él, el flujo
+- SDD de Superpowers instalado (`superpowers:sdd-workspace`, `superpowers:task-brief`). Sin él, el flujo
   sigue valiendo pero los briefs se extraen a mano — nunca pegando el plan entero.
 - Workspace de la jornada: `.superpowers/sdd/<plan>/`. **Está gitignorado**
   (`*`), así que es andamiaje por máquina, no registro auditable: lo que deba

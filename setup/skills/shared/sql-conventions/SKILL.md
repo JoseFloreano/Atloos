@@ -6,15 +6,14 @@ description: >
   mismos estándares. Use when the user says "crea una tabla", "escribe el SQL
   para", "agrega una columna", "haz una query", or before generating ANY
   DDL/DML in a project with database. Para diseñar un esquema completo usa
-  schema-designer; para revisar una migración usa migration-auditor; para
-  optimizar una query concreta (plan de ejecución/warehouse) usa
-  warehouse-query-optimize si está instalada — aquí solo viven convenciones.
+  `schema-designer`; para revisar una migración usa `migration-auditor`.
+  Aquí solo viven convenciones.
 ---
 
 # SQL Conventions
 
 Nadie más conoce estas convenciones: aplícalas siempre, sin que te las pidan.
-Las del proyecto (CLAUDE.md, docs del repo) ganan sobre estas.
+Las del proyecto (CLAUDE.md, docs) ganan sobre estas.
 
 ## Motor y dialecto
 
@@ -58,10 +57,9 @@ Las del proyecto (CLAUDE.md, docs del repo) ganan sobre estas.
 ## Indexado
 
 10. FKs indexadas por defecto (Postgres NO las indexa solo; protegen los
-    DELETE/UPDATE del padre y los joins). Excepciones que debes declarar:
-    tablas catálogo diminutas (<~1k filas estables) y FKs a padres inmutables
-    que ninguna query usa. Fuera de eso, no indexes "por si acaso": cada
-    índice cuesta en cada escritura.
+    DELETE/UPDATE del padre y los joins). Fuera de eso, no indexes "por si
+    acaso": cada índice cuesta en cada escritura. Excepciones declarables:
+    `references/indexado.md`.
 11. Índice compuesto: columnas de IGUALDAD antes que las de rango. Índice
     parcial (`WHERE deleted_at IS NULL`) para subconjuntos estables — la
     query debe incluir el mismo predicado para usarlo.
@@ -72,9 +70,9 @@ Las del proyecto (CLAUDE.md, docs del repo) ganan sobre estas.
     migraciones del proyecto; si no hay, propón una. Excepción: entorno
     desechable o análisis one-off — DDL directo permitido, marcado "NO apto
     para producción".
-13. Toda migración pasa por `migration-auditor` ANTES de ejecutarse. Esto es
-    instrucción, no garantía: el hook `validate-migration-review` (Fase S2)
-    la vuelve determinista — si no está instalado, adviértelo.
+13. Toda migración pasa por `migration-auditor` ANTES de ejecutarse.
+    ⚠ **Instrucción, no garantía: ningún hook impone este paso.** Dilo, en vez
+    de suponer una red que no existe.
 
 ## Verifica antes de terminar
 

@@ -11,7 +11,7 @@ description: >
 
 # Git Bisect Assist
 
-Búsqueda binaria del commit culpable. Complementa a `systematic-debugging`: esta
+Búsqueda binaria del commit culpable. Complementa a `superpowers:systematic-debugging`: esta
 skill encuentra el CUÁNDO/DÓNDE (commit); aquella encuentra el POR QUÉ (causa raíz).
 
 ## Requisitos
@@ -38,7 +38,7 @@ skill encuentra el CUÁNDO/DÓNDE (commit); aquella encuentra el POR QUÉ (causa
 4. **Al encontrar el commit:** `git bisect reset` SIEMPRE (no dejes el repo en
    estado bisect). Muestra `git show <sha> --stat` y el diff relevante.
 5. **Del commit a la causa:** el commit culpable es evidencia, no diagnóstico —
-   continúa con `systematic-debugging` fase 1 usando ese diff como pista principal.
+   continúa con `superpowers:systematic-debugging` fase 1 usando ese diff como pista principal.
 6. **Registra** con `memory-keeper`: síntoma, commit culpable (sha + título),
    causa raíz y fix — las regresiones repetidas en la misma zona son señal de
    arquitectura (regla de Superpowers: 3+ → cuestionar el diseño).

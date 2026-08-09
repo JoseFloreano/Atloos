@@ -17,6 +17,7 @@ de ejecutarse** y Claude recibe el motivo para autocorregirse.
 | `mark-code-dirty.py` | PostToolUse sobre `Write\|Edit\|MultiEdit` | Marca flag cuando la sesión edita CÓDIGO **de este proyecto** — insumo del siguiente. No cuentan: los `.md`, ni nada fuera de `CLAUDE_PROJECT_DIR` (scratchpad, otras working dirs, otro repo). Esa segunda condición faltaba y provocaba falsos positivos en los 3 hooks anti-drift: un `commit-msg.txt` temporal sellaba el flag y el hook Stop exigía actualizar un vault que ya estaba al día |
 | `check-vault-updated.py` | Stop | Anti-drift del vault: si hubo código editado y `_PROJECT.md` no se actualizó después, bloquea el cierre (exit 2) pidiendo SOLO pendientes/estado. **Una vez por sesión**, respeta `stop_hook_active`, silencio total en proyectos sin onboarding. Sale en silencio si `CLAUDE_TG_BOT=1` (sesiones del daemon de Telegram: no hay humano para cerrar el vault y bloquear colgaría la respuesta del bot — ADR puente-telegram §7). El cierre completo es de la skill `session-close` |
 | `merge-gate-guard.py` | PreToolUse sobre `Bash` | **W3 del RFD 04.** Bloquea (exit 2) todo `git merge` cuyo **destino efectivo** sea `main`/`master` sin evidencia determinista de verde: un `.claude/gate-verde.json` cuyo `sha` sea el HEAD actual de la rama que se integra — la evidencia la escribe `scripts/gate-test.py` y solo con exit 0 de la suite. **Por qué existe**: en la prueba deliberada del 2026-08-07 el `workstream-merge-gate` salió 2/4 y la causa medida no fue que la skill fallara, sino que **no llegó a correr** (ganó `superpowers:finishing-a-development-branch`, sin confirmación humana ni squash) — se colaron 2 merges a `main` sin OK. Una convención escrita vuelve a fallar; un arnés, no. **Destino EFECTIVO, no rama actual**: los dos merges venían como `git checkout main && git merge x`, así que mirar el HEAD del momento dejaría pasar justo el caso que lo motivó. Fuera de las ramas protegidas no interviene, y no suplanta a la skill: no juzga la calidad del verde, ni el worktree, ni pide la confirmación (un hook no puede preguntar) |
+| `goal-evidence-guard.py` | Stop | **Capa 1 del contrato de `/goal`.** El evaluador de `/goal` **no ejecuta herramientas**: juzga solo lo que apareció en la conversación, así que cierra metas leyendo el reporte, no el artefacto — la ley 1 rota por diseño, y corriendo sola. Este hook lee la meta forjada por `goal-forge` en `.claude/goal.json` y, si nombra un artefacto, comprueba contra el DISCO que existe y es fresco (mismo contrato sha↔HEAD del `merge-gate-guard`, movido de `PreToolUse` a `Stop`). **Fail-open** sin `goal.json` o con meta que no nombra artefacto: un guard que bloquea cierres legítimos se desactiva en dos semanas. **Cláusula de corte propia**: tras 3 bloqueos sale abierto diciendo que la condición está mal forjada — un bloqueo infinito es otro fallo, no una defensa. La capa 2 (`type: "agent"`, que sí lee disco) queda **nombrada, no construida**: es experimental por declaración de Anthropic |
 | `memory-flush.py` | PreCompact (`manual` y `auto`) | Anti-drift en la compactación (R5 del `ecosistema/16`): con el mismo flag, si el vault sigue desfasado **pausa la compactación una vez** y pide volcar pendientes/decisiones antes de que el contexto se resuma. Sin flag → silencio. PreCompact **no admite `additionalContext`**: su único canal hacia Claude es exit 2, que en este evento significa "blocks compaction" — de ahí la pausa. Marca `precompact_flushed` para no repetirla (una auto-compactación bloqueada en bucle ahogaría la sesión) |
 
 Requiere Python 3 en el PATH (`python3` en macOS/Linux, `python` en Windows).
@@ -124,9 +125,10 @@ falso, nunca tocan el vault real). `sync-hooks.ps1` no los copia: solo instala
 los `.py` de la raíz de `hooks/`.
 
 ```powershell
-py setup\hooks\tests\test-mark-code-dirty.py    # 12 casos
-py setup\hooks\tests\test-memory-flush.py       # 11 casos
-py setup\hooks\tests\test-merge-gate-guard.py   # 8 casos (repos git reales)
+py setup\hooks\tests\test-mark-code-dirty.py       # 12 casos
+py setup\hooks\tests\test-memory-flush.py          # 11 casos
+py setup\hooks\tests\test-merge-gate-guard.py      # 23 casos (repos git reales)
+py setup\hooks\tests\test-goal-evidence-guard.py   # 20 casos (incluye el canario)
 ```
 
 Córrelos ante **cualquier** cambio en el sistema anti-drift: los tres hooks
@@ -146,6 +148,67 @@ nada" (fail-open); usa los arneses o bash.
 - **Fail-closed** ante group_id ausente/prohibido: exit 2 + mensaje accionable.
 - El multi-cuenta hereda el hook si copias `hooks/` + settings a cada
   `CLAUDE_CONFIG_DIR` (el sync de dotfiles ya contempla `settings.json`).
+
+## Dos hooks en `Stop`: cómo conviven (y la deuda que queda)
+
+Desde el 2026-08-09 hay **dos**: `check-vault-updated.py` y
+`goal-evidence-guard.py`. Los dos corren, en el orden del `$HookMap` de
+`sync-hooks.ps1` (el cableado **apende**, así que el del vault va primero).
+Miden cosas distintas y ninguno lee el estado del otro, así que no se estorban.
+Medido en `tests/test-goal-evidence-guard.py` §E.
+
+⚠ **Pero hay un efecto real, y no está arreglado.** `check-vault-updated`
+respeta `stop_hook_active` y solo exige **una vez por sesión**. El guard **no
+lo respeta a propósito**: la pregunta *"¿existe ya el artefacto?"* tiene
+respuesta distinta en cada vuelta, y quien acota su bucle es su propio tope de
+3 bloqueos. Consecuencia:
+
+> Si el guard bloquea primero, el turno siguiente llega con `stop_hook_active`
+> puesto y **el anti-drift del vault se calla el resto del bucle** — justo en
+> el escenario que más lo necesita: horas de trabajo autónomo sin humano
+> mirando.
+
+Está **medido, no supuesto** (caso E.3 del arnés). No se arregla aquí porque el
+arreglo es **D2 del RFD 18** —cambiar el disparador de "una vez por sesión" a
+"cada N ediciones de código sin registrar"— y esa decisión **está sin
+arbitrar**. Cambiar el comportamiento de un hook que funciona, por iniciativa
+propia y a mitad de otro sprint, sería exactamente lo que este repo no hace.
+
+## `/loop`: lo que hay que saber antes de confiarle nada
+
+Verificado contra `code.claude.com/docs`, no contra blogs. El artículo más
+citado sobre `/goal` y `/loop` **se equivoca**: dice que se implementan como
+`.claude/commands/goal.md`. Son **nativos** — `/goal` es un comando y `/loop`
+una skill bundled.
+
+**Lo que descalifica a `/loop` como guardia**, y son tres cosas a la vez:
+
+- **Caduca a los 7 días**, sin excepción.
+- **Muere con la sesión** (salvo que se mande a background).
+- **Necesita la sesión abierta.** No es un cron.
+
+Para trabajo durable, las opciones son **Routines** (nube, sin máquina
+encendida, mínimo 1 hora, no ve ficheros locales) o **tareas de escritorio**
+(máquina encendida, sin sesión abierta, sí ve ficheros locales, 1 minuto).
+
+**Lo demás, útil:**
+
+- **Sin intervalo, Claude elige el retardo** (1 min – 1 h) tras cada iteración,
+  y dice cuál y por qué. En ese modo **puede terminar el bucle solo**, llamando
+  a `ScheduleWakeup` con `stop: true`.
+- **`loop.md` sustituye el prompt de mantenimiento**: `.claude/loop.md` (gana)
+  o `~/.claude/loop.md`. **Se relee en cada iteración** → se afina en caliente,
+  con el bucle corriendo. Tope **25.000 bytes**. El de este proyecto está en
+  `.claude/loop.md` y va por ~3 KB.
+- **Puede ejecutar skills como prompt** (`/loop 20m /vault-drift-audit`), pero
+  solo las **auto-invocables**. Verificado: **ninguna de nuestras skills lleva
+  `disable-model-invocation`**, así que todas valen.
+- **Máximo 50 tareas por sesión.** `Esc` lo para.
+  **`CLAUDE_CODE_DISABLE_CRON=1` lo apaga todo.**
+
+**Dependencias de versión**, que conviene comprobar en `setup-new-machine`:
+`/goal` pide **v2.1.139+**; el `stop: true` de `ScheduleWakeup`, **v2.1.202+**;
+el filtro de skills auto-invocables en disparos programados, **v2.1.196+**.
 
 ## Graphify: tres cosas que conviene saber antes (RFD 10 C8)
 

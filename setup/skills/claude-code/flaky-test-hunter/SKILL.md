@@ -11,7 +11,7 @@ description: >
 # Flaky Test Hunter
 
 Convierte "a veces falla" en una causa concreta y un fix. Complementa a
-`systematic-debugging` (que exige reproducción consistente — justo lo que un
+`superpowers:systematic-debugging` (que exige reproducción consistente — justo lo que un
 flaky no da hasta que esta skill lo arrincona).
 
 ## Requisitos
@@ -27,12 +27,12 @@ flaky no da hasta que esta skill lo arrincona).
    Registra la tasa de fallo. 0/20 fallos ≠ estable: sube N o cambia condiciones (paso 3).
 2. **Clasifica por síntoma** — las 5 familias, en orden de frecuencia:
    a) **Timing/asincronía**: sleeps fijos, awaits faltantes, animaciones →
-      esperas condicionales (ver `condition-based-waiting` de Superpowers).
+      esperas condicionales (ver `superpowers:condition-based-waiting` de Superpowers).
    b) **Orden/aislamiento**: pasa solo pero falla en suite (o al revés) → estado
       compartido, fixtures que filtran; prueba orden aleatorio (`pytest -p randomly`,
       Jest `--randomize`) para confirmarlo.
    c) **Concurrencia real**: race conditions del código bajo test — esto se vuelve
-      bug de producto, no de test; escala a `systematic-debugging`.
+      bug de producto, no de test; escala a `superpowers:systematic-debugging`.
    d) **Recursos externos**: red, puertos ocupados, filesystem, reloj → mockear o aislar.
    e) **Aleatoriedad sin semilla**: fija la seed y expónla en el output del test.
 3. **Reproduce agravando la condición sospechada:** carga de CPU en paralelo,
