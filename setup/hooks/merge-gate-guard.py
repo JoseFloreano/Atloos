@@ -59,6 +59,44 @@ def git(args, cwd):
 # es un comando: es prosa que casualmente empieza por `git merge`.
 NO_ES_REF = set("`'\"()[]{}<>,¿?¡!*:\\ ")
 
+# Opciones GLOBALES de git (van antes del subcomando) que consumen el token
+# siguiente. Sin esto, `git -C . merge x` rompía el ancla `^git\s+merge` y
+# esquivaba la compuerta entera (H1 de la auditoría del 2026-08-09).
+GLOBAL_CON_VALOR = {"-C", "-c", "--git-dir", "--work-tree", "--namespace",
+                    "--exec-path"}
+
+# Opciones de `git pull` que consumen el token siguiente, para no confundir su
+# valor con el nombre del remoto.
+PULL_CON_VALOR = {"-s", "--strategy", "-X", "--strategy-option", "--depth"}
+
+
+def sin_opciones_globales(seg):
+    """`git -C . -c k=v merge x` → `git merge x`, o None si no queda subcomando."""
+    toks = seg.split()
+    if not toks or toks[0] != "git":
+        return None
+    i = 1
+    while i < len(toks) and toks[i].startswith("-"):
+        i += 2 if toks[i] in GLOBAL_CON_VALOR else 1
+    return "git " + " ".join(toks[i:]) if i < len(toks) else None
+
+
+def _spans_citados(linea):
+    """Tramos entre comillas, como (inicio, fin). Lo de dentro es texto."""
+    spans, i, n = [], 0, len(linea)
+    while i < n:
+        c = linea[i]
+        if c in "'\"":
+            j = linea.find(c, i + 1)
+            if j == -1:
+                spans.append((i, n - 1))
+                break
+            spans.append((i, j))
+            i = j + 1
+        else:
+            i += 1
+    return spans
+
 
 def sin_heredocs(cmd):
     """Quita el CUERPO de los heredocs, que es texto, no comandos.
@@ -66,6 +104,12 @@ def sin_heredocs(cmd):
     Lo aprendió bloqueando su propio commit: el mensaje explicaba el caso
     `git checkout main && git merge x` y el hook lo leyó como un merge de
     verdad. El contenido de un heredoc nunca se ejecuta.
+
+    Y aprendió la vuelta con la auditoría: un `<<IDENT` DENTRO de comillas no
+    abre ningún heredoc. Al tratarlo como si lo abriera, se comía todas las
+    líneas siguientes esperando un cierre que nunca llegaba —y con ellas, el
+    merge de verdad—. Este repo escribe sobre heredocs en sus mensajes de
+    commit, así que el caso no era hipotético.
     """
     fuera, saltando, cierre = [], False, None
     for linea in cmd.splitlines():
@@ -73,9 +117,12 @@ def sin_heredocs(cmd):
             if linea.strip() == cierre:
                 saltando = False
             continue
-        m = re.search(r"<<-?\s*['\"]?([A-Za-z_][A-Za-z0-9_]*)['\"]?", linea)
-        if m:
-            saltando, cierre = True, m.group(1)
+        spans = _spans_citados(linea)
+        for m in re.finditer(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1", linea):
+            if any(a <= m.start() <= b for a, b in spans):
+                continue                  # `<<` entrecomillado: es prosa
+            saltando, cierre = True, m.group(2)
+            break
         fuera.append(linea)
     return "\n".join(fuera)
 
@@ -87,19 +134,61 @@ def segmentos(cmd):
 
 
 def rama_de_checkout(seg):
-    """Rama a la que salta un `git checkout/switch`, o None."""
+    """Rama a la que salta un `git checkout/switch`, o None. "-" = la anterior."""
+    seg = sin_opciones_globales(seg) or seg
     m = re.match(r"^git\s+(?:checkout|switch)\s+(.*)$", seg)
     if not m:
         return None
-    for tok in m.group(1).split():
+    resto = m.group(1)
+    # `git checkout <rama> -- <ruta>` RESTAURA ficheros desde esa rama: no salta
+    # a ella. Tratarlo como salto bloqueaba trabajo legítimo desde otra rama.
+    if re.search(r"(^|\s)--(\s|$)", resto):
+        return None
+    for tok in resto.split():
+        if tok == "-":
+            return "-"        # `switch -` vuelve: lo resuelve el recorrido
         if tok.startswith("-"):
             continue          # -b, -q, --detach… la rama es el primer no-flag
         return tok.strip("'\"")
     return None
 
 
+def fuente_de_pull(seg, destino):
+    """(es_integracion, rama_origen|None) para `git pull`, que es fetch+merge.
+
+    Escapaba entero: ni siquiera contiene la palabra "merge". Pero solo cuenta
+    como integración si nombra una rama DISTINTA del destino — un `git pull` a
+    secas, o `git pull origin main` estando en main, es sincronizar con el
+    remoto. Bloquear eso sería un falso positivo diario, peor que el escape.
+
+    Límite declarado: un `git pull` sin refspec cuyo upstream fuera una rama de
+    trabajo pasaría. Exige una configuración que aquí no se da.
+    """
+    seg = sin_opciones_globales(seg) or seg
+    m = re.match(r"^git\s+pull(?:\s+(.*))?$", seg)
+    if not m:
+        return False, None
+    args, saltar = [], False
+    for tok in (m.group(1) or "").split():
+        if saltar:
+            saltar = False
+            continue
+        if tok in PULL_CON_VALOR:
+            saltar = True
+            continue
+        if not tok.startswith("-"):
+            args.append(tok)
+    if len(args) < 2:
+        return False, None                        # sin refspec: sincronización
+    rama = args[1].strip("'\"").split(":")[0]     # <src>:<dst> → nos importa src
+    if not rama or any(c in NO_ES_REF for c in rama) or rama == destino:
+        return False, None
+    return True, rama
+
+
 def fuente_de_merge(seg):
     """(es_merge, rama_origen|None). rama None = merge sin argumento."""
+    seg = sin_opciones_globales(seg) or seg
     m = re.match(r"^git\s+merge(?:\s+(.*))?$", seg)
     if not m:
         return False, None
@@ -152,20 +241,27 @@ def main():
     if (data.get("tool_name") or "") != "Bash":
         sys.exit(0)
     cmd = ((data.get("tool_input") or {}).get("command") or "").strip()
-    if "merge" not in cmd:                            # atajo barato
+    # Atajo barato. `pull` entra porque es fetch+merge y no lleva la palabra:
+    # ese hueco dejaba pasar la forma más común de integrar sin escribir "merge".
+    if "merge" not in cmd and "pull" not in cmd:
         sys.exit(0)
 
     cwd = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
 
     # ── Destino efectivo: se simula el recorrido de la línea ──────────────
     actual = git(["rev-parse", "--abbrev-ref", "HEAD"], cwd) or ""
-    destino = actual
+    destino = anterior = actual
     for seg in segmentos(cmd):
         salto = rama_de_checkout(seg)
+        if salto == "-":                  # vuelve a la de antes, como git
+            destino, anterior = anterior, destino
+            continue
         if salto:
-            destino = salto
+            destino, anterior = salto, destino
             continue
         es_merge, fuente = fuente_de_merge(seg)
+        if not es_merge:
+            es_merge, fuente = fuente_de_pull(seg, destino)
         if not es_merge:
             continue
         if destino not in PROTEGIDAS:

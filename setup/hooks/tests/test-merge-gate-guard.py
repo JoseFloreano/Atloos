@@ -184,6 +184,86 @@ def main():
     caso("tras el fix, el merge real sigue bloqueado", rc, 2, err)
     shutil.rmtree(d, ignore_errors=True)
 
+    # ── Los 9 de la auditoría externa del 2026-08-09 ─────────────────────
+    # H1: el parser dejaba pasar 5 merges reales y bloqueaba 3 comandos
+    # legítimos. El 9.º es el boquete que el arreglo NO debe abrir.
+
+    # 11-12 · opciones globales de git rompían el ancla `^git\s+merge`
+    d = repo_lab()
+    sh(["git", "checkout", "-q", "main"], d)
+    rc, err = corre(d, "git -C . merge feat/x")
+    caso("opción global `-C` no esquiva el gate", rc, 2, err)
+    rc, err = corre(d, "git -c core.editor=true merge feat/x")
+    caso("opción global `-c` no esquiva el gate", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    # 12b · la otra mitad: las opciones globales también rompían el ancla del
+    #       CHECKOUT, así que el destino efectivo se perdía. Lo destapó un
+    #       mutante: sin este caso, revertir esa normalización pasaba inadvertido.
+    d = repo_lab()          # HEAD en feat/x
+    rc, err = corre(d, "git -C . checkout main && git merge feat/x")
+    caso("opción global en el `checkout` no pierde el destino efectivo", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    # 13 · `<<IDENT` DENTRO de comillas no abre un heredoc: el fix del falso
+    #      positivo se comía el resto del comando. Y este repo escribe sobre
+    #      heredocs en sus mensajes de commit, así que el caso es real.
+    d = repo_lab()
+    sh(["git", "checkout", "-q", "main"], d)
+    rc, err = corre(d, 'git commit -m "docs: explica el uso de <<EOF en los tests"\n'
+                       "git merge feat/x")
+    caso("`<<EOF` entrecomillado no se traga el merge que sigue", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    # 14 · lo mismo con un `<<` suelto en un echo
+    d = repo_lab()
+    sh(["git", "checkout", "-q", "main"], d)
+    rc, err = corre(d, 'echo "x << n"\ngit merge feat/x')
+    caso("`<<` suelto en un echo no se traga el merge", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    # 15 · `git pull` ES un merge (fetch + merge) y ni siquiera contenía la
+    #      palabra: se caía por el atajo barato antes de llegar al parser.
+    d = repo_lab()
+    sh(["git", "checkout", "-q", "main"], d)
+    rc, err = corre(d, "git pull origin feat/x")
+    caso("`git pull <remoto> <rama>` a main sin evidencia bloquea", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    # 16-17 · `git checkout <rama> -- <ruta>` NO cambia de rama: restaura
+    #         ficheros. Bloquear aquí es un falso positivo sobre trabajo legítimo.
+    d = repo_lab()          # HEAD en feat/x, rama no protegida
+    rc, err = corre(d, "git checkout main -- a.py && git merge feat/x")
+    caso("`checkout main -- <ruta>` no cambia de rama (no bloquea)", rc, 0, err)
+    rc, err = corre(d, "git checkout main -- . && git merge feat/x")
+    caso("`checkout main -- .` no cambia de rama (no bloquea)", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    # 18 · `git switch -` vuelve a la rama anterior: el destino efectivo
+    #      deja de ser main.
+    d = repo_lab()          # HEAD en feat/x
+    rc, err = corre(d, "git switch main && git switch - && git merge feat/x")
+    caso("`switch -` deshace el salto a main (no bloquea)", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    # 19 · el boquete que el arreglo no debe abrir: enseñarle `git pull` no
+    #      puede convertir cada pull cotidiano en un bloqueo.
+    d = repo_lab()          # HEAD en feat/x, rama no protegida
+    rc, err = corre(d, "git pull origin feat/x")
+    caso("`git pull` en rama NO protegida sigue sin intervenir", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    # 20 · el otro boquete simétrico: `git pull` que SINCRONIZA main con su
+    #      remoto no integra ningún frente. Bloquearlo sería un falso positivo
+    #      diario, peor que el escape que arregla el caso 15.
+    d = repo_lab()
+    sh(["git", "checkout", "-q", "main"], d)
+    rc, err = corre(d, "git pull origin main")
+    caso("`git pull origin main` estando en main no bloquea (sincroniza)", rc, 0, err)
+    rc, err = corre(d, "git pull")
+    caso("`git pull` a secas no bloquea (sincroniza)", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True)
+
     print(f"\n{sum(results)}/{len(results)} casos OK")
     return 0 if all(results) else 1
 
