@@ -181,3 +181,34 @@ rutas entre los dos árboles: el agente no podía encontrarlo.
 **Por qué un arnés y no un grep**: el barrido del 08-03 buscó rutas
 *hardcodeadas* —el síntoma— y esta skill tenía una ruta *vaga*. Misma
 enfermedad, otro síntoma, y sobrevivió al grep.
+
+## Copias desplegadas que se quedan atrás (H3 de la auditoría del 08-09)
+
+```bash
+py setup/scripts/tests/test-claude-md-drift.py            # [repo] · 0 = limpio
+py setup/scripts/tests/test-claude-md-drift.py <otro/CLAUDE.md> ...   # [repo] · otros proyectos
+```
+
+⚠ **En Cowork no se puede correr** (sin repo conectado ni intérprete):
+repórtalo como **"no verificado (requiere laptop)"**, nunca como que pasó.
+
+Caza la enfermedad de **un contenido con dos puntos de consumo donde editar uno
+no obliga a editar el otro**. La copia desplegada se queda atrás y no hay diff
+que lo delate: son ficheros distintos, con formas distintas.
+
+Medida tres veces, ninguna hipotética:
+
+| Cuándo | Qué se quedó atrás |
+|---|---|
+| 2026-07-26 | `memory-instructions.md` volvió a la v1 en un pull — **3.ª divergencia** con su gemelo, según su propia cabecera |
+| 2026-08-09 | El `CLAUDE.md` de `Atloos`, **11 de 22 líneas** — entre ellas la línea determinista del merge-gate, o sea la capa 1 de las tres ausente justo en el repo donde caen los merges |
+| 2026-08-09 | La copia instalada de `merge-gate-guard.py` en `~/.claude/hooks/`, ejecutando el parser roto **después** de arreglarlo en el repo |
+
+**Por qué un arnés y no la nota que ya existía**: las tres veces la regla estaba
+escrita —la cabecera de los dos gemelos dice literalmente *"editar ambas a la
+vez"*— y las tres veces se incumplió. Es la tesis del RFD 11 aplicada al propio
+setup: la convención escrita no muerde.
+
+Los `CLAUDE.md` de otros proyectos viven fuera de este repo, así que el check
+solo alcanza el propio salvo que le pases sus rutas. **Eso es un límite, no una
+cobertura**: si auditas otro proyecto, pásale su `CLAUDE.md` o dilo.
