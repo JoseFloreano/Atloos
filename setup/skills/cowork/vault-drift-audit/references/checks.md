@@ -172,9 +172,9 @@ en vez de darlo por bueno. Un check que no corrió no es un check que pasó.
 Caza la enfermedad que produjo el fallo del 2026-08-07: **una skill corre desde
 el cwd de CUALQUIER proyecto**, así que todo lo que mande ejecutar necesita una
 ruta **estable por máquina** (`~/.claude/scripts/`, que puebla `sync-skills`) —
-no la ruta del repo, y no *"búscalo en ClaudeSetup"*.
+no la ruta del repo, y no *"búscalo en Atloos"*.
 
-Ese día `notify-telegram` mandó ejecutar un script "del repo ClaudeSetup" desde
+Ese día `notify-telegram` mandó ejecutar un script "del repo Atloos" desde
 `alphadogs`, en la misma máquina y con el puente configurado. No hay relación de
 rutas entre los dos árboles: el agente no podía encontrarlo.
 

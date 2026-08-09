@@ -96,7 +96,7 @@ igual a una sesión normal de Claude Code:
   entre agentes ya alcanza y es más barato.
 - No escribir un orquestador propio desde cero — las cuatro capas del doc 01
   cubren el mecanismo; construir uno nuevo repetiría el trabajo ya hecho.
-- No aplicar este patrón a este mismo repo (`ClaudeSetup`) como caso de uso
+- No aplicar este patrón a este mismo repo (`Atloos`) como caso de uso
   principal: es un repo de docs + scripts, sin código de aplicación con
   módulos independientes que se presten a ownership por archivo. El caso de
   uso real está en los proyectos de aplicación del usuario (AlphaDogs,

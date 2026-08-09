@@ -1,4 +1,4 @@
-# Puente Telegram ↔ Claude Setup — Diseño preliminar (pre-ADR)
+# Puente Telegram ↔ Atloos — Diseño preliminar (pre-ADR)
 
 > **Fecha:** Agosto 2026 (investigado con fuentes primarias el 2026-08-01)
 > **Estado (2026-08-01):** IMPLEMENTADO — T0 (avisos), T1 (chat lectura), T2

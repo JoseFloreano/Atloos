@@ -11,7 +11,7 @@
 > | `session-close`: umbrales en ambas direcciones + `references/backlog-pendientes.md` | `b8ca2a1` |
 > | `vault-drift-audit`: los 4 checks del §2.3 | `4b607cc` |
 > | `project-resume`: menciona sin abrir (**las 2 variantes**) | `eefd25f` |
-> | Piloto `claude-setup` migrado | vault |
+> | Piloto `atloos` migrado | vault |
 >
 > **Piloto medido:** 131 → **116 líneas**, 13 pendientes → **6 activos + 6 en
 > backlog**. Arranque de `project-resume`: 8,6 KB (cargar el backlog sería +29%).
@@ -21,7 +21,7 @@
 > **Contexto:** `ADR-20260801-higiene-vault` (vault) — este RFD lo ENMIENDA,
 > no lo reemplaza · plantillas en `ObsidianVault/templates/` · skills
 > `session-close`, `vault-drift-audit`, `project-resume`.
-> **Disparador empírico:** `claude-setup/_PROJECT.md` está en **120/120
+> **Disparador empírico:** `atloos/_PROJECT.md` está en **120/120
 > líneas** (el tope exacto del ADR) con **17 pendientes** — la presión es
 > real, no hipotética.
 
@@ -31,7 +31,7 @@
 
 El ADR de higiene fija `_PROJECT.md` ≤120 líneas para forzar curación. Un
 proyecto sano puede acumular más pendientes legítimos de los que caben en
-ese presupuesto (hoy: claude-setup, 17). Sin válvula, pasan dos cosas malas:
+ese presupuesto (hoy: atloos, 17). Sin válvula, pasan dos cosas malas:
 o se borran pendientes reales para caber (pérdida), o el tope se estira
 (muere el mecanismo de curación). La tentación obvia —un `pendientes.md`
 suelto— sin reglas se convierte en el cementerio que el ADR mató (el
@@ -92,7 +92,7 @@ suelto— sin reglas se convierte en el cementerio que el ADR mató (el
 
 ## 3. Alternativas rechazadas
 
-- **Solo curar más agresivo, sin backlog**: rechazada — claude-setup tiene
+- **Solo curar más agresivo, sin backlog**: rechazada — atloos tiene
   17 pendientes reales; borrar valor para caber es el fallo que la válvula
   evita.
 - **Carpeta `backlog/` un-archivo-por-ítem (estilo `bugs/`)**: más granular
@@ -102,7 +102,7 @@ suelto— sin reglas se convierte en el cementerio que el ADR mató (el
 
 ## 4. Criterios de éxito
 
-1. **Piloto = claude-setup**: `_PROJECT.md` queda con 5–7 activos y <120
+1. **Piloto = atloos**: `_PROJECT.md` queda con 5–7 activos y <120
    líneas; los demás migran al backlog con fecha de alta; `grep` de
    cualquier ítem da exactamente 1 archivo.
 2. `vault-drift-audit` caza un zombi sembrado (>30 días) y un duplicado

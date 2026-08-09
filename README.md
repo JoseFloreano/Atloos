@@ -1,4 +1,4 @@
-# ClaudeSetup
+# Atloos
 
 Memoria persistente y skills para **Claude Code + Cowork**, sincronizadas entre
 2-3 laptops. Repo de documentación y scripts: no contiene código de aplicación.
@@ -165,7 +165,7 @@ ls ~/.claude/scripts/          # adr-index.py  notify_telegram.py  gate-test.py
 ```
 
 Esa ruta estable no es cosmética: el 2026-08-07 `notify-telegram` falló desde
-otro proyecto por mandar buscar el script "en el repo ClaudeSetup", y no hay
+otro proyecto por mandar buscar el script "en el repo Atloos", y no hay
 relación de rutas entre dos árboles distintos.
 
 **Los cinco hooks de Claude Code** — qué garantiza cada uno, cómo probarlos y qué

@@ -29,7 +29,7 @@ el resultado en el móvil.
   *(Escape hatch: `TELEGRAM_NOTIFY_SCRIPT` gana si está definida — nada la
   define por defecto, es para instalaciones raras.)*
 
-  > ⚠ **No busques el repo ClaudeSetup para ejecutarlo.** Esta skill corre desde
+  > ⚠ **No busques el repo Atloos para ejecutarlo.** Esta skill corre desde
   > el cwd de cualquier proyecto y no hay relación de rutas que lleve de uno a
   > otro. El 2026-08-07 falló exactamente así: desde `alphadogs`, en la máquina
   > donde el puente estaba configurado, con las credenciales puestas — lo único

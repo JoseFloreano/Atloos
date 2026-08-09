@@ -175,7 +175,7 @@ COMÚN (OneDrive + git)
 │
 └── VARIANTE COWORK
     ├── Instrucciones de proyecto (equivalente al CLAUDE.md, mismo texto base)
-    ├── Carpetas conectadas: ClaudeSetup + ObsidianVault
+    ├── Carpetas conectadas: Atloos + ObsidianVault
     ├── Connectors del registry (GitHub, Drive) en vez de MCPs npx
     └── Scheduled tasks para lo periódico
 ```

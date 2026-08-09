@@ -51,7 +51,7 @@ largas — que es cuando más se usa este patrón. El `ADR-20260801-puente-teleg
 los git ops del agente y poniéndolos en el daemon; en una sesión normal de
 Claude Code no hay daemon, así que la garantía tiene que venir de otro lado.
 
-**E3. Este repo es mal candidato para el piloto.** `ClaudeSetup` es docs +
+**E3. Este repo es mal candidato para el piloto.** `Atloos` es docs +
 scripts: no tiene módulos independientes que se presten a ownership por
 archivo, ni suite de tests que dé el verde del gate. Pilotar aquí mediría el
 mecanismo pero no el valor. El caso real vive en los proyectos de aplicación
@@ -73,7 +73,7 @@ abrir seis.
 
 **No objetivos:** multi-agente sobre el mismo archivo (prohibido por doc 12,
 no cambia); Agent Teams como default para trabajo cotidiano de 1-2 frentes;
-orquestador propio desde cero (E1); y aplicar esto al repo `ClaudeSetup` como
+orquestador propio desde cero (E1); y aplicar esto al repo `Atloos` como
 caso principal (E3).
 
 ## 4. Caso central: dónde vive el gate de merge

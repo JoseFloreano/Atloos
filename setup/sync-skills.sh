@@ -36,7 +36,7 @@ info() { echo -e "  ${BLUE}[INFO]${NC} $1"; }
 SKILLS_ROOT="${SETUP_DIR}/skills"
 if [ ! -d "${SKILLS_ROOT}" ]; then
   echo -e "  ${RED}[ERROR]${NC} No encuentro ${SKILLS_ROOT}."
-  echo -e "  ${RED}       ${NC} Corre este script desde el repo ClaudeSetup (setup/sync-skills.sh)."
+  echo -e "  ${RED}       ${NC} Corre este script desde el repo Atloos (setup/sync-skills.sh)."
   exit 1
 fi
 info "Fuente: ${SKILLS_ROOT}"
@@ -177,7 +177,7 @@ if [ -z "${NO_COWORK_BUILD:-}" ]; then
   cat > "${PLUGIN}/.claude-plugin/plugin.json" << EOF
 {
   "name": "dev-skills",
-  "description": "Skills personales de desarrollo (fuente: setup/skills del repo ClaudeSetup)",
+  "description": "Skills personales de desarrollo (fuente: setup/skills del repo Atloos)",
   "version": "$(date '+%Y.%m.%d')"
 }
 EOF

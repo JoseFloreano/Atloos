@@ -7,7 +7,7 @@ skill nueva = crear una carpeta + commitear + correr un script.
 ## La estructura (fuente de verdad)
 
 ```
-setup/skills/            ← en el repo ClaudeSetup, versionado en git
+setup/skills/            ← en el repo Atloos, versionado en git
 ├── shared/            ← skills que sirven a AMBOS productos
 │   └── adr-writer/
 │       └── SKILL.md

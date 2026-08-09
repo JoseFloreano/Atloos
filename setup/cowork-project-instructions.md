@@ -41,7 +41,7 @@ projects.
 ## Skills
 
 - The `dev-skills` plugin (shared + cowork skills, synced from
-  `setup/skills/` del repo ClaudeSetup) should be installed. Use its skills
+  `setup/skills/` del repo Atloos) should be installed. Use its skills
   automatically whenever a task matches their descriptions.
 - Saving durable knowledge → `memory-keeper` skill; architecture decisions
   → `adr-writer` skill.

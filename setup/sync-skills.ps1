@@ -44,7 +44,7 @@ function Write-Info { param($m) Write-Host "  [INFO] $m" -ForegroundColor Cyan }
 $SkillsRoot = Join-Path $PSScriptRoot "skills"
 if (-not (Test-Path $SkillsRoot)) {
     Write-Host "  [ERROR] No encuentro $SkillsRoot." -ForegroundColor Red
-    Write-Host "          Corre este script desde el repo ClaudeSetup (setup\sync-skills.ps1)." -ForegroundColor Red
+    Write-Host "          Corre este script desde el repo Atloos (setup\sync-skills.ps1)." -ForegroundColor Red
     exit 1
 }
 Write-Info "Fuente: $SkillsRoot"
@@ -200,7 +200,7 @@ if (-not $NoCoworkBuild) {
     # B4 (instalacion single-laptop): Out-File -Encoding UTF8 en PS 5.1 escribe BOM y RFC 8259 lo
     # prohíbe en JSON — el validador de plugins de Cowork lo rechaza. Sin BOM:
     $manifestJson = @{ name = "dev-skills"
-       description = "Skills personales de desarrollo (fuente: setup/skills del repo ClaudeSetup)"
+       description = "Skills personales de desarrollo (fuente: setup/skills del repo Atloos)"
        version = (Get-Date -Format 'yyyy.MM.dd')
     } | ConvertTo-Json
     [IO.File]::WriteAllText((Join-Path $pluginDir ".claude-plugin\plugin.json"), $manifestJson,

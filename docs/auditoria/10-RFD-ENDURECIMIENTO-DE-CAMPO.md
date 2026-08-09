@@ -23,7 +23,7 @@
 > **119** (de 97.917 en disco) bajo el tope de 800 · (5) 8/8 skills ≤500,
 > `session-close` en **488** (partía de 489) · (6) los 7 bloques conservan
 > numeración · (7) **la condición 7 del RFD 04 sigue ABIERTA** · (8) ciclo D2
-> completo sobre `claude-setup`.
+> completo sobre `atloos`.
 >
 > **Delta (§7: gana el código):** `graphify .` no genera `GRAPH_REPORT.md` por
 > sí solo en 0.9.5 — pide un `cluster-only` aparte. El hook buscaba ese archivo

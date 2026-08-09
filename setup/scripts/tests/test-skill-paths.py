@@ -3,10 +3,10 @@
 test-skill-paths.py — Caza rutas inalcanzables en las skills.
 
 Por qué existe (2026-08-07): la skill `notify-telegram` mandaba ejecutar
-`notify_telegram.py` "del repo ClaudeSetup, en setup/telegram-bridge/". Desde el
+`notify_telegram.py` "del repo Atloos, en setup/telegram-bridge/". Desde el
 cwd de `alphadogs`, en la MISMA máquina y con el puente configurado, el agente no
 tuvo forma de encontrarlo: no hay relación de rutas entre `Python/Lock_in/
-AlphaDogs` y `Python/Otros/ClaudeSetup`.
+AlphaDogs` y `Python/Otros/Atloos`.
 
 **La enfermedad**: una skill corre desde el cwd de CUALQUIER proyecto, así que
 todo lo que mande ejecutar o leer necesita una ruta **estable por máquina**.
@@ -50,8 +50,8 @@ COMANDO = re.compile(r"(?:^|[\s`(])(?:py|python3?|bash|sh|pwsh|powershell|\./)\s
 # Ruta absoluta que codifica UNA máquina (usuario, unidad).
 MAQUINA = re.compile(r"[A-Za-z]:\\Users\\|/c/Users/|/home/[a-z]|Mis_Documentos", re.I)
 
-# "el repo ClaudeSetup", "dentro del repo del setup"… sin decir cómo llegar.
-VAGA = re.compile(r"repo\s+ClaudeSetup|repo\s+del\s+setup|dentro\s+del\s+repo", re.I)
+# "el repo Atloos", "dentro del repo del setup"… sin decir cómo llegar.
+VAGA = re.compile(r"repo\s+Atloos|repo\s+del\s+setup|dentro\s+del\s+repo", re.I)
 
 # Ruta relativa al repo que se USA como si el cwd fuera el repo.
 REPO_REL = re.compile(r"(?<![\w/.-])setup/(?:scripts|telegram-bridge|hooks)/\S+\.(?:py|sh|ps1)")
@@ -77,7 +77,7 @@ def revisa(archivo: Path):
             hallazgos.append((rel, n, "EJECUTA POR RUTA DEL REPO", linea.strip()))
             continue
 
-        # 3) "está en el repo ClaudeSetup" junto a un script: ruta vaga.
+        # 3) "está en el repo Atloos" junto a un script: ruta vaga.
         if VAGA.search(linea) and re.search(r"\.(?:py|sh|ps1)\b", linea):
             hallazgos.append((rel, n, "RUTA VAGA", linea.strip()))
 
@@ -105,7 +105,7 @@ def main():
 La regla: una skill corre desde el cwd de CUALQUIER proyecto. Todo lo que mande
 ejecutar debe resolverse por una ruta estable por máquina —hoy
 `~/.claude/scripts/`, que `sync-skills` puebla— y NO por la ruta del repo ni por
-"búscalo en ClaudeSetup".
+"búscalo en Atloos".
 
 Si algún hallazgo es un falso positivo (documentación que no manda ejecutar
 nada), reescribe la línea para que no parezca un comando. Y si de verdad es un

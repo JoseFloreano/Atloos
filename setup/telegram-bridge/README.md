@@ -5,7 +5,7 @@ resultado al móvil. **Solo envía** — no hay bot escuchando, ni daemon, ni UR
 pública, ni túnel (`sendMessage` es un POST HTTPS saliente).
 
 Diseño: `docs/telegram/00-DISENO-TELEGRAM-BRIDGE.md` §1 · ADR:
-`10-Projects/claude-setup/ADRs/ADR-20260801-puente-telegram.md`
+`10-Projects/atloos/ADRs/ADR-20260801-puente-telegram.md`
 
 | Pieza | Qué es |
 |---|---|

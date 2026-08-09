@@ -52,8 +52,8 @@ def check(name, ok, detail=""):
 
 
 def proyecto(tmp):
-    """Estructura real: <tmp>/claude-setup/ADRs/"""
-    d = os.path.join(tmp, "claude-setup", "ADRs")
+    """Estructura real: <tmp>/atloos/ADRs/"""
+    d = os.path.join(tmp, "atloos", "ADRs")
     os.makedirs(d, exist_ok=True)
     return d
 
@@ -76,7 +76,7 @@ def main():
               and "2026-08-01" in filas[0] and "2026-07-30" in filas[1]
               and "2026-07-26" in filas[2], f"rc={rc} filas={len(filas)}")
         check("1b. cabecera con el nombre del proyecto",
-              txt.startswith("# ADRs — claude-setup"), txt.splitlines()[0] if txt else "vacio")
+              txt.startswith("# ADRs — atloos"), txt.splitlines()[0] if txt else "vacio")
         check("1c. wikilink al ADR", "[[ADR-20260801-nuevo]]" in txt)
 
         # --- Caso 2: idempotencia ---
