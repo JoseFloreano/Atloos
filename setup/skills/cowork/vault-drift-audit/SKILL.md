@@ -42,7 +42,7 @@ e invisible — se caza con revisiones periódicas, no en caliente.)
    desfasado (`adr-index.py --check`), `_PROJECT.md` por encima de 120 líneas o
    con secciones `## Hecho`, y notas de `sessions/` ya cosechadas con más de 30
    días — candidatas a `_archive/`.
-   **Backlog `pendientes.md`** (RFD 12): zombis con `alta:` de +30 días,
+   **Backlog `pendientes.md`** ([[ADR-20260801-higiene-vault]]): zombis con `alta:` de +30 días,
    duplicados o N desfasada entre `_PROJECT.md` y el backlog, y los dos
    umbrales — crear (>12 sin backlog) y disolver (≤8 con backlog).
    **Rutas de las skills**: `test-skill-paths.py` — ninguna debe mandar ejecutar

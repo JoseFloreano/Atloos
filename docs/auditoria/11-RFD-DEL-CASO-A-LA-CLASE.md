@@ -22,9 +22,11 @@
 > jornada del 2026-08-07 en `recomendador-cobranza` (16 frentes, 9 ramas,
 > 3.174 verdes). **Es una auditoría a las correcciones del RFD 10**, no un
 > reporte nuevo: califica las 5 recomendaciones del día anterior.
-> **Contexto:** `auditoria/10-RFD-ENDURECIMIENTO-DE-CAMPO.md` (implementado el
-> 08-07) · `subagentes/07-PRIMERA-CAMPANA-REAL.md` (jornada 1) ·
-> `arquitectura-memoria/12-RFD-BACKLOG-DE-PENDIENTES.md` ·
+> **Contexto:** el RFD 10 (cosechado el 08-09 a `ADR-20260801-bot-memoria-y-perfil`,
+> `ADR-20260801-higiene-vault` «Enmienda 2» y `ADR-20260803-skills-fuente-unica`
+> «Enmienda»; el documento sigue en la historia de git) ·
+> `subagentes/07-PRIMERA-CAMPANA-REAL.md` (jornada 1) · el RFD 12 (cosechado a
+> `ADR-20260801-higiene-vault` «Enmienda 1») ·
 > `ADR-20260801-higiene-vault` · `ADR-20260801-bot-memoria-y-perfil`.
 
 ---

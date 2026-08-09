@@ -74,7 +74,7 @@ completo; el estado dice la verdad.
 
 ---
 
-## Backlog `pendientes.md` — los 4 checks (RFD 12 §2.3)
+## Backlog `pendientes.md` — los 4 checks ([[ADR-20260801-higiene-vault]], enmienda 1)
 
 Solo aplican a proyectos que tengan `10-Projects/<proyecto>/pendientes.md`, o
 que deberían tenerlo. Sin este bloque, el backlog es un punto ciego: un archivo

@@ -8,7 +8,9 @@ alcance: "10 subagentes despachados · 6 ramas integradas · 1 diseño devuelto"
 > **Promovido:** 2026-08-07 a `docs/subagentes/07` desde el reporte de campo
 > del usuario (jornada del 2026-08-06 en `recomendador-cobranza`, otra laptop),
 > **sin reescribir su contenido**. Es la evidencia que originó los fallos F3,
-> F4, F5, F10 y F11 del `auditoria/10-RFD-ENDURECIMIENTO-DE-CAMPO.md`.
+> F4, F5, F10 y F11 del RFD 10, cosechado el 2026-08-09 (sus decisiones viven
+> en `ADR-20260801-bot-memoria-y-perfil`, `ADR-20260801-higiene-vault` y
+> `ADR-20260803-skills-fuente-unica`; el RFD sigue en la historia de git).
 >
 > ⚠ **Evidencia de campo COMPLEMENTARIA de W2 — NO sustituye la condición 7 del
 > RFD 04** (la prueba deliberada del merge-gate), que sigue abierta: en uso real

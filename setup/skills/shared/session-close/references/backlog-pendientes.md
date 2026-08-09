@@ -1,7 +1,6 @@
 # El backlog `pendientes.md` — umbrales y mecánica
 
-Detalle del paso 7 de `session-close`. Diseño: RFD 12
-(`docs/arquitectura-memoria/12-RFD-BACKLOG-DE-PENDIENTES.md`), enmienda a
+Detalle del paso 7 de `session-close`. Diseño cosechado: enmienda 1 de
 `ADR-20260801-higiene-vault`.
 
 **Qué defiende esto.** El tope de 120 líneas de `_PROJECT.md` existe para

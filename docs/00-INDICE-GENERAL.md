@@ -26,7 +26,7 @@ La serie original: por qué esta arquitectura de memoria y no otra.
 | [RFD 10 · Graphiti + FalkorDB: errores de integración](./arquitectura-memoria/10-RFD-GRAPHITI-INTEGRACION-ERRORES.md) | 🔵 **Draft** — 8 errores encontrados y propuesta de solución con skills en vez de MCP HTTP |
 | [11 · Graphiti: guía rápida de setup](./arquitectura-memoria/11-GRAPHITI-SETUP-GUIA-RAPIDA.md) | DeepSeek + Ollama; deriva del RFD 10 |
 | [RFD 13 · Graphiti: el estado real](./arquitectura-memoria/13-RFD-GRAPHITI-ESTADO-REAL.md) | 🔴 **Propuesta — pide decisión.** Qué es cierto hoy, los 4 diagnósticos falsos y la deriva del 08-04. **Léelo antes de tocar Graphiti** |
-| [12 · RFD backlog de pendientes](./arquitectura-memoria/12-RFD-BACKLOG-DE-PENDIENTES.md) | Válvula del tope de 120: `pendientes.md` con umbrales 12/8 y auditoría |
+| ~~12 · RFD backlog de pendientes~~ | ✅ **Implementado, auditado y cosechado** (2026-08-09) → `ADR-20260801-higiene-vault`, «Enmienda 1». Válvula del tope de 120: `pendientes.md` con umbrales 12/8 y los 4 checks de auditoría |
 
 ### 📁 [`cowork-y-multiagente/`](./cowork-y-multiagente/) — Los dos productos y su convivencia
 
@@ -40,7 +40,7 @@ La serie original: por qué esta arquitectura de memoria y no otra.
 | Doc | Tema |
 |-----|------|
 | [09 · Auditoría del setup](./auditoria/09-AUDITORIA-SETUP.md) | Fortalezas, riesgos, matriz y mitigaciones (aplicadas) |
-| [10 · RFD endurecimiento de campo](./auditoria/10-RFD-ENDURECIMIENTO-DE-CAMPO.md) | 12 fallos de la primera campaña. **IMPLEMENTADO 08-07**, pendiente de auditoría externa |
+| ~~10 · RFD endurecimiento de campo~~ | ✅ **Implementado, auditado y cosechado** (2026-08-09) → repartido en tres ADR: `ADR-20260801-bot-memoria-y-perfil` (D1, curado + extracto fresco), `ADR-20260801-higiene-vault` («Enmienda 2», `Estado del repo:`) y `ADR-20260803-skills-fuente-unica` («Enmienda», el sync no destruye por defecto) |
 | [11 · RFD del caso a la clase](./auditoria/11-RFD-DEL-CASO-A-LA-CLASE.md) | 🔴 **Propuesta — 2 decisiones abiertas.** Los 4 fallos que destapó auditar el RFD 10: todos son "arreglamos el caso, no la clase" |
 
 ### 📁 [`skills/`](./skills/) — Catálogos de skills investigados
@@ -94,7 +94,7 @@ La línea de trabajo activa. Los RFDs llevan su estado en la cabecera Y aquí.
 | [01 · Mecanismos nativos y externos](./subagentes/01-MECANISMOS-NATIVOS-Y-EXTERNOS.md) | `--worktree`, Agent Teams, Superpowers instalado, plugin wshobson |
 | [02 · Patrón propuesto y riesgos](./subagentes/02-PATRON-PROPUESTO-Y-RIESGOS.md) | Flujo en 4 pasos, gate de merge, costo y riesgos |
 | [03 · Skills propuestas](./subagentes/03-SKILLS-PROPUESTAS.md) | `workstream-merge-gate`, `workstream-memory-briefing`, plan de adopción |
-| [04 · RFD de adopción](./subagentes/04-RFD-ADOPCION-WORKSTREAMS.md) | ⭐ La ruta W0–W3. **W1 ✓ de facto · W2 ejecutada · W3 no disparado** — sin cosechar hasta la auditoría externa |
+| ~~04 · RFD de adopción~~ | ✅ **Implementado, auditado y cosechado** (2026-08-09) → `ADR-20260805-workstreams-paralelos`. La ruta W0–W3 completa: worktrees fuera de OneDrive y el gate de merge en tres capas, con sus dos deudas escritas |
 | [05 · Limitaciones observadas](./subagentes/05-LIMITACIONES-OBSERVADAS.md) | Evidencia empírica: 22 despachos, taxonomía de fallos y los 10 cambios a skills |
 | [06 · Investigación externa](./subagentes/06-INVESTIGACION-EXTERNA-MULTIAGENTE.md) | MAST, Superpowers 6, Agent Teams, wshobson; enriquecimientos para W2 |
 | [07 · Primera campaña real](./subagentes/07-PRIMERA-CAMPANA-REAL.md) | Retrospectiva de campo del 08-06: qué del instrumental rindió y qué no |
