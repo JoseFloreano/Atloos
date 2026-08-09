@@ -3,6 +3,12 @@
 # Solo se ignora lo volátil/por-máquina:
 .claude/vault-dirty.json
 .claude/settings.local.json
+# Evidencia de verde del merge gate: la escribe gate-test.py y caduca sola en
+# cuanto llega otro commit. Es por-maquina y por-rama, como vault-dirty.json.
+.claude/gate-verde.json
+# Meta forjada por goal-forge y leida por goal-evidence-guard: estado de la
+# sesion, no del repo.
+.claude/goal.json
 
 # CLAUDE.md es un artefacto de INSTANCIA (lo genera project-onboard), no
 # fuente del setup: la plantilla versionada es setup/memory-instructions.md.
@@ -30,3 +36,17 @@ Thumbs.db
 
 # Artefacto de build del plugin de Cowork (lo genera sync-skills)
 setup/_build/
+
+# Handoff e instrucciones de Cowork
+setup/cowork_handoff.md
+setup/cowork_instructions.md
+
+# ── Material de trabajo con secretos de terceros ────────────────────
+# docs/tmp/ recibe PDFs y volcados pegados a mano. Uno de ellos trae un JWT
+# personal en una URL (RFD 18 §1). Esta linea llevaba dias SOLO en el arbol de
+# trabajo: en la otra laptop la carpeta no estaba ignorada, asi que un
+# `git add -A` habria publicado el token. Los .gitignore no son retroactivos.
+docs/tmp/
+
+# Bloqueos sueltos de git que deja OneDrive al sincronizar.
+_to_delete/
