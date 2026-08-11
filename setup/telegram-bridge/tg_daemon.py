@@ -71,6 +71,16 @@ WRITE_TOOLS = (
     "Bash(npm test:*),Bash(npm run test:*),Bash(npm run lint:*),Bash(npm run build:*),"
     "Bash(pytest:*),Bash(py -m pytest:*),Bash(python -m pytest:*),Bash(ruff:*),"
     "Bash(eslint:*),Bash(flutter test:*),Bash(flutter analyze:*),"
+    # El runner declarado en `.claude/settings.json` de ESTE repo. Sin esta
+    # entrada el bot no podia correr los arneses de su propia casa: las de
+    # arriba nombran suites genéricas (pytest, npm test) y aquí la suite se
+    # invoca como `py setup/scripts/run-tests.py`. Una auditoría escrita desde
+    # el puente (docs/auditoria/21) se quedó sin poder ver un solo verde por
+    # esto, y tuvo que declararse a sí misma "reporte, no artefacto".
+    # Es estrecha a propósito: el path exacto del runner, no `py:*`, que sería
+    # ejecutar cualquier cosa. Lo vigila tests/test-perfil-bot.py, que resuelve
+    # la declaración con el mismo código que /test.
+    "Bash(py setup/scripts/run-tests.py:*),"
     "Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git add:*)"
 )
 # Segunda barrera explícita: publicar/integrar nunca pasa por el agente.
