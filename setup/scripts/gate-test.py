@@ -18,11 +18,14 @@ Uso:
 
 El comando se resuelve, en este orden:
   1. `--cmd`
-  2. `GATE_TEST_CMD` del entorno
-  3. el bloque "## Comando de test" del CLAUDE.md del repo (primera línea de su
-     bloque de código)
-Sin ninguno de los tres, no inventa nada: sale con error y lo dice. Sin comando
-de test declarado no hay verde posible, y sin verde no se mergea.
+  2. `GATE_TEST_CMD` del entorno (lo inyecta Claude Code desde settings.json)
+  3. `env.GATE_TEST_CMD` del `.claude/settings.json` VERSIONADO del repo, leido
+     del disco: asi funciona lo lance quien lo lance, tambien desde una
+     terminal pelada. Nunca se lee `settings.local.json`, que es por-maquina.
+  4. el bloque "## Comando de test" del CLAUDE.md del repo (primera linea de su
+     bloque de codigo), para repos donde el CLAUDE.md si se versiona
+Sin ninguno de los cuatro, no inventa nada: sale con error y lo dice. Sin
+comando de test declarado no hay verde posible, y sin verde no se mergea.
 
 Ruta estable: `sync-skills` lo instala en `~/.claude/scripts/` (F13 — una skill
 corre desde el cwd de cualquier proyecto, así que no puede citar rutas del repo).
@@ -59,6 +62,32 @@ def comando_declarado(raiz):
     return m.group(2).strip() if m else ""
 
 
+def comando_en_settings(raiz):
+    """`env.GATE_TEST_CMD` del .claude/settings.json VERSIONADO del repo.
+
+    Solo settings.json, NUNCA settings.local.json: ese esta gitignorado y es
+    por-maquina, asi que dejarle declarar el comando reabriria por detras el
+    agujero por el que projects.json pierde — una copia local imponiendo un
+    verde mas debil, sin diff donde se vea.
+    """
+    ruta = os.path.join(raiz, ".claude", "settings.json")
+    try:
+        with open(ruta, "r", encoding="utf-8") as f:
+            datos = json.load(f)
+    except FileNotFoundError:
+        return ""
+    except (OSError, ValueError) as exc:
+        print(f"[gate-test] AVISO: no pude leer {ruta} ({exc}).\n"
+              f"            Sigo con el resto de la resolucion.", file=sys.stderr)
+        return ""
+    if not isinstance(datos, dict):
+        return ""
+    env = datos.get("env")
+    if not isinstance(env, dict):
+        return ""
+    return str(env.get("GATE_TEST_CMD", "")).strip()
+
+
 def main():
     args = sys.argv[1:]
     if not args or args[0].startswith("-"):
@@ -72,12 +101,15 @@ def main():
             cmd = args[i + 1]
 
     raiz = git(["rev-parse", "--show-toplevel"]) or os.getcwd()
-    cmd = cmd or os.environ.get("GATE_TEST_CMD", "") or comando_declarado(raiz)
+    cmd = (cmd or os.environ.get("GATE_TEST_CMD", "")
+           or comando_en_settings(raiz) or comando_declarado(raiz))
     if not cmd:
         print("Sin comando de test declarado: no hay verde posible y no se\n"
-              "mergea. Declara uno en el CLAUDE.md del repo bajo '## Comando de\n"
-              "test', o pásalo con --cmd. Si el proyecto no tiene suite, redefine\n"
-              "el verde (build? lint?) o este patrón no aplica aquí.",
+              "mergea. Declara uno en '.claude/settings.json' del repo, bajo\n"
+              "'env.GATE_TEST_CMD' (viaja entre máquinas y se ve en el diff), o\n"
+              "en el CLAUDE.md del repo bajo '## Comando de test' si aquí lo\n"
+              "versionas, o pásalo con --cmd. Si el proyecto no tiene suite,\n"
+              "redefine el verde (build? lint?) o este patrón no aplica aquí.",
               file=sys.stderr)
         return 2
 

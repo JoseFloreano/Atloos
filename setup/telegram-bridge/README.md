@@ -250,16 +250,35 @@ Puedes estar editando en la laptop mientras el bot desarrolla: no se ven.
 
 ## Configurar los tests (necesario para `/merge`)
 
-En `projects.json`, cada proyecto declara su comando:
+El comando de test sale, en este orden:
 
-```json
-{
-  "mi-repo": { "path": "C:\\ruta\\al\\repo", "test": "py -m pytest -q" }
-}
-```
+1. **`.claude/settings.json` del repo**, bajo `env.GATE_TEST_CMD` — archivo
+   versionado, así que viaja entre máquinas y se ve en el diff:
 
-Sin `test` declarado, `/test` avisa y **`/merge` queda bloqueado** (no hay verde
-posible). Se acepta el formato viejo (`"nombre": "ruta"`), sin tests.
+   ```json
+   { "env": { "GATE_TEST_CMD": "py setup/scripts/run-tests.py" } }
+   ```
+
+2. **`projects.json`**, como fallback para repos que no declaran nada:
+
+   ```json
+   { "mi-repo": { "path": "C:\\ruta\\al\\repo", "test": "py -m pytest -q" } }
+   ```
+
+El **repo gana** sobre `projects.json` a propósito: `projects.json` es
+por-máquina y no viaja, así que si ganara él, la copia vieja de otra laptop
+seguiría imponiendo su verde. En `atloos` ese verde era `py -m compileall`, que
+solo comprueba que los archivos parsean — un `/merge` desde el móvil entraba a
+`main` sin ejecutar un solo arnés.
+
+El comando debe ser **un ejecutable con sus argumentos**, sin `&&`, `||`, `|`
+ni `;`: aquí se corre argv sin shell y un metacarácter se rompería (en la
+laptop, donde `gate-test.py` usa shell, funcionaría — esa asimetría es justo lo
+que se evita). Si necesitas encadenar, envuélvelo en un script.
+
+Sin comando declarado por ninguna vía, `/test` avisa y **`/merge` queda
+bloqueado** (no hay verde posible). Se acepta el formato viejo de
+`projects.json` (`"nombre": "ruta"`), sin tests.
 
 ## Recuperación
 
@@ -285,8 +304,31 @@ posible). Se acepta el formato viejo (`"nombre": "ruta"`), sin tests.
    `~/.aws`) con rutas absolutas — los globs `Read(**/.env)` no funcionan.
 3. **`CLAUDE_TG_BOT=1`** en el entorno de cada invocación: el hook anti-drift
    `check-vault-updated.py` sale en silencio (no hay humano que cierre el vault).
+   *(Consecuencia conocida y no resuelta: en un servidor 24/7 ese hook no
+   dispararía nunca, que es donde nadie mira. Auditoría del RFD 19.)*
 4. Los logs guardan eventos y longitudes, **no** el contenido de los mensajes ni
    el token.
+
+### La allowlist tiene que incluir el runner del repo
+
+Las entradas `Bash(...)` de `WRITE_TOOLS` nombran suites genéricas (`pytest`,
+`npm test`, `ruff`, `flutter test`). **Los arneses de esta casa no encajan en
+ninguna**: se corren como `py setup/scripts/run-tests.py`. Sin una entrada para
+eso, el agente del puente tiene prohibido correr los tests de su propio repo —
+y eso no es teórico: una auditoría escrita desde el móvil
+(`docs/auditoria/21-AUDITORIA-DEL-BUCLE-GOAL-Y-LOOP.md`) tuvo que declarar en su
+cabecera que no había visto un solo verde, por esta razón exacta.
+
+La entrada es **estrecha a propósito** —el path del runner, nunca `Bash(py:*)`,
+que sería ejecutar cualquier cosa— y la vigila
+`tests/test-perfil-bot.py`, que no compara contra una constante copiada: resuelve
+la declaración con el **mismo** `testcmd.resolver` que usa `/test`. Si mañana el
+repo declara otro runner y nadie toca la allowlist, ese arnés se pone rojo.
+También fija las dos mitades del canario: el modo **lectura** sigue sin poder
+correrlo, y un comando arbitrario sigue sin colarse.
+
+Si enganchas otro proyecto cuyo runner no sea `pytest` ni `npm test`, esto hay
+que repetirlo para él.
 
 ---
 

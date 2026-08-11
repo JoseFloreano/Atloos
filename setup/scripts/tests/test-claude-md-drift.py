@@ -27,8 +27,14 @@ incumplió. Es la tesis del RFD 11: la convención escrita no muerde.
 Uso:  py setup/scripts/tests/test-claude-md-drift.py [otro/CLAUDE.md ...]
       Sin argumentos comprueba el `CLAUDE.md` de este repo. Los `CLAUDE.md` de
       otros proyectos viven fuera; pásalos por ruta para auditarlos también.
+      Con `CLAUDE_TG_BOT=1` y SIN argumentos, el chequeo del CLAUDE.md
+      desplegado se salta —a la vista, como `[SKIP]`, nunca como `[OK]` en
+      silencio—: es el worktree del bot, y ver por qué eso es seguro exige
+      leer `check_desplegado()` más abajo. Un objetivo explícito se sigue
+      comprobando siempre, con o sin la variable puesta.
 Salidas: 0 sin deriva · 1 hay deriva
 """
+import os
 import re
 import sys
 from pathlib import Path
@@ -107,12 +113,39 @@ def check_desplegado(ruta):
 def main():
     print("Deriva entre fuente y copias desplegadas\n")
     check_gemelos()
-    objetivos = [Path(a).resolve() for a in sys.argv[1:]] or [REPO / "CLAUDE.md"]
-    for ruta in objetivos:
-        check_desplegado(ruta)
+
+    argv = sys.argv[1:]
+    objetivos = []
+    if not argv and os.environ.get("CLAUDE_TG_BOT") == "1":
+        # Objetivo por defecto (REPO/CLAUDE.md), y estamos en el worktree del
+        # bot: ese CLAUDE.md NO es el del repo, es la versión BOT que
+        # gitops.create_worktree() escribe llamando a bot_claude_md()
+        # (ADR-20260801-bot-memoria-y-perfil) — sustituye entera la sección de
+        # Memory Rules porque el bot no puede cumplir las órdenes de vault y
+        # Graphiti que ahí viven. Este chequeo caza una copia que se QUEDÓ
+        # ATRÁS de su fuente por descuido; esta copia, en cambio, se REGENERA
+        # desde el CLAUDE.md del repo cada vez que se monta un worktree nuevo,
+        # así que no puede desincronizarse por su cuenta — el modo de fallo
+        # que `check_desplegado` existe para cazar no puede darse aquí. Por
+        # eso se salta, y SOLO el objetivo por defecto: si alguien pasa una
+        # ruta explícita (`sys.argv[1:]`), la está pidiendo a propósito y se
+        # comprueba igual, con o sin la variable. Los gemelos (arriba) siguen
+        # corriendo siempre: comparan la fuente contra su copia hermana, algo
+        # que un worktree no afecta para nada.
+        print("  [SKIP] CLAUDE.md desplegado (objetivo por defecto): "
+              "CLAUDE_TG_BOT=1 — worktree del bot, CLAUDE.md regenerado en "
+              "cada worktree nuevo (gitops.create_worktree/bot_claude_md); no "
+              "puede quedarse atrás por su cuenta, así que \"distinto\" aquí "
+              "es correcto y no es la deriva que este arnés caza")
+    else:
+        objetivos = [Path(a).resolve() for a in argv] or [REPO / "CLAUDE.md"]
+        for ruta in objetivos:
+            check_desplegado(ruta)
 
     if not hallazgos:
-        print(f"  [OK] los gemelos coinciden y {len(objetivos)} CLAUDE.md al día")
+        extra = (f"y {len(objetivos)} CLAUDE.md al día" if objetivos
+                 else "(CLAUDE.md desplegado: ver [SKIP] arriba)")
+        print(f"  [OK] los gemelos coinciden {extra}")
         return 0
     for h in hallazgos:
         print(f"  {'' if h.startswith('    ') else '[DERIVA] '}{h}")

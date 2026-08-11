@@ -161,7 +161,7 @@ Además instala en **`~/.claude/scripts/`** —misma ruta en toda máquina,
 independiente de dónde esté clonado el repo— los scripts que las skills invocan:
 
 ```bash
-ls ~/.claude/scripts/          # adr-index.py  notify_telegram.py  gate-test.py
+ls ~/.claude/scripts/          # adr-index.py  notify_telegram.py  gate-test.py  run-tests.py
 ```
 
 Esa ruta estable no es cosmética: el 2026-08-07 `notify-telegram` falló desde

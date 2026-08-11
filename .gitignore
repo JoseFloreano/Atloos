@@ -48,6 +48,14 @@ setup/cowork_instructions.md
 # `git add -A` habria publicado el token. Los .gitignore no son retroactivos.
 docs/tmp/
 
+# ── Andamiaje de Superpowers ────────────────────────────────────────
+# Specs de brainstorming y planes de writing-plans: material de TRABAJO, no
+# fuente del setup. Lo durable se cosecha a un ADR del vault con la skill
+# design-doc-harvest y el doc se tira. Al estar ignorados, ya no hay historia
+# de git detras: la cosecha deja de ser opcional, porque es lo unico que
+# sobrevive al borrado.
+docs/superpowers/
+
 # Bloqueos sueltos de git que deja OneDrive al sincronizar.
 _to_delete/
 

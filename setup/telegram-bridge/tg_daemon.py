@@ -47,6 +47,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gitops                                              # noqa: E402
 from progress import ProgressTracker                       # noqa: E402
 import vaultio                                             # noqa: E402
+import testcmd                                              # noqa: E402
 from notify_telegram import deliver_text, load_env_file, _env_candidates  # noqa: E402
 
 BASE = Path(__file__).resolve().parent
@@ -70,6 +71,16 @@ WRITE_TOOLS = (
     "Bash(npm test:*),Bash(npm run test:*),Bash(npm run lint:*),Bash(npm run build:*),"
     "Bash(pytest:*),Bash(py -m pytest:*),Bash(python -m pytest:*),Bash(ruff:*),"
     "Bash(eslint:*),Bash(flutter test:*),Bash(flutter analyze:*),"
+    # El runner declarado en `.claude/settings.json` de ESTE repo. Sin esta
+    # entrada el bot no podia correr los arneses de su propia casa: las de
+    # arriba nombran suites genéricas (pytest, npm test) y aquí la suite se
+    # invoca como `py setup/scripts/run-tests.py`. Una auditoría escrita desde
+    # el puente (docs/auditoria/21) se quedó sin poder ver un solo verde por
+    # esto, y tuvo que declararse a sí misma "reporte, no artefacto".
+    # Es estrecha a propósito: el path exacto del runner, no `py:*`, que sería
+    # ejecutar cualquier cosa. Lo vigila tests/test-perfil-bot.py, que resuelve
+    # la declaración con el mismo código que /test.
+    "Bash(py setup/scripts/run-tests.py:*),"
     "Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git add:*)"
 )
 # Segunda barrera explícita: publicar/integrar nunca pasa por el agente.
@@ -705,7 +716,11 @@ async def cmd_write(update, context):
     conv["write"] = True
     conv["last_activity"] = now_ts()
     save_state(state)
-    tests = projects[project].get("test") or "(sin comando de test configurado)"
+    try:
+        tests = testcmd.resolver(conv["worktree"], projects[project]) \
+            or "(sin comando de test declarado)"
+    except testcmd.ComandoInvalido as exc:
+        tests = f"⚠ declarado pero invalido: {exc}"
     await reply(cfg, chat_id,
                 f"✍ **Modo escritura**\n"
                 f"Rama: `{conv['branch']}`\n"
@@ -768,16 +783,29 @@ async def cmd_test(update, context):
     if not conv or not conv.get("worktree"):
         await reply(cfg, chat_id, "Esta conversación no tiene rama de trabajo. /write on")
         return
-    cmd = (projects[project].get("test") or "").strip()
+    try:
+        cmd = testcmd.resolver(conv["worktree"], projects[project])
+    except testcmd.ComandoInvalido as exc:
+        await reply(cfg, chat_id, f"❌ {exc}")
+        return
     if not cmd:
-        await reply(cfg, chat_id, f"El proyecto '{project}' no tiene comando de test en "
-                                  f"projects.json.\nSin verde no se puede /merge.")
+        await reply(cfg, chat_id,
+                    f"El proyecto '{project}' no declara comando de test.\n"
+                    f"Se busca en .claude/settings.json del repo "
+                    f"(env.GATE_TEST_CMD) y, si no, en projects.json.\n"
+                    f"Sin verde no se puede /merge.")
         return
 
     INFLIGHT[chat_id] = now_ts()
     try:
         await reply(cfg, chat_id, f"🧪 Ejecutando: `{cmd}`")
-        rc, out, err = await gitops.run(cmd.split(), conv["worktree"], timeout=1800)
+        # CLAUDE_TG_BOT=1: la señal que test-claude-md-drift.py usa para saltar
+        # (en voz alta) el chequeo del CLAUDE.md desplegado en este worktree —
+        # esa copia es la versión BOT de gitops.bot_claude_md(), no una que se
+        # quedó atrás. Antes de este cambio la variable solo llegaba a la
+        # invocación de Claude (más abajo, run_claude), nunca a este subproceso.
+        env = {**os.environ, "CLAUDE_TG_BOT": "1"}
+        rc, out, err = await gitops.run(cmd.split(), conv["worktree"], timeout=1800, env=env)
         salida = (out + "\n" + err).strip()
         if rc == 0:
             conv["test_ok_sha"] = await gitops.head_sha(conv["worktree"])

@@ -32,7 +32,11 @@ es el artefacto.**
 
 ## Requisitos
 
-- **Comando de test declarado** para el proyecto. Sin él **no hay verde posible
+- **Comando de test declarado** para el proyecto, en `.claude/settings.json`
+  bajo `env.GATE_TEST_CMD` (archivo versionado, así viaja entre máquinas y se
+  ve en el diff). Debe ser un ejecutable con sus argumentos, **sin `&&` ni
+  pipes**: el `/test` del puente Telegram corre argv sin shell y se rompería.
+  Sin él **no hay verde posible
   y no se mergea** — redefine el verde (build? lint?) o el patrón no aplica aquí.
 - `git` y acceso al worktree del frente.
 
