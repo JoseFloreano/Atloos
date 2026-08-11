@@ -250,16 +250,35 @@ Puedes estar editando en la laptop mientras el bot desarrolla: no se ven.
 
 ## Configurar los tests (necesario para `/merge`)
 
-En `projects.json`, cada proyecto declara su comando:
+El comando de test sale, en este orden:
 
-```json
-{
-  "mi-repo": { "path": "C:\\ruta\\al\\repo", "test": "py -m pytest -q" }
-}
-```
+1. **`.claude/settings.json` del repo**, bajo `env.GATE_TEST_CMD` — archivo
+   versionado, así que viaja entre máquinas y se ve en el diff:
 
-Sin `test` declarado, `/test` avisa y **`/merge` queda bloqueado** (no hay verde
-posible). Se acepta el formato viejo (`"nombre": "ruta"`), sin tests.
+   ```json
+   { "env": { "GATE_TEST_CMD": "py setup/scripts/run-tests.py" } }
+   ```
+
+2. **`projects.json`**, como fallback para repos que no declaran nada:
+
+   ```json
+   { "mi-repo": { "path": "C:\\ruta\\al\\repo", "test": "py -m pytest -q" } }
+   ```
+
+El **repo gana** sobre `projects.json` a propósito: `projects.json` es
+por-máquina y no viaja, así que si ganara él, la copia vieja de otra laptop
+seguiría imponiendo su verde. En `atloos` ese verde era `py -m compileall`, que
+solo comprueba que los archivos parsean — un `/merge` desde el móvil entraba a
+`main` sin ejecutar un solo arnés.
+
+El comando debe ser **un ejecutable con sus argumentos**, sin `&&`, `||`, `|`
+ni `;`: aquí se corre argv sin shell y un metacarácter se rompería (en la
+laptop, donde `gate-test.py` usa shell, funcionaría — esa asimetría es justo lo
+que se evita). Si necesitas encadenar, envuélvelo en un script.
+
+Sin comando declarado por ninguna vía, `/test` avisa y **`/merge` queda
+bloqueado** (no hay verde posible). Se acepta el formato viejo de
+`projects.json` (`"nombre": "ruta"`), sin tests.
 
 ## Recuperación
 

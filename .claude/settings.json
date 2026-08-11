@@ -1,4 +1,7 @@
 {
+  "env": {
+    "GATE_TEST_CMD": "py setup/scripts/run-tests.py"
+  },
   "permissions": {
     "allow": [
       "Bash(ls -la \"/c/Users/jlflo/OneDrive/DevSetup\" 2>/dev/null && echo \"---EXISTS---\" || echo \"---DEVSETUP NO EXISTE---\")",

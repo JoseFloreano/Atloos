@@ -56,10 +56,16 @@ def branch_name(slug: str, today: str = "") -> str:
 
 
 # ── Ejecución ─────────────────────────────────────────────────────────────
-async def run(args: list, cwd: str, timeout: int = GIT_TIMEOUT) -> tuple:
-    """Ejecuta un comando y devuelve (returncode, stdout, stderr) ya decodificados."""
+async def run(args: list, cwd: str, timeout: int = GIT_TIMEOUT, env: dict = None) -> tuple:
+    """Ejecuta un comando y devuelve (returncode, stdout, stderr) ya decodificados.
+
+    `env=None` (default) hereda el entorno del proceso actual, igual que antes
+    de que este parámetro existiera — los llamadores que no lo pasan no cambian
+    de comportamiento. Existe para que `cmd_test` pueda inyectar `CLAUDE_TG_BOT`
+    en el subproceso de test sin tocar el resto de usos de `run`.
+    """
     proc = await asyncio.create_subprocess_exec(
-        *args, cwd=cwd,
+        *args, cwd=cwd, env=env,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
     try:
         out, err = await asyncio.wait_for(proc.communicate(), timeout=timeout)
