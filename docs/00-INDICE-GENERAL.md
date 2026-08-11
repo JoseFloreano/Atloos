@@ -42,6 +42,7 @@ La serie original: por qué esta arquitectura de memoria y no otra.
 | [09 · Auditoría del setup](./auditoria/09-AUDITORIA-SETUP.md) | Fortalezas, riesgos, matriz y mitigaciones (aplicadas) |
 | ~~10 · RFD endurecimiento de campo~~ | ✅ **Implementado, auditado y cosechado** (2026-08-09) → repartido en tres ADR: `ADR-20260801-bot-memoria-y-perfil` (D1, curado + extracto fresco), `ADR-20260801-higiene-vault` («Enmienda 2», `Estado del repo:`) y `ADR-20260803-skills-fuente-unica` («Enmienda», el sync no destruye por defecto) |
 | [11 · RFD del caso a la clase](./auditoria/11-RFD-DEL-CASO-A-LA-CLASE.md) | 🔴 **Propuesta — 2 decisiones abiertas.** Los 4 fallos que destapó auditar el RFD 10: todos son "arreglamos el caso, no la clase" |
+| [21 · Auditoría del bucle (`/goal` y `/loop`)](./auditoria/21-AUDITORIA-DEL-BUCLE-GOAL-Y-LOOP.md) | Qué quedó en disco del RFD 18: P1–P4 y D1/D2 construidos; 8 hallazgos, 2 con hueco real en la ley 1. **El arnés no se corrió** |
 
 ### 📁 [`skills/`](./skills/) — Catálogos de skills investigados
 
