@@ -66,14 +66,39 @@ def head(d):
     return p.stdout.decode().strip()
 
 
-def forja(d, condicion, artefacto, cmd="py -m pytest -q", bloqueos=0, ts=None):
-    """Escribe .claude/goal.json — lo que produce la skill `goal-forge`."""
+def forja(d, condicion, artefacto, cmd="py -m pytest -q", bloqueos=0, ts=None,
+          session_id=None):
+    """Escribe .claude/goal.json — lo que produce la skill `goal-forge`.
+
+    `session_id` va aparte porque lo normal es que NO esté: `goal-forge` no
+    conoce el id de la sesión, así que la meta nace huérfana y la sella el
+    guard en el primer turno que la ve (§G).
+    """
     meta = {"condicion": condicion, "artefacto": artefacto, "cmd": cmd,
             "turnos": 20, "bloqueos": bloqueos,
             "forjada_ts": ts if ts is not None else time.time()}
+    if session_id is not None:
+        meta["session_id"] = session_id
     with open(os.path.join(d, ".claude", "goal.json"), "w", encoding="utf-8") as f:
         json.dump(meta, f)
     return meta
+
+
+def meta_en_disco(d):
+    """El goal.json tal y como quedó tras correr el hook, o None si lo borró."""
+    p = os.path.join(d, ".claude", "goal.json")
+    if not os.path.exists(p):
+        return None
+    with open(p, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def evidencia_json(d, ruta, datos):
+    """Artefacto que DECLARA su veredicto (§F), en vez de solo existir."""
+    p = os.path.join(d, ruta)
+    os.makedirs(os.path.dirname(p) or d, exist_ok=True)
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(datos, f)
 
 
 def evidencia(d, ruta, sha=None):
@@ -204,20 +229,90 @@ def main():
 
     # Frescura débil, declarada como tal: sin sha solo se puede exigir que el
     # artefacto sea POSTERIOR a la meta.
+    #
+    # El ejemplo dice `solo-si-verde.sh` y no `ruff check .` a propósito: `ruff`
+    # escribe su salida igual en verde que en rojo, así que como condición de
+    # meta enseñaba el anti-patrón que §F existe para prohibir (H1 de la
+    # auditoría 21). Un arnés que ilustra con el caso malo lo normaliza.
     d = repo_lab()
     evidencia(d, "salida.txt")                      # ya estaba ahí de antes
     time.sleep(0.05)
-    forja(d, "`ruff check .` deja salida.txt", "salida.txt")
+    forja(d, "`scripts/solo-si-verde.sh` deja salida.txt", "salida.txt")
     rc, err = corre(d)
     caso("artefacto sin sha ANTERIOR a la meta: bloquea", rc, 2, err)
     shutil.rmtree(d, ignore_errors=True)
 
     d = repo_lab()
-    forja(d, "`ruff check .` deja salida.txt", "salida.txt")
+    forja(d, "`scripts/solo-si-verde.sh` deja salida.txt", "salida.txt")
     time.sleep(0.05)
     evidencia(d, "salida.txt")                      # producido durante la meta
     rc, err = corre(d)
     caso("artefacto sin sha POSTERIOR a la meta: pasa", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    # ── F · El VEREDICTO, no solo la existencia (H1) ──────────────────────
+    # El guard miraba que el artefacto existiera y fuera fresco. Con
+    # `gate-verde.json` eso basta porque solo se escribe en exit 0 — ahí existir
+    # ES el veredicto. Pero nada obligaba a esa semántica: un artefacto que se
+    # escribe también en rojo cerraba la meta con la suite rota.
+    print("\nF · si el artefacto DICE su veredicto, se respeta (H1)")
+
+    for clave, valor, etiqueta in (("ok", False, "ok=false"),
+                                   ("exit_code", 1, "exit_code=1"),
+                                   ("fallos", 3, "fallos=3")):
+        d = repo_lab()
+        forja(d, "la suite pasa", "reporte.json")
+        evidencia_json(d, "reporte.json", {clave: valor})
+        rc, err = corre(d)
+        caso(f"F · artefacto que declara ROJO ({etiqueta}): bloquea", rc, 2, err)
+        shutil.rmtree(d, ignore_errors=True)
+
+    d = repo_lab()
+    forja(d, "la suite pasa", "reporte.json")
+    evidencia_json(d, "reporte.json", {"ok": True, "fallos": 0})
+    rc, err = corre(d)
+    caso("F · artefacto que declara VERDE: pasa", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    # La otra mitad, y es la que impide que esto se vuelva un guard adivino:
+    # sin veredicto declarado el hook NO lo inventa. Por eso el contrato de
+    # `goal-forge` exige artefactos que solo existan en verde.
+    d = repo_lab()
+    forja(d, "la suite pasa", "reporte.json")
+    evidencia_json(d, "reporte.json", {"duracion": 12, "notas": "sin veredicto"})
+    rc, err = corre(d)
+    caso("F · JSON sin campo de veredicto: no se lo inventa, pasa", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    # ── G · La meta tiene dueño: una sesión (H2) ──────────────────────────
+    # `/goal` es de sesión, pero `.claude/goal.json` es un fichero sin dueño:
+    # una meta forjada ayer y no cumplida bloqueaba los tres primeros cierres
+    # de CUALQUIER sesión futura del proyecto. El hook hermano ya resolvía esto
+    # con el flag del vault; aquí se copia el gesto.
+    print("\nG · la meta pertenece a la sesión que la forjó (H2)")
+
+    d = repo_lab()
+    forja(d, "la suite pasa", ".claude/verde.json")
+    rc, err = corre(d)                                   # sesión s1, meta sin dueño
+    # `or {}` no es paranoia: con el guard mutado para no adoptar, el fichero
+    # acaba BORRADO y este caso reventaba con AttributeError en vez de fallar.
+    # Un arnés que crashea no informa — deja de contar los casos que quedan.
+    dueño = (meta_en_disco(d) or {}).get("session_id")
+    afirma(f"G.1 el guard ADOPTA la meta huérfana y la sella (session_id={dueño!r})",
+           rc == 2 and dueño == "s1")
+    shutil.rmtree(d, ignore_errors=True)
+
+    d = repo_lab()
+    forja(d, "la suite pasa", ".claude/verde.json", session_id="OTRA-SESION")
+    rc, err = corre(d)
+    afirma("G.2 meta de otra sesión: no interviene y BORRA el fichero huérfano",
+           rc == 0 and meta_en_disco(d) is None)
+    shutil.rmtree(d, ignore_errors=True)
+
+    d = repo_lab()
+    forja(d, "la suite pasa", ".claude/verde.json", session_id="s1")
+    rc, err = corre(d)
+    caso("G.3 meta de la MISMA sesión: sigue mordiendo", rc, 2, err)
     shutil.rmtree(d, ignore_errors=True)
 
     # ── C · EL CANARIO ───────────────────────────────────────────────────
@@ -262,8 +357,7 @@ def main():
     forja(d, "los tests pasan", ".claude/verde.json")
     corre(d)
     corre(d)
-    with open(os.path.join(d, ".claude", "goal.json"), encoding="utf-8") as f:
-        n = json.load(f).get("bloqueos")
+    n = (meta_en_disco(d) or {}).get("bloqueos")
     afirma(f"el contador de bloqueos persiste entre turnos (va por {n})", n == 2)
     shutil.rmtree(d, ignore_errors=True)
 

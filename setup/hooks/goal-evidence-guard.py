@@ -27,9 +27,18 @@ artefacto no aparece tras eso, el problema no es que falte evidencia: es que la
 condición está mal forjada, y seguir bloqueando sería un bucle sin fondo. Sale
 abierto diciéndolo.
 
+QUÉ MIRA DEL ARTEFACTO, y en este orden: que exista, que **no declare rojo** si
+trae un campo de veredicto (`exit_code`, `ok`, `fallos`…), y que sea fresco
+(sha↔HEAD, o mtime posterior a la meta si no lleva sha). Lo del veredicto es H1
+de la auditoría 21: con `gate-verde.json` existir ES el veredicto —solo se
+escribe en exit 0—, pero nada obligaba a esa semántica, y un artefacto que se
+escribe también en rojo cerraba la meta con la suite rota.
+
 QUÉ NO HACE. No lee la condición de `/goal` (el payload de `Stop` no la trae:
-por eso `goal-forge` la declara en un fichero). No juzga la calidad de la
-evidencia. Y **no construye la capa 2** —el hook `type: "agent"`, que sí lee
+por eso `goal-forge` la declara en un fichero). **No se inventa un veredicto que
+el artefacto no declara** — por eso el contrato de `goal-forge` exige artefactos
+que solo existan en verde: lo que el fichero no dice, el hook no lo adivina. Y
+**no construye la capa 2** —el hook `type: "agent"`, que sí lee
 disco y correría la comprobación—: es experimental por declaración de Anthropic
 y la producción va en `command`. Queda nombrada, no construida.
 
@@ -47,6 +56,12 @@ import sys
 META = os.path.join(".claude", "goal.json")
 MAX_BLOQUEOS = 3
 
+# Campos con los que un artefacto puede DECLARAR su veredicto. Se respeta el que
+# traiga; los que no aparecen no se inventan (ver `veredicto_rojo`).
+CODIGOS = ("exit_code", "returncode", "rc")          # != 0 es rojo
+BANDERAS = ("ok", "verde", "passed", "success")      # False es rojo
+CONTEOS = ("fallos", "failed", "errors", "failures")  # > 0 es rojo
+
 try:
     sys.stderr.reconfigure(encoding="utf-8")
 except Exception:
@@ -61,6 +76,30 @@ def git_head(cwd):
         return p.stdout.decode("utf-8", "replace").strip()
     except Exception:
         return ""
+
+
+def veredicto_rojo(datos):
+    """Motivo si el artefacto DECLARA que el comando falló; None si no lo dice.
+
+    Deliberadamente conservador: solo mira campos inequívocos y **no adivina**.
+    Un artefacto sin veredicto pasa igual que antes — el guard no puede
+    inventarse lo que el fichero no dice, y por eso el contrato de `goal-forge`
+    exige artefactos que solo existan (o solo se actualicen) en verde.
+    """
+    if not isinstance(datos, dict):
+        return None
+    for k in CODIGOS:
+        v = datos.get(k)
+        if isinstance(v, int) and not isinstance(v, bool) and v != 0:
+            return f"`{k}` vale {v}"
+    for k in BANDERAS:
+        if datos.get(k) is False:
+            return f"`{k}` vale false"
+    for k in CONTEOS:
+        v = datos.get(k)
+        if isinstance(v, int) and not isinstance(v, bool) and v > 0:
+            return f"`{k}` vale {v}"
+    return None
 
 
 def bloquea(meta, ruta_meta, motivo):
@@ -97,7 +136,7 @@ def main():
         sys.exit(0)
 
     try:
-        json.load(sys.stdin)          # payload Stop: se valida, no se usa
+        payload = json.load(sys.stdin)
     except Exception:
         sys.exit(0)                   # fail-open ante entrada ilegible
 
@@ -116,6 +155,33 @@ def main():
             meta = json.load(f) or {}
     except Exception:
         sys.exit(0)                   # fail-open: un bug del hook no tumba la sesión
+
+    # ── La meta pertenece a la sesión que la forjó ────────────────────────
+    # `/goal` es de sesión, pero este fichero no lo era: una meta forjada ayer y
+    # no cumplida bloqueaba los tres primeros cierres de CUALQUIER sesión futura
+    # del proyecto. `goal-forge` no puede escribir el id —no lo conoce—, así que
+    # lo sella el guard en el primer turno que la ve. El gesto (comparar y
+    # borrar el huérfano) es el de `check-vault-updated.py` con su flag.
+    sesion = (payload or {}).get("session_id", "") if isinstance(payload, dict) else ""
+    dueño = meta.get("session_id")
+    if sesion:
+        if not dueño:
+            meta["session_id"] = sesion
+            try:
+                with open(ruta_meta, "w", encoding="utf-8") as f:
+                    json.dump(meta, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+        elif dueño != sesion:
+            try:
+                os.remove(ruta_meta)
+            except OSError:
+                pass
+            sys.stderr.write(
+                "goal-evidence-guard: `.claude/goal.json` era de otra sesión y se\n"
+                "ha borrado. Una meta de `/goal` muere con su sesión; el fichero no\n"
+                "lo hacía, y bloqueaba turnos ajenos por algo que ya no existe.\n")
+            sys.exit(0)
 
     artefacto = meta.get("artefacto")
     if not artefacto:
@@ -144,6 +210,18 @@ def main():
             datos = json.load(f)
     except Exception:
         datos = None
+
+    # El veredicto manda sobre la frescura: una evidencia fresquísima que dice
+    # ROJO no es evidencia de nada bueno. Con `gate-verde.json` esta rama no se
+    # toca (solo se escribe en exit 0), pero nada obligaba a esa semántica y sin
+    # esto un artefacto escrito también en rojo cerraba la meta con la suite
+    # rota — H1 de la auditoría 21.
+    rojo = veredicto_rojo(datos)
+    if rojo:
+        bloquea(meta, ruta_meta,
+                f"`{artefacto}` existe, pero DICE que el comando falló: {rojo}.\n"
+                f"Una evidencia que declara rojo cierra la meta solo si nadie la\n"
+                f"lee. Este hook la lee.")
 
     if isinstance(datos, dict) and datos.get("sha"):
         head = git_head(proyecto)

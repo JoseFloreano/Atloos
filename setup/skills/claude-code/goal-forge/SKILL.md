@@ -39,6 +39,12 @@ cierra la meta. Una condición mal forjada no es un detalle de estilo: es la ley
    limpio"* no es condición; *"`ruff check .` sale 0"* sí. Si no sabes qué
    comando la prueba, el objetivo aún no está entendido — eso es lo que la
    skill acaba de descubrir, y decirlo vale más que forjar algo vacío.
+6. **El artefacto no debe existir si el comando falló.** El guard comprueba que
+   está y que es fresco; si además **declara** su veredicto (`exit_code`, `ok`,
+   `fallos`) lo respeta, pero **no se inventa el que no está**. Un fichero que
+   se escribe igual en rojo —la salida de `ruff`, un log— cierra la meta con la
+   suite rota. Si no puedes garantizar esa semántica, envuelve el comando con
+   `gate-test.py`, que solo escribe con exit 0.
 
 ## Pasos
 
@@ -46,7 +52,9 @@ cierra la meta. Una condición mal forjada no es un detalle de estilo: es la ley
    y dilo**: mal forjada es peor que sin forjar.
 2. Escribe `.claude/goal.json` con `condicion`, `artefacto` (ruta del fichero
    de evidencia), `cmd`, `turnos` y `forjada_ts`. Es lo que lee el hook
-   `goal-evidence-guard`, que cierra la meta contra el disco.
+   `goal-evidence-guard`, que cierra la meta contra el disco. **No escribas
+   `session_id`**: no lo conoces, y el guard sella la meta con el de la sesión
+   en su primer turno — así una meta vieja no bloquea sesiones ajenas.
 3. Entrega la línea `/goal …` lista para pegar, y di qué artefacto vigilará.
 4. Verifica: ¿la condición nombra un comando? ¿tiene corte? ¿la puede satisfacer
    una frase? Si sí, vuelve al 1.
