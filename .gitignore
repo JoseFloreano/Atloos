@@ -50,3 +50,11 @@ docs/tmp/
 
 # Bloqueos sueltos de git que deja OneDrive al sincronizar.
 _to_delete/
+
+# Worktrees que crea el aislamiento de subagentes. Los pone AQUI DENTRO, que
+# contradice ADR-20260805 (worktrees fuera de OneDrive): un checkout completo
+# replicandose a la nube y a cada laptop. No podemos cambiar donde los crea,
+# pero si evitar que un `git add -A` publique 1,9 MB de repo duplicado.
+# Borralos con `git worktree remove` al terminar; si OneDrive tiene el
+# directorio bloqueado, reintenta.
+.claude/worktrees/

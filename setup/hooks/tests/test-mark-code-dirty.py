@@ -164,6 +164,34 @@ def main():
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         check("12. payload sin file_path -> exit 0", p.returncode == 0)
 
+        # --- Contador de ediciones sin registrar (D2 del RFD 18, opcion b) ---
+        # El hook Stop dejo de exigir "una vez por sesion" y pasa a re-armarse
+        # cada N ediciones sin registrar. Ese N se cuenta AQUI: sin contador, el
+        # anti-drift no tiene con que medir la sesion larga.
+        clear_flag(proj)
+        run_hook(proj, os.path.join(proj, "app.py"))
+        run_hook(proj, os.path.join(proj, "otro.py"))
+        st = flag_state(proj)
+        check("13. dos ediciones de codigo -> edits == 2",
+              st is not None and st.get("edits") == 2,
+              f"edits={None if st is None else st.get('edits')}")
+
+        clear_flag(proj)
+        run_hook(proj, os.path.join(proj, "app.py"))
+        run_hook(proj, os.path.join(outside, "commit-msg.txt"))
+        st = flag_state(proj)
+        check("14. edicion fuera del proyecto NO incrementa edits",
+              st is not None and st.get("edits") == 1,
+              f"edits={None if st is None else st.get('edits')}")
+
+        clear_flag(proj)
+        run_hook(proj, os.path.join(proj, "app.py"))
+        run_hook(proj, os.path.join(proj, "app.py"), session="sess-test-0002")
+        st = flag_state(proj)
+        check("15. sesion nueva resetea el contador a 1",
+              st is not None and st.get("edits") == 1,
+              f"edits={None if st is None else st.get('edits')}")
+
     fallos = [n for n, ok, _ in results if not ok]
     print(f"\n{len(results) - len(fallos)}/{len(results)} casos OK")
     if fallos:

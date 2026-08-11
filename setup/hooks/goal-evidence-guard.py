@@ -34,8 +34,10 @@ disco y correría la comprobación—: es experimental por declaración de Anthr
 y la producción va en `command`. Queda nombrada, no construida.
 
 CONVIVE CON `check-vault-updated.py`, que ya vive en `Stop`. Los dos corren; ver
-`tests/test-goal-evidence-guard.py` §convivencia, incluido el efecto medido de
-`stop_hook_active`, que NO se arregla aquí (es D2, sin arbitrar).
+`tests/test-goal-evidence-guard.py` §convivencia. El efecto que ese arnés dejó
+medido —que el vecino enmudecía cuando este guard bloqueaba primero— se arbitró
+como D2·b y está arreglado: hoy los dos ignoran `stop_hook_active` y cada uno se
+acota con su propia cláusula de corte.
 """
 import json
 import os

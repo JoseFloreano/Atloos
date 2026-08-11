@@ -11,9 +11,10 @@ evaluador de `/goal` cerraría, porque solo lee la conversación. El guard debe
 rechazarla. Sin ese caso, el resto del arnés no prueba lo que importa: cualquier
 hook que salga 0 siempre pasaría los demás.
 
-Y §D mide la CONVIVENCIA con `check-vault-updated.py`, que ya vive en `Stop`.
+Y §E mide la CONVIVENCIA con `check-vault-updated.py`, que ya vive en `Stop`.
 No es cortesía: dos hooks en el mismo evento pueden enmascararse, y aquí uno lo
-hace. El arnés lo deja medido en vez de suponerlo.
+hacía — el vecino enmudecía cuando este guard bloqueaba primero. Se arbitró como
+D2·b y E.3 pasó de medir la avería a fijar su ausencia.
 
 Uso:  py setup/hooks/tests/test-goal-evidence-guard.py                [repo]
 Salida: una línea por caso + resumen; exit 1 si algo falla.
@@ -292,12 +293,14 @@ def main():
            f"exige ({rc_v}) — cada uno mide lo suyo", rc_g == 0 and rc_v == 2)
     shutil.rmtree(d, ignore_errors=True)
 
-    # E.3 · EL EFECTO MEDIDO, y no se arregla aquí.
-    #       check-vault-updated respeta `stop_hook_active`; el guard no. Si el
-    #       guard bloquea primero, el turno siguiente llega con el flag puesto
-    #       y el anti-drift se calla. Es D2 del RFD 18, SIN ARBITRAR: tocar
-    #       check-vault-updated queda fuera de este sprint por encargo. Lo que
-    #       se puede hacer hoy es dejarlo medido en vez de suponerlo.
+    # E.3 · LA DEUDA, YA PAGADA. Este caso medía una avería: el guard bloqueaba
+    #       primero, el turno siguiente llegaba con `stop_hook_active` puesto y
+    #       check-vault-updated —que entonces sí lo respetaba— se callaba el
+    #       resto del bucle. Se arbitró como D2·b y el hook dejó de amordazarse:
+    #       ahora decide igual con el flag y sin él, acotado por su propia
+    #       cláusula de corte. El contrato completo del vecino vive en
+    #       `tests/test-check-vault-updated.py` §B y §C; aquí solo se comprueba
+    #       que la convivencia ya no lo enmudece.
     d = repo_lab()
     raiz = vault_falso(d)
     sucia(d)
@@ -306,11 +309,8 @@ def main():
     sucia(d)
     rc_con, _ = corre(d, hook=VAULT_HOOK, stop_hook_active=True,
                       env_extra={"OneDrive": raiz})
-    afirma(f"MEDIDO: check-vault-updated exige sin stop_hook_active ({rc_sin}) "
-           f"y calla con él ({rc_con})", rc_sin == 2 and rc_con == 0)
-    print("          ↑ deuda escrita, NO arreglada aquí: si el guard bloquea\n"
-          "            primero, el anti-drift queda mudo el resto del bucle.\n"
-          "            Es D2 del RFD 18 y está sin arbitrar.")
+    afirma(f"check-vault-updated ya NO enmudece con stop_hook_active: exige sin "
+           f"él ({rc_sin}) y con él ({rc_con})", rc_sin == 2 and rc_con == 2)
     shutil.rmtree(d, ignore_errors=True)
 
     # E.4 · Y el guard NO hereda ese fallo: sigue evaluando con el flag puesto.

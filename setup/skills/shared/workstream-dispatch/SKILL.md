@@ -49,7 +49,9 @@ el mismo trabajo inútil, más caro.
    la plantilla y lo que más desfases evitó.
 3. **Arma el despacho con los 7 bloques obligatorios** →
    [`references/plantilla-despacho.md`](references/plantilla-despacho.md).
-   Ninguno es opcional: cada uno corresponde a un fallo que ya ocurrió.
+   Ninguno es opcional: cada uno corresponde a un fallo que ya ocurrió. El
+   criterio de salida del bloque 7 **es** la condición de meta si el frente va a
+   correr desatendido: fórjala con `claude-code:goal-forge`, no a ojo.
 4. **Al recibir `NEEDS_CONTEXT`**, actúa de juez →
    [`references/protocolo-escalacion.md`](references/protocolo-escalacion.md).
    Registra la resolución **antes** de re-despachar.

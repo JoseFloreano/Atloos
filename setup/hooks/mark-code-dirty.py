@@ -3,9 +3,11 @@
 mark-code-dirty.py — Hook PostToolUse (Write|Edit|MultiEdit) de Claude Code.
 
 Capa 1 del sistema anti-drift del vault: cuando la sesión edita un archivo de
-CÓDIGO (cualquier cosa que no sea .md), deja un flag en .claude/vault-dirty.json.
-El hook Stop (check-vault-updated.py) usa ese flag para exigir — una sola vez
-por sesión — que los pendientes/estado del vault se actualicen antes de terminar.
+CÓDIGO (cualquier cosa que no sea .md), deja un flag en .claude/vault-dirty.json
+y **cuenta** la edición (`edits`). El hook Stop (check-vault-updated.py) usa el
+flag para exigir que los pendientes/estado del vault se actualicen antes de
+terminar, y usa el contador para volver a exigirlo cada N ediciones sin
+registrar — que es lo que lo mantiene vivo en una sesión de 40 turnos.
 
 Fail-open: cualquier error → exit 0 (un bug del hook no debe romper la sesión).
 """
@@ -74,11 +76,15 @@ def main() -> None:
             with open(flag_path, "r", encoding="utf-8") as f:
                 state = json.load(f) or {}
         if state.get("session_id") != session:
-            state = {}  # sesión nueva: resetea el "ya se lo pedí"
+            state = {}  # sesión nueva: resetea el contador y los bloqueos
+        # `edits` cuenta las ediciones de código SIN REGISTRAR de esta sesión: es
+        # la magnitud con la que el hook Stop mide una sesión larga (D2 del RFD
+        # 18, opción b). Muere con el flag en cuanto el vault se actualiza, así
+        # que no es un contador de la sesión: es el tamaño de la deuda.
         state.update({
             "session_id": session,
             "last_code_edit": time.time(),
-            "enforced": bool(state.get("enforced", False)),
+            "edits": int(state.get("edits", 0) or 0) + 1,
         })
         with open(flag_path, "w", encoding="utf-8") as f:
             json.dump(state, f)

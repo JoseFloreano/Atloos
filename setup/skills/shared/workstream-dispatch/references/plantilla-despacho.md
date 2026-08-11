@@ -191,3 +191,33 @@ CONCERNS: lo que no cuadra, si lo hay
 
 No es cortesía. En ImpossibleBench, dar la opción explícita de abortar baja el
 gaming del **54% al 9%** (doc 06 §2.2 [R]).
+
+### El criterio de salida se escribe UNA vez y sirve para dos cosas
+
+Todo despacho dice ya cuándo está hecho. Escríbelo como **estado final medible +
+el comando que lo prueba**, y ese mismo objeto vale como condición de meta si el
+frente va a correr desatendido:
+
+> **HECHO cuando** `py setup/hooks/tests/test-merge-gate-guard.py` [repo] imprime
+> `23/23 casos OK`, sin tocar `sync-hooks.ps1`, **o para a los 20 turnos**.
+
+Tres partes y ninguna sobra:
+
+- **El comando, nombrado dentro.** Sin él la condición se satisface con una
+  afirmación — y el evaluador de `/goal` **no ejecuta herramientas**: cierra
+  metas leyendo lo que el propio agente dijo en el turno. *"El código queda
+  limpio"* no es criterio; *"`ruff check .` sale 0"* sí.
+- **Las restricciones**, lo que no debe cambiar por el camino. Es el mismo
+  ownership del bloque 4, dicho en forma comprobable.
+- **La cláusula de corte** (`o para a los N turnos`). Sin ella el frente no
+  tiene fondo, y un bucle sin fondo gasta hasta que alguien mira.
+
+Si el frente va a correr en `/goal`, no la escribas a ojo: fórjala con
+`claude-code:goal-forge` (superficie Claude Code), que impone este contrato y
+rechaza lo que solo puede satisfacer una afirmación. El hook `goal-evidence-guard`
+la comprueba **contra el disco** al cerrar cada turno, así que una condición que
+nombra bien su artefacto es lo que separa un frente desatendido de una máquina de
+producir reportes.
+
+Sin meta, el criterio no se pierde: se queda donde siempre, en el contrato de
+reporte de arriba. Escribirlo así solo lo deja listo por si el frente se suelta.

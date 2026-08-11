@@ -109,8 +109,8 @@ cualquier hook — no hay sync automático como el de las skills.
 3. Verifica en una sesión nueva:
    - Graphiti: pide guardar un episodio **sin** group_id — debe bloquearse.
    - Anti-drift: en un proyecto enganchado, pide un cambio de código trivial y
-     deja que termine — al final debe pedir actualizar pendientes UNA vez
-     (y no repetirlo en el mismo chat tras cumplir).
+     deja que termine — al final debe pedir actualizar pendientes (y callarse
+     en cuanto cumplas; si lo ignoras, insiste 3 veces y abre).
    - Memory flush: en esa misma sesión (con el flag ya puesto), corre `/compact`
      — debe pausarse una vez con el recordatorio; el segundo `/compact` pasa. En
      una sesión que solo tocó `.md`, `/compact` no dice nada.
@@ -125,7 +125,8 @@ falso, nunca tocan el vault real). `sync-hooks.ps1` no los copia: solo instala
 los `.py` de la raíz de `hooks/`.
 
 ```powershell
-py setup\hooks\tests\test-mark-code-dirty.py       # 12 casos
+py setup\hooks\tests\test-mark-code-dirty.py       # 15 casos
+py setup\hooks\tests\test-check-vault-updated.py   # 28 casos (el re-armado D2)
 py setup\hooks\tests\test-memory-flush.py          # 11 casos
 py setup\hooks\tests\test-merge-gate-guard.py      # 23 casos (repos git reales)
 py setup\hooks\tests\test-goal-evidence-guard.py   # 20 casos (incluye el canario)
@@ -157,22 +158,36 @@ Desde el 2026-08-09 hay **dos**: `check-vault-updated.py` y
 Miden cosas distintas y ninguno lee el estado del otro, así que no se estorban.
 Medido en `tests/test-goal-evidence-guard.py` §E.
 
-⚠ **Pero hay un efecto real, y no está arreglado.** `check-vault-updated`
-respeta `stop_hook_active` y solo exige **una vez por sesión**. El guard **no
-lo respeta a propósito**: la pregunta *"¿existe ya el artefacto?"* tiene
-respuesta distinta en cada vuelta, y quien acota su bucle es su propio tope de
-3 bloqueos. Consecuencia:
+**Hubo un efecto real, medido y ya arreglado (D2·b, 2026-08-10).** Antes,
+`check-vault-updated` respetaba `stop_hook_active` y solo exigía **una vez por
+sesión**: si el guard bloqueaba primero, el turno siguiente llegaba con el flag
+puesto y **el anti-drift se callaba el resto del bucle** — justo en el escenario
+que más lo necesita, horas de trabajo autónomo sin humano mirando. Estaba medido
+en el caso E.3, que hoy fija lo contrario.
 
-> Si el guard bloquea primero, el turno siguiente llega con `stop_hook_active`
-> puesto y **el anti-drift del vault se calla el resto del bucle** — justo en
-> el escenario que más lo necesita: horas de trabajo autónomo sin humano
-> mirando.
+Los dos hooks comparten ahora el mismo criterio, que es el que ya tenía el
+guard: **no se respeta `stop_hook_active`** (la pregunta tiene respuesta distinta
+en cada vuelta) y **cada uno se acota con su propia cláusula de corte de 3
+bloqueos**. Ninguno lee el estado del otro.
 
-Está **medido, no supuesto** (caso E.3 del arnés). No se arregla aquí porque el
-arreglo es **D2 del RFD 18** —cambiar el disparador de "una vez por sesión" a
-"cada N ediciones de código sin registrar"— y esa decisión **está sin
-arbitrar**. Cambiar el comportamiento de un hook que funciona, por iniciativa
-propia y a mitad de otro sprint, sería exactamente lo que este repo no hace.
+### El disparador del anti-drift, en una tabla
+
+| | Antes | Ahora |
+|---|---|---|
+| Primer aviso | primer Stop con código sin registrar | igual |
+| Insistencia | ninguna: una vez y mudo | hasta **3 avisos**, luego sale abierto |
+| Vuelve | nunca en esa sesión | cuando se acumulan **N ediciones** más sin registrar |
+| N | — | `VAULT_DRIFT_EVERY`, default **10** |
+| `stop_hook_active` | lo enmudecía | se ignora |
+
+`VAULT_DRIFT_EVERY=0` es la escotilla al comportamiento viejo (una tanda y no
+vuelve). Un valor inválido cae al default: un número mal escrito no puede
+apagar el anti-drift en silencio. La cuenta la lleva `mark-code-dirty` en la
+clave `edits` del flag, y **muere con el flag** en cuanto el vault se actualiza
+— mide el tamaño de la deuda, no la duración de la sesión.
+
+Contrato completo en `tests/test-check-vault-updated.py` (§B el re-armado, §C
+la convivencia).
 
 ## `/loop`: lo que hay que saber antes de confiarle nada
 
