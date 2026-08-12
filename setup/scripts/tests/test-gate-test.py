@@ -88,8 +88,22 @@ def verde(marca):
     La marca viaja como argv sobrante de `-c`, que Python ignora. Nada de `#`
     para marcarlos: cmd.exe no tiene comentarios y el `#` acabaría de argumento
     igual, pero por accidente en vez de a propósito.
+
+    EL INTÉRPRETE VA POR `sys.executable`, NO POR `py` (auditoría 22, H10). El
+    lanzador `py` solo existe en Windows, así que este arnés daba **3/9 en
+    Linux** y las seis caídas eran todas `/bin/sh: 1: py: not found` — el fixture
+    fallaba, no el contrato que mide. Era cosmético mientras el único sitio donde
+    corre sea Windows, y deja de serlo el día que el mini PC 24/7 sea Linux
+    (D5/D8). `sys.executable` es absoluto y siempre existe: es el mismo Python
+    que está corriendo este arnés.
+
+    Va ENTRECOMILLADO porque `gate-test.py` ejecuta con `shell=True` y en Windows
+    la ruta lleva espacios (`C:\\Program Files\\...`). Con cuatro comillas en la
+    línea, cmd.exe no entra en su regla de "quita la primera y la última" —esa
+    solo aplica con exactamente dos—, así que la cita sobrevive en los dos
+    sistemas.
     """
-    return f'py -c "import sys; sys.exit(0)" {marca}'
+    return f'"{sys.executable}" -c "import sys; sys.exit(0)" {marca}'
 
 
 def main():

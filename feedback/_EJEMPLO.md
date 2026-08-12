@@ -6,15 +6,18 @@ maquina: legion-win11
 so: Windows 11
 superficie: claude-code
 claude_code: 2.1.219
+setup_sha: 652342e
 tarea: Integrar la rama feat/redondeo a main en un repo de laboratorio
 duracion_min: 40
 turnos: 22
 veredicto: sirvio-con-fricciones
 skills_disparadas: [workstream-merge-gate, session-close]
-skills_que_faltaron: []
+skills_existentes_que_no_dispararon: []
+skills_inexistentes: []
 hooks_disparados: [merge-gate-guard, check-vault-updated]
 graphify: no-usado
 bloqueantes: 1
+coste_medido: si
 ---
 
 # Feedback — integrar una rama a main con el gate

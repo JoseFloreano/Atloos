@@ -51,22 +51,19 @@ aislamiento activo.
    `cp setup/hooks/git-post-commit-graph-report.sh .git/hooks/post-commit` +
    `chmod +x` (ver `hooks/README.md`). Sin Graphify, omite sin avisar.
 
-   ⚠ **Tras instalar, SUSTITUYE la línea que `graphify claude install` escribe
-   en el `CLAUDE.md` del proyecto** —*"For codebase questions, first run
-   `graphify query`"*— por el disparador. Esa línea es la que el agente lee de
-   verdad; dejarla intacta deja la mala instrucción en pie (F14, incumplida 2
-   jornadas de 2). Déjala así:
-
-   ```markdown
-   Antes de tu primer `grep` de exploración en una sesión, corre
-   `graphify query`. Su salida es la LISTA DE CANDIDATOS, no la respuesta:
-   confírmala con `Read` y da por hecho que le faltan sitios (en campo: 5 de 9
-   sitios, con los 2 decisivos fuera).
-   ```
+   ⚠ **El disparador ya viaja en el snippet** (paso 5), así que un proyecto
+   recién enganchado lo tiene sin que nadie haga nada. Este paso ya NO es la vía
+   por la que llega: es solo el **parche** para un repo que YA arrastra la línea
+   que escribe `graphify claude install` —*"For codebase questions, first run
+   `graphify query`"*—. Bórrala. Esa línea es la que el agente lee de verdad, y
+   dejarla en pie mantiene viva la mala instrucción: dice QUÉ, no dice CUÁNDO
+   (F14, incumplida 2 jornadas de 2).
 8. **Verifica**: existe `10-Projects/<nombre>/_PROJECT.md`; el `CLAUDE.md` del
-   proyecto contiene el snippet y NO queda ningún `<project-name>` sin reemplazar.
+   proyecto contiene el snippet y NO queda ningún `<project-name>` sin
+   reemplazar. Y `py setup/scripts/tests/test-claude-md-drift.py <CLAUDE.md>` [repo]
+   comprueba que el snippet llegó entero y caza la línea vieja de Graphify.
 
 ## Referencias
 
 - `references/memory-snippet.md` — bloque a insertar en el CLAUDE.md del proyecto
-  (~230 tokens; reemplaza `<project-name>`).
+  (~300 tokens; reemplaza `<project-name>`).

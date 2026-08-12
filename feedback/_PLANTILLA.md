@@ -6,16 +6,32 @@ maquina: legion-win11
 so: Windows 11
 superficie: claude-code
 claude_code: 2.1.226
+setup_sha: 9d2827b
 tarea: Una línea con lo que se intentó hacer
 duracion_min: 45
 turnos: 30
 veredicto: sirvio-con-fricciones
 skills_disparadas: [session-close, workstream-merge-gate]
-skills_que_faltaron: []
+skills_existentes_que_no_dispararon: []
+skills_inexistentes: []
 hooks_disparados: [check-vault-updated]
 graphify: usado
 bloqueantes: 0
+coste_medido: si
 ---
+
+<!-- Las tres claves nuevas, y por qué:
+     · setup_sha — el commit del repo desde el que se corrió `sync-skills` en
+       ESTA máquina. `claude_code:` fija el harness y no dice qué skills había,
+       que es justo lo que el reporte evalúa.
+     · skills_existentes_que_no_dispararon — existían y NO cargaron. Antes se
+       llamaba `skills_que_faltaron` y `[]` se leía como "no faltó ninguna"
+       mientras la sección 8 decía lo contrario. Si además hacía falta una que
+       NO existe, va en `skills_inexistentes`.
+     · coste_medido — `si` o `no`. No obliga a correr `/cost`; obliga a decir
+       si se corrió. Con `no`, la sección 4 tiene que decirlo con esas
+       palabras: "no se corrió `/cost`". -->
+
 
 # Feedback — <tarea en pocas palabras>
 
@@ -41,7 +57,14 @@ $ git status --porcelain | wc -l
 
 [R] Skills cargadas: <lista, o «no lo sé»>
 [R] Hooks disparados: <lista, y si alguno bloqueó (exit 2)>
-[R] Coste (`/cost`): <literal, o «no disponible»>
+[R] Coste (`/cost`): <salida literal>
+[R] Sha del setup (`git -C <repo> rev-parse --short HEAD` en la máquina desde la
+    que se corrió `sync-skills`): <sha>
+
+> **El sha del setup no es opcional.** `claude_code: 2.1.226` fija el harness y
+> no dice qué skills tenía la máquina — y esa es la pregunta que decide si el
+> reporte prueba algo. Sin él no se puede saber si la skill que "no disparó"
+> estaba siquiera instalada.
 
 ## 3. Qué funcionó
 
@@ -51,6 +74,9 @@ $ git status --porcelain | wc -l
 ## 4. Qué NO funcionó
 
 > **Obligatoria.** Si no hubo nada, explica por qué crees que no lo hubo.
+> Y si no corriste `/cost`, **dilo aquí con esas palabras**: «no se corrió
+> `/cost`». En los dos reportes de dos no se midió y nadie lo echó de menos,
+> porque no había ningún sitio donde faltara.
 
 - [H] …
 
@@ -105,5 +131,10 @@ $ git status --porcelain | wc -l
 
 ## 9. Confirmación del humano
 
-- [H] Leído y corregido por: <alias> · <fecha>
-- [H] Cambios que pedí sobre el borrador del agente: <ninguno / cuáles>
+> **La rellena una persona, y el validador la comprueba.** Sin ella el reporte
+> es el borrador de un agente sobre su propio trabajo. `pendiente`, `TODO`,
+> `<algo entre ángulos>` o menos de ~60 caracteres útiles **bloquean**.
+
+- [H] Leído y corregido por: <alias> · <AAAA-MM-DD>
+- [H] Cambios que pedí sobre el borrador del agente: <descríbelos, o di que no
+  pediste ninguno y por qué te parece fiel>

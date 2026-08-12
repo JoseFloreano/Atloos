@@ -50,11 +50,23 @@ positivos. La convención que cierra el hueco es humana y vive en `skill-forge`:
 **toda skill nombrada dentro de otra va entre backticks y con su namespace.**
 Este arnés vigila que lo marcado resuelva; que se marque, lo vigila la skill.
 
+EL TOPE DURO MUERDE DESDE EL 2026-08-12 (auditoría 22, H7). Hasta entonces las
+palabras "tope duro 500" solo existían **dentro de la cadena de texto de una
+tabla markdown generada**: el único `return 1` del arnés dependía de las
+referencias colgantes, así que ningún check bloqueaba por longitud —ni a 450, ni
+a 475, ni a 500— mientras siete skills vivían entre 491 y 499. Era la ley 1
+aplicada al propio catálogo: la convención escrita no muerde. Ahora sí.
+
+Los dos umbrales son distintos y hacen cosas distintas:
+  · 475 (`SATURACION`) → **AVISO**. Mira hacia dónde va el catálogo y dice qué
+    skills ya no tienen dónde mover el detalle. No tumba el arnés.
+  · 500 (`TOPE_DURO`)  → **BLOQUEA**. 500 es el último valor admisible; 501 pone
+    la suite en rojo. Hoy el máximo son 499, así que nace en verde: es un alambre
+    puesto antes de que alguien lo pise, no un refactor pendiente.
+
 Uso:  py setup/scripts/tests/test-skill-catalog.py          [repo]
       py setup/scripts/tests/test-skill-catalog.py --tabla  [repo]
-Salidas: 0 sin referencias colgantes · 1 hay hallazgos.
-La saturación es AVISO: no tumba el arnés (nueve skills la disparan hoy y
-ninguna incumple el tope todavía).
+Salidas: 0 sin referencias colgantes y sin skills sobre el tope · 1 hay hallazgos.
 """
 import re
 import subprocess
@@ -70,7 +82,8 @@ for _s in (sys.stdout, sys.stderr):
 
 RAIZ = Path(__file__).resolve().parents[2]        # setup/
 SKILLS = RAIZ / "skills"
-SATURACION = 475        # umbral de aviso; el tope duro de una skill nueva es 450
+SATURACION = 475        # umbral de AVISO; una skill nueva nace en ≤450
+TOPE_DURO = 500         # el que BLOQUEA (auditoría 22, H7). 501 pone la suite en rojo
 
 # Superficies en las que se despliega una skill, y qué puede ver cada una.
 # `shared` va a las dos, así que es la más restringida: solo ve `shared`.
@@ -161,6 +174,23 @@ def cuerpo(texto):
     return texto
 
 
+def palabras_de(texto):
+    """Palabras del cuerpo. Es la unidad de LOS DOS umbrales, y por eso vive
+    en una sola función: medir el aviso de una forma y el bloqueo de otra sería
+    el defecto que este arnés persigue, cometido dentro del propio arnés."""
+    return len(cuerpo(texto).split())
+
+
+def excede_tope(palabras):
+    """¿Pasa del tope duro? 500 es el último valor admisible; 501 bloquea.
+
+    Se escribe como función y no como un `>` suelto para que `autoprueba_tope()`
+    pueda ejercer LA MISMA decisión que corre en producción. Un check verificado
+    contra una reimplementación no está verificado: está duplicado.
+    """
+    return palabras > TOPE_DURO
+
+
 def revisa_referencias(inv, artefactos):
     """(colgantes, fuera_de_superficie). Las primeras BLOQUEAN; las otras avisan.
 
@@ -218,13 +248,51 @@ def mide_saturacion():
         partes = skill_md.relative_to(SKILLS).parts
         if "_build" in partes or partes[0] == "_template":
             continue
-        palabras = len(cuerpo(skill_md.read_text(encoding="utf-8")).split())
+        palabras = palabras_de(skill_md.read_text(encoding="utf-8"))
         if palabras < SATURACION:
             continue
         refs = skill_md.parent / "references"
         n_refs = len(list(refs.glob("*.md"))) if refs.is_dir() else 0
         filas.append((f"{partes[0]}/{partes[1]}", palabras, n_refs))
     return sorted(filas, key=lambda f: -f[1])
+
+
+def autoprueba_tope():
+    """Mutación: fabrica el defecto y exige que el tope lo cace.
+
+    (bool, motivo). El defecto es justo el que H7 dejó pasar durante meses: una
+    skill por encima del tope duro que no tumba nada. Se ejerce la MISMA pareja
+    de funciones que corre en producción —`palabras_de` y `excede_tope`—, con
+    frontmatter delante para que el contador tenga que quitarlo: si mide el
+    fichero entero, el borde se desplaza y el tope deja de significar lo que dice.
+
+    Se comprueban los DOS lados del borde. Un check que solo prueba que 501
+    bloquea no distingue "tope en 500" de "tope en 0": cualquier umbral más bajo
+    también lo bloquearía, y la suite entera se pondría roja sin que este caso
+    lo notara.
+    """
+    cabecera = "---\nname: laboratorio\ndescription: no existe en disco\n---\n\n"
+    justo = cabecera + " ".join(["palabra"] * TOPE_DURO)
+    pasada = cabecera + " ".join(["palabra"] * (TOPE_DURO + 1))
+
+    if palabras_de(justo) != TOPE_DURO:
+        return False, (f"el contador no mide el cuerpo sin frontmatter: "
+                       f"{palabras_de(justo)} palabras donde hay {TOPE_DURO}")
+    if excede_tope(palabras_de(justo)):
+        return False, f"{TOPE_DURO} palabras exactas deberían pasar, y bloquean"
+    if not excede_tope(palabras_de(pasada)):
+        return False, (f"{TOPE_DURO + 1} palabras NO producen bloqueo — el tope "
+                       f"duro vuelve a ser decorativo, que es H7 otra vez")
+    if SATURACION > TOPE_DURO:
+        # El tope se lee de las filas que `mide_saturacion` recoge, y esa función
+        # filtra por SATURACION. Con el aviso por encima del bloqueo, una skill
+        # sobre el tope no entraría en la lista y saldría en verde: el arnés
+        # mentiría en la dirección peligrosa. Es config, no datos, así que se
+        # caza aquí y no en tiempo de ejecución.
+        return False, (f"SATURACION ({SATURACION}) está por encima de TOPE_DURO "
+                       f"({TOPE_DURO}): las skills sobre el tope no llegarían a "
+                       f"mirarse")
+    return True, ""
 
 
 def sello():
@@ -305,7 +373,21 @@ Tres arreglos legítimos, por orden de preferencia:
         print("\n  0 hallazgos: toda referencia sin prefijo resuelve a una skill\n"
               "  real y visible desde su superficie.")
 
-    print("\n── Check 2 · saturación (aviso, no bloquea) " + "─" * 30 + "\n")
+    print("\n── Check 2 · saturación (aviso) y tope duro (BLOQUEA) " + "─" * 20 + "\n")
+    ok_tope, motivo_tope = autoprueba_tope()
+    print(f"  [AUTOPRUEBA] {'OK' if ok_tope else 'FALLIDA'} — {TOPE_DURO} "
+          f"palabras pasan y {TOPE_DURO + 1} bloquean"
+          + (f"\n               {motivo_tope}" if not ok_tope else ""))
+    excedidas = [f for f in filas if excede_tope(f[1])]
+    if excedidas:
+        print(f"\n  {len(excedidas)} skill(s) POR ENCIMA del tope duro de "
+              f"{TOPE_DURO} palabras:\n")
+        for nombre, palabras, refs in excedidas:
+            print(f"    {nombre:<34}{palabras:>9}   (+{palabras - TOPE_DURO})")
+        print(f"\n  Esto SÍ tumba el arnés. El arreglo no es subir el número: es\n"
+              f"  mover detalle a `references/`, que es lo que el modelo carga\n"
+              f"  solo cuando lo necesita.")
+    print()
     if not filas:
         print(f"  Ninguna skill llega a {SATURACION} palabras.")
     else:
@@ -329,7 +411,10 @@ Tres arreglos legítimos, por orden de preferencia:
         for rel, n, _t, detalle, _x in superficie_mal:
             print(f"    {rel}:{n}  →  {detalle}")
 
-    return 1 if hallazgos else 0
+    # Tres motivos de rojo, y el tercero es el propio arnés: si su autoprueba
+    # cae, lo que este fichero afirma sobre el tope deja de estar respaldado, y
+    # un check no verificado en verde es exactamente el agujero de H7.
+    return 1 if (hallazgos or excedidas or not ok_tope) else 0
 
 
 if __name__ == "__main__":

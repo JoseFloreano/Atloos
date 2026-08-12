@@ -29,6 +29,12 @@ import subprocess
 import sys
 import tempfile
 
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 HOOK = os.path.normpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)), os.pardir, "merge-gate-guard.py"))
 
@@ -71,12 +77,35 @@ def escribe_evidencia(d, branch, sha, cmd="py -m pytest -q"):
                    "ts": "2026-08-08T10:00:00", "cmd": cmd}, f)
 
 
-def corre(d, comando):
+def repo_lab_remoto():
+    """Repo lab + un `origin` de verdad (bare) con `main` ya publicada.
+
+    Hace falta un remoto porque el guard del push consulta `origin/<rama>` para
+    no bloquear un push que no adelanta nada.
+    """
+    d = repo_lab()
+    bare = tempfile.mkdtemp(prefix="gate-guard-origin-")
+    sh(["git", "init", "-q", "--bare", "-b", "main"], bare)
+    sh(["git", "remote", "add", "origin", bare], d)
+    sh(["git", "push", "-q", "origin", "main"], d)
+    sh(["git", "fetch", "-q", "origin"], d)
+    return d, bare
+
+
+def commit_en(d, fichero, texto, msg):
+    with open(os.path.join(d, fichero), "w") as f:
+        f.write(texto)
+    sh(["git", "add", "-A"], d)
+    sh(["git", "commit", "-q", "-m", msg], d)
+
+
+def corre(d, comando, extra_env=None):
     """Lanza el hook con el payload PreToolUse. Devuelve (rc, stderr)."""
     payload = {"session_id": "s1", "hook_event_name": "PreToolUse",
                "tool_name": "Bash", "tool_input": {"command": comando}}
     env = dict(os.environ)
     env["CLAUDE_PROJECT_DIR"] = d
+    env.update(extra_env or {})
     p = subprocess.run([sys.executable, HOOK],
                        input=json.dumps(payload).encode("utf-8"),
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -263,6 +292,190 @@ def main():
     rc, err = corre(d, "git pull")
     caso("`git pull` a secas no bloquea (sincroniza)", rc, 0, err)
     shutil.rmtree(d, ignore_errors=True)
+
+    # ══ `git push` a protegida (sprint 2) ══════════════════════════════════
+    # El agujero lo encontró el campo, no una auditoría: el gate corría sobre un
+    # SHA, entró un commit más en la misma rama y el `--ff-only` se llevó los
+    # dos. El hook miraba `merge` y el verbo era `push`.
+    print("\nF · el verbo `push` (el agujero del 2026-08-11)")
+
+    # 21 · el incidente exacto: main avanzó y el verde es de antes → bloquea
+    d, bare = repo_lab_remoto()
+    sh(["git", "checkout", "-q", "main"], d)
+    gateado = head(d, "main")
+    escribe_evidencia(d, "main", gateado)
+    commit_en(d, "doc.md", "el commit que se coló\n", "doc mientras corria el gate")
+    rc, err = corre(d, "git push")
+    caso("push a main con un commit POSTERIOR al verde bloquea", rc, 2, err)
+    enseña = "gate-test.py" in err and "árbol" in err
+    results.append(enseña)
+    print(f"  [{'OK  ' if enseña else 'FALLA'}] el mensaje ENSEÑA "
+          f"(nombra el helper y habla del árbol)")
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 22 · push a main SIN ninguna evidencia → bloquea
+    d, bare = repo_lab_remoto()
+    sh(["git", "checkout", "-q", "main"], d)
+    commit_en(d, "doc.md", "algo\n", "un commit en main")
+    rc, err = corre(d, "git push")
+    caso("push a main SIN evidencia bloquea", rc, 2, err)
+    rc, err = corre(d, "git push origin main")
+    caso("  ídem con refspec explícito `git push origin main`", rc, 2, err)
+    rc, err = corre(d, "git push --force-with-lease origin +main")
+    caso("  ídem con push forzado `+main`", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 23 · evidencia sobre el tip exacto → pasa
+    d, bare = repo_lab_remoto()
+    sh(["git", "checkout", "-q", "main"], d)
+    commit_en(d, "doc.md", "algo\n", "un commit en main")
+    escribe_evidencia(d, "main", head(d, "main"))
+    rc, err = corre(d, "git push")
+    caso("push a main con el verde sobre ESE commit pasa", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 24 · el commit es nuevo pero el ÁRBOL es el gateado: es lo que produce el
+    #      `merge --squash` que el propio gate manda usar. Tiene que pasar.
+    d, bare = repo_lab_remoto()
+    escribe_evidencia(d, "feat/x", head(d, "feat/x"))
+    sh(["git", "checkout", "-q", "main"], d)
+    sh(["git", "merge", "-q", "--squash", "feat/x"], d)
+    sh(["git", "commit", "-q", "-m", "integra feat/x (squash)"], d)
+    rc, err = corre(d, "git push")
+    caso("tras `--squash`, commit nuevo pero MISMO árbol: pasa", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 25 · y el reverso: squash + un commit extra encima → el árbol ya no es el
+    #      gateado → bloquea. Si esto pasara, el caso 24 sería un agujero.
+    d, bare = repo_lab_remoto()
+    escribe_evidencia(d, "feat/x", head(d, "feat/x"))
+    sh(["git", "checkout", "-q", "main"], d)
+    sh(["git", "merge", "-q", "--squash", "feat/x"], d)
+    sh(["git", "commit", "-q", "-m", "integra feat/x (squash)"], d)
+    commit_en(d, "extra.md", "colado\n", "y un extra encima")
+    rc, err = corre(d, "git push")
+    caso("squash + commit extra: el árbol cambió → bloquea", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 26 · PreToolUse corre ANTES del comando: en `merge && push` el árbol que
+    #      viajaría aún no existe, así que no es verificable → bloquea el push.
+    d, bare = repo_lab_remoto()
+    escribe_evidencia(d, "feat/x", head(d, "feat/x"))
+    rc, err = corre(d, "git checkout main && git merge feat/x && git push")
+    caso("`merge && push` en la misma línea: push no verificable → bloquea",
+         rc, 2, err)
+    rc, err = corre(d, "git checkout main && git commit -am x && git push")
+    caso("`commit && push` sobre main: ídem", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    print("\nG · los cuatro falsos positivos del push, que aquí son caros")
+
+    # 27 · FP 1 · push a una rama de trabajo
+    d, bare = repo_lab_remoto()
+    commit_en(d, "b.py", "y = 3\n", "mas trabajo")
+    rc, err = corre(d, "git push -u origin feat/x")
+    caso("FP1 · push a rama de trabajo NO interviene", rc, 0, err)
+    rc, err = corre(d, "git push")
+    caso("  ídem sin refspec, estando en feat/x", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 28 · FP 2 · `--dry-run` no ejecuta nada
+    d, bare = repo_lab_remoto()
+    sh(["git", "checkout", "-q", "main"], d)
+    commit_en(d, "doc.md", "algo\n", "un commit en main")
+    rc, err = corre(d, "git push --dry-run origin main")
+    caso("FP2 · `--dry-run` a main NO interviene", rc, 0, err)
+    rc, err = corre(d, "git push -n origin main")
+    caso("  ídem con `-n`", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 29 · FP 3 · tags. `git push --tags` estando EN main no empuja main.
+    d, bare = repo_lab_remoto()
+    sh(["git", "checkout", "-q", "main"], d)
+    commit_en(d, "doc.md", "algo\n", "un commit en main")
+    sh(["git", "tag", "v1.0"], d)
+    rc, err = corre(d, "git push --tags")
+    caso("FP3 · `git push --tags` estando en main NO interviene", rc, 0, err)
+    rc, err = corre(d, "git push origin v1.0")
+    caso("  ídem empujando un tag por nombre", rc, 0, err)
+    rc, err = corre(d, "git push origin refs/tags/v1.0")
+    caso("  ídem con `refs/tags/`", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 30 · FP 4 · el bot de Telegram. Empuja a SUS ramas y no puede quedarse
+    #      bloqueado (además va por subprocess del daemon, no por Bash).
+    d, bare = repo_lab_remoto()
+    sh(["git", "checkout", "-q", "-b", "tg/20260811-una-tarea"], d)
+    commit_en(d, "c.py", "z = 1\n", "trabajo del bot")
+    rc, err = corre(d, "git push -u origin tg/20260811-una-tarea",
+                    {"CLAUDE_TG_BOT": "1"})
+    caso("FP4 · push del bot a su rama NO interviene", rc, 0, err)
+    rc, err = corre(d, "git push --force-with-lease -u origin tg/20260811-una-tarea",
+                    {"CLAUDE_TG_BOT": "1"})
+    caso("  ídem con el push forzado que usa gitops.push_branch", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 31 · y el quinto que no estaba en el encargo pero se paga a diario: un
+    #      push que no adelanta nada. No viaja ningún árbol, no hay qué gatear.
+    d, bare = repo_lab_remoto()
+    sh(["git", "checkout", "-q", "main"], d)
+    rc, err = corre(d, "git push origin main")
+    caso("push que no adelanta nada (local == origin/main) NO interviene",
+         rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 32 · refspec `HEAD:main` desde otra rama: el destino es main igual.
+    d, bare = repo_lab_remoto()
+    rc, err = corre(d, "git push origin HEAD:main")
+    caso("`push origin HEAD:main` desde otra rama bloquea", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 33 · `HEAD` A SECAS, que es como se teclea. La auditoría 22 (B2) lo empujó
+    #      DE VERDAD a `origin/main`: el destino se resolvía como el literal
+    #      "HEAD", que no está en PROTEGIDAS, y el hook no intervenía. El caso 32
+    #      probaba `HEAD:main` —con dos puntos— y por eso no lo cazó.
+    print("\nH · `HEAD` a secas: el escape que el arnés no probaba (auditoría 22)")
+    d, bare = repo_lab_remoto()
+    sh(["git", "checkout", "-q", "main"], d)
+    commit_en(d, "doc.md", "sin gatear\n", "NUEVO SIN GATEAR")
+    for forma in ("git push origin HEAD", "git push origin @",
+                  "git push origin head", "git push origin +HEAD",
+                  "git push -u origin HEAD"):
+        rc, err = corre(d, forma)
+        caso(f"`{forma}` estando en main bloquea", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 34 · y su reverso: `HEAD` desde una rama de trabajo NO puede bloquear.
+    #      Resolver el alias no debe convertirse en un falso positivo diario.
+    d, bare = repo_lab_remoto()
+    commit_en(d, "b.py", "y = 9\n", "trabajo")        # HEAD queda en feat/x
+    rc, err = corre(d, "git push origin HEAD")
+    caso("`push origin HEAD` desde una rama de trabajo NO interviene", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 35 · envoltorios de un carácter. Afectaba también a `git merge`, así que
+    #      venía del W3 y no del sprint 2 (auditoría 22, H6).
+    print("\nI · subshell y grupo: un carácter de envoltorio no es una excusa")
+    d, bare = repo_lab_remoto()
+    sh(["git", "checkout", "-q", "main"], d)
+    commit_en(d, "doc.md", "sin gatear\n", "sin gatear")
+    for forma in ("(git push origin main)", "{ git push origin main; }",
+                  "(git push origin HEAD)"):
+        rc, err = corre(d, forma)
+        caso(f"`{forma}` bloquea", rc, 2, err)
+    rc, err = corre(d, "(git merge feat/x)")
+    caso("`(git merge feat/x)` a main bloquea", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 36 · el límite declarado sigue siéndolo, y el arnés lo FIJA para que nadie
+    #      lea la cobertura más ancha de lo que es. `bash -c` no se caza.
+    d, bare = repo_lab_remoto()
+    sh(["git", "checkout", "-q", "main"], d)
+    commit_en(d, "doc.md", "sin gatear\n", "sin gatear")
+    rc, err = corre(d, "bash -c 'git push origin main'")
+    caso("LÍMITE: `bash -c` se escapa, y está declarado en el docstring",
+         rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
 
     print(f"\n{sum(results)}/{len(results)} casos OK")
     return 0 if all(results) else 1

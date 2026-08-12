@@ -94,7 +94,19 @@ def meta_en_disco(d):
 
 
 def evidencia_json(d, ruta, datos):
-    """Artefacto que DECLARA su veredicto (§F), en vez de solo existir."""
+    """Artefacto que DECLARA su veredicto (§F), en vez de solo existir.
+
+    La pausa NO es cosmética. El guard exige que el artefacto sea POSTERIOR a la
+    meta; sin ella, forjar la meta y escribir la evidencia caen en el mismo tick
+    del reloj del sistema de ficheros y "posterior" falla. En Windows salía
+    verde por azar y en Linux era rojo determinista: el grupo F estaba en 26/28
+    en `main` desde el 08-11 y el sprint 2 lo heredó sin verlo (auditoría 22,
+    H4). Los tres casos ROJO del grupo lo tapaban, porque un bloqueo falso
+    también es un bloqueo — pasaban por el motivo equivocado.
+
+    Va aquí y no en cada llamada para que el próximo caso del grupo nazca sano.
+    """
+    time.sleep(0.05)
     p = os.path.join(d, ruta)
     os.makedirs(os.path.dirname(p) or d, exist_ok=True)
     with open(p, "w", encoding="utf-8") as f:

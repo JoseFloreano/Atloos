@@ -1,8 +1,10 @@
-# Los 7 bloques obligatorios de todo despacho
+# Los 8 bloques obligatorios de todo despacho
 
-Cada bloque corresponde a un fallo que **ya ocurrió** el 2026-08-04
-(`docs/subagentes/05-LIMITACIONES-OBSERVADAS.md`). Ninguno es opcional. Si uno
-no aplica, dilo explícitamente en el despacho en vez de omitirlo en silencio.
+Cada bloque corresponde a un fallo que **ya ocurrió** — los siete primeros el
+2026-08-04 (`docs/subagentes/05-LIMITACIONES-OBSERVADAS.md`), el octavo el
+2026-08-11, cuando las ramas sin destino declarado llegaron a 92. Ninguno es
+opcional. Si uno no aplica, dilo explícitamente en el despacho en vez de
+omitirlo en silencio.
 
 ---
 
@@ -73,6 +75,46 @@ que falta deja fuera la mitad del inventario:
 **Genéralo con comandos** (`git worktree list`, `git branch -v`, el runner de
 tests en ambos sitios) y pega la salida. Escrito de memoria, este bloque miente:
 los números de línea los movió la tarea anterior.
+
+### La FIRMA del fallo del entorno, por adelantado
+
+El inventario dice qué hay. La firma dice **cómo se ve cuando falta**, y esa es
+la parte que convierte un diagnóstico en un arreglo.
+
+> **Seis subagentes reportaron los mismos 2 tests rojos como «preexistentes».**
+> No lo eran: eran **artefactos ausentes en su worktree**. A partir del quinto
+> brief se les dio **la firma exacta —196 skips + esos 2 rojos concretos, con su
+> nombre—** y **los siguientes la resolvieron en vez de reportarla.**
+
+La diferencia entre los cuatro primeros y los dos últimos no fue el modelo ni la
+tarea: fue una línea en el brief. Así que el bloque 2 lleva, además del
+inventario:
+
+- **La firma numérica esperada de una corrida sana**: cuántos pasan, cuántos
+  fallan, **cuántos se saltan**. El conteo de skips es la señal más barata que
+  existe y casi nadie la pasa.
+- **La firma de los fallos de entorno CONOCIDOS**, con el nombre exacto del test
+  y qué artefacto le falta:
+
+  ```
+  Si ves EXACTAMENTE estos 2 rojos:
+      tests/test_carga.py::test_padron_completo
+      tests/test_carga.py::test_padron_delta
+  …y 196 skips, NO son preexistentes: te falta data/padron.csv en el worktree.
+  Tráelo con `<comando>` y vuelve a correr ANTES de reportar nada.
+  ```
+
+- **Y la orden que lo cierra**: *un rojo que coincide con una firma conocida se
+  arregla, no se reporta.* Sin esa frase el frente hace lo educado —informar— y
+  te devuelve el trabajo hecho a medias.
+
+> **Un frente que sabe cómo se ve el fallo del entorno lo arregla; uno que no,
+> lo diagnostica mal y te lo devuelve como hallazgo.**
+
+⚠ Y el reverso, para no crear el fallo opuesto: la firma es una **lista cerrada**
+de fallos conocidos. Un rojo que NO esté en ella se reporta siempre — nunca se
+asume que «será del entorno». Convertir la firma en una excusa genérica sería
+peor que no darla.
 
 ### La regla que cierra el bloque 2: `[SUPUESTO]`
 
@@ -221,3 +263,46 @@ producir reportes.
 
 Sin meta, el criterio no se pierde: se queda donde siempre, en el contrato de
 reporte de arriba. Escribirlo así solo lo deja listo por si el frente se suelta.
+
+---
+
+## 8 · Destino de la rama — se decide AL DESPACHAR, no después
+
+El bloque más barato de escribir y el único que se pagó en horas.
+
+> Se llegó a **92 ramas remotas**. Bajarlas a 17 se comió una parte de la sesión
+> **sin producir nada**. El diagnóstico del propio coordinador:
+>
+> *«El fallo no fue paralelizar: fue no incluir "qué pasa con esta rama cuando
+> el frente acabe" en el propio despacho.»*
+
+Después del hecho, la pregunta no tiene respuesta barata: para decidir si una
+rama se borra hay que reconstruir qué era, si se integró, si alguien depende de
+ella. Al despachar cuesta una línea, porque el contexto está delante.
+
+**Campo obligatorio del despacho**, con uno de tres valores y nunca vacío:
+
+```
+DESTINO DE LA RAMA: se integra | se borra | se queda
+  · se integra → a `main` por `workstream-merge-gate`, y la rama se borra tras
+                 el squash (`git branch -D`: tras squash, `-d` no la reconoce).
+  · se borra   → el trabajo es exploratorio o desechable. Di QUÉ se conserva de
+                 él (el reporte, un ADR, nada) y bórrala al cerrar el frente.
+  · se queda   → SOLO con dueño y fecha de revisión. Una rama que «se queda»
+                 sin las dos cosas es una rama huérfana con otro nombre.
+```
+
+### Las dos reglas que lo hacen funcionar
+
+1. **`se queda` exige dueño y fecha.** Es el valor que se elige por defecto
+   cuando nadie quiere decidir, y por eso es el que necesita fricción. Sin dueño
+   y sin fecha, el valor correcto es `se borra`.
+2. **El destino se ejecuta al cerrar el frente, no «cuando toque».** Va en el
+   mismo paso que la verificación del artefacto; si el coordinador cierra un
+   frente sin ejecutar su destino, la deuda ya está creada.
+
+### Y el remoto cuenta
+
+Borrar la rama local no borra `origin/<rama>`. Las 92 eran **remotas**. Si el
+destino es `se borra` y la rama se publicó, el cierre incluye
+`git push origin --delete <rama>` — o no se ha borrado nada.

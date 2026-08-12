@@ -39,8 +39,15 @@ Y saca del contexto de esta sesión, **sin adivinar**:
 - Sistema operativo y si estás en Claude Code, Cowork o el puente de Telegram.
 - **Qué skills se cargaron de verdad** en esta sesión, y cuáles no.
 - **Qué hooks se dispararon**, y si alguno bloqueó algo (exit 2).
-- Número aproximado de turnos y duración. Si el usuario puede correr `/cost`,
-  pídeselo y pega el número tal cual.
+- Número aproximado de turnos y duración.
+- **El coste.** Pídele que corra `/cost` y pega el número tal cual. **Si no lo
+  corre, pon `coste_medido: no` y dilo en la sección 4 con esas palabras: «no
+  se corrió `/cost`».** No es opcional decirlo: en los dos reportes de dos no
+  se midió y el hueco pasó desapercibido porque no había campo donde faltara.
+- **El sha del setup.** El commit del repo desde el que se corrió `sync-skills`
+  en esa máquina, a `setup_sha`. `claude_code:` fija el harness y no dice qué
+  skills tenía — y esa es la pregunta que decide si el reporte prueba algo:
+  ¿estaba instalada la skill que "no disparó"?
 
 **Y lo de Graphify, que tiene sección propia porque es lo que peor se cumple:**
 
@@ -141,6 +148,13 @@ Muéstrale el reporte al humano y dile literalmente:
 
 Espera su OK. **Si te dice que algo no fue así, gana su versión**, y lo dejas
 escrito como él lo cuenta.
+
+Luego **rellena la sección 9 con lo que te haya dicho**, con su alias y la fecha
+de hoy. Y vuelve a correr el validador: **desde el sprint 2 esto ya no es una
+regla escrita al lado del arnés, es el arnés** — una sección 9 con `pendiente`,
+`TODO`, un `<hueco entre ángulos>`, sin fecha o con menos de ~60 caracteres
+útiles **bloquea**. Los dos primeros reportes de campo llegaron sin confirmar y
+el validador les dio luz verde; por eso ahora no puede.
 
 ### Lo que NO debes hacer
 
