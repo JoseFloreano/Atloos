@@ -36,13 +36,8 @@ una extracción one-off basta idempotencia + capas 1-3 de data-quality-gates.
 2. **Extracción robusta**:
    - Cursor cuando exista, persistido EN LA MISMA transacción que el batch
      que lo cubre — nunca antes de cargar, o el corte pierde datos.
-   - Cursor de timestamp: extrae desde `cursor − ventana de solape`
-     (5-15 min; el upsert absorbe el retrabajo — cubre late-arriving data y
-     empates), campo en UTC/timestamptz, u opta por cursor compuesto
-     `(updated_at, id)`.
-   - Si la API solo ofrece offset: orden por clave inmutable, solape de una
-     página, dedup vía upsert, reconciliar conteos al final — y anota que la
-     fuente no garantiza consistencia entre páginas.
+   - Cursor de **timestamp** (ventana de solape) y el caso de **offset**, que
+     falla distinto: `references/etl-pattern.md`.
    - Rate limiting: respeta `Retry-After`/`X-RateLimit-*` con backoff
      exponencial + jitter; reintenta también 5xx y errores de red.
 3. **Fallos parciales**: fila mala → rechazados con motivo, y se continúa.

@@ -59,3 +59,8 @@ citas** y reescribirlas era inviable. Los wikilinks de Obsidian sobreviven al
 cambio de carpeta porque resuelven por nombre; **solo hay que reescribir las
 citas por RUTA** (fueron 3).
 
+## El matiz del paso 4: enriquecer, no duplicar
+
+**Si la decisión ya tiene ADR, la cosecha lo ENRIQUECE — no crea otro**: dos
+ADRs del mismo asunto reproducen en la capa durable la divergencia que la
+cosecha venía a eliminar.

@@ -182,3 +182,16 @@ source_id, reason, at timestamptz DEFAULT now())` · `_pipeline_runs
   Postgres.
 - Resto de diferencias por motor: `references/engine-notes.md` de
   migration-auditor.
+
+## El cursor, según lo que la fuente te dé
+
+Extraído del paso 2 del `SKILL.md` (sprint 4): son dos mecánicas distintas y
+fallan distinto, así que el cuerpo se queda con la regla y el detalle vive aquí.
+
+- **Cursor de timestamp**: extrae desde `cursor − ventana de solape`
+  (5-15 min; el upsert absorbe el retrabajo — cubre late-arriving data y
+  empates), campo en UTC/timestamptz, u opta por cursor compuesto
+  `(updated_at, id)`.
+- **Si la API solo ofrece offset**: orden por clave inmutable, solape de una
+  página, dedup vía upsert, reconciliar conteos al final — y anota que la
+  fuente no garantiza consistencia entre páginas.

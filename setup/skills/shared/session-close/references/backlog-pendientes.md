@@ -98,3 +98,15 @@ se aplicó ahí**. Consolidarlos es trabajo de ese proyecto, no de este ritual.
   resuélvela moviéndolo, no copiándolo.
 - **Los bugs no entran**: siguen en `bugs/` con `status: open`.
 - **El tope no se toca**: sigue 120 blando / 150 duro.
+
+## El aviso del tope ESCALA — no es un recordatorio
+
+Extraído del paso 7 del `SKILL.md` (sprint 4), literal.
+
+Los umbrales de los checkboxes de primer nivel: **>12** → propón crear
+`pendientes.md`; **≤8** entre activos y backlog → propón disolverlo; si ya
+existe, **recalcula su N**.
+
+**Avisa, no bloquees** — pero el aviso **escala**: lee y actualiza
+`<!-- umbral avisado: … -->`; de la 2.ª vez en adelante es incumplimiento
+del contrato, con los días.

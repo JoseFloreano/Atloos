@@ -36,17 +36,15 @@ e invisible — se caza con revisiones periódicas, no en caliente.)
    `codebase-map-snapshot.md` más viejo que el último cambio estructural — mide
    la salud del hook. La frescura del `codebase-map.md` CURADO queda a juicio
    humano: no tiene generador que la garantice.
-   **ADRs: todos los estados, no solo `accepted`** — `proposed` estancado >14
-   días y contradicciones sin `superseded` (tabla en `references/checks.md`).
+   **ADRs: todos los estados, no solo `accepted`** — tabla de qué mirar en cada
+   uno en `references/checks.md`.
    Además (detalle y comandos en `references/checks.md`): índice de ADRs
    desfasado (`adr-index.py --check`), `_PROJECT.md` por encima de 120 líneas o
    con secciones `## Hecho`, y notas de `sessions/` ya cosechadas con más de 30
    días — candidatas a `_archive/`.
-   **Backlog `pendientes.md`** ([[ADR-20260801-higiene-vault]]): zombis con `alta:` de +30 días,
-   duplicados o N desfasada entre `_PROJECT.md` y el backlog, y los dos
-   umbrales — crear (>12 sin backlog) y disolver (≤8 con backlog).
-   **Rutas de las skills**: `test-skill-paths.py` — ninguna debe mandar ejecutar
-   nada por la ruta del repo ni por "búscalo en Atloos" (fallo del 08-07).
+   Y dos señales más, con su detalle en `references/checks.md`: **el backlog**
+   (zombis, N desfasada, los dos umbrales) y **las rutas de las skills**
+   (`test-skill-paths.py`).
 4. **Reporte por proyecto**, ordenado por severidad de drift: qué está
    desfasado, evidencia (fechas), y la actualización mínima propuesta.
 5. **Solo si el usuario aprueba**: aplica las actualizaciones propuestas
@@ -57,7 +55,7 @@ e invisible — se caza con revisiones periódicas, no en caliente.)
    y revisa el `git log` de `setup/skills/` buscando skills sin ediciones ni
    menciones. Las que nadie usa → candidatas a poda o fusión con `skill-forge`
    (decide él, no tú). **NUNCA un pase LLM automático sobre el catálogo
-   completo** — lección del Curator de Hermes: 91M tokens quemados (`ecosistema/16` §R7).
+   completo** — por qué, en `references/checks.md`.
 7. Cierra sugiriendo la causa si hay patrón: si el mismo proyecto driftea
    repetidamente, el hook/ritual no está corriendo en esa laptop — revisarlo.
 

@@ -85,3 +85,21 @@ No es nueva: son los **bloques 6 (predicción obligatoria)** y **7 (contrato de
 reporte)** de `references/plantilla-despacho.md` de `workstream-dispatch`, que
 ya obligan a decir qué esperas y cómo se comprueba. `goal-forge` es esa misma
 disciplina comprimida a 4.000 caracteres y puesta donde el evaluador la lee.
+
+## El artefacto no debe existir si el comando falló
+
+Extraído del punto 6 del contrato en `SKILL.md` (sprint 4), literal.
+
+**El artefacto no debe existir si el comando falló.** El guard comprueba que
+está y que es fresco; si además **declara** su veredicto (`exit_code`, `ok`,
+`fallos`) lo respeta, pero **no se inventa el que no está**. Un fichero que
+se escribe igual en rojo —la salida de `ruff`, un log— cierra la meta con la
+suite rota. Si no puedes garantizar esa semántica, envuelve el comando con
+`gate-test.py`, que solo escribe con exit 0.
+
+## Cuando no sabes qué comando prueba la condición
+
+Extraído del punto 5 del contrato en `SKILL.md` (sprint 4), literal.
+
+Si no sabes qué comando la prueba, el objetivo aún no está entendido — eso es
+lo que la skill acaba de descubrir, y decirlo vale más que forjar algo vacío.

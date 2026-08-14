@@ -53,15 +53,11 @@ otra laptop.
 6. *(Solo Claude Code)* Si existe `.claude/vault-dirty.json` en el repo,
    bórralo — el cierre manual deja el flag del hook en cero.
 7. **Tamaño, backlog y estado del repo.** `wc -l` (blando 120, duro 150) y
-   cuenta los checkboxes de primer nivel: **>12** → propón crear
-   `pendientes.md`; **≤8** entre activos y backlog → propón disolverlo; si ya
-   existe, **recalcula su N**. En el mismo gesto actualiza (o añade si falta)
-   `Estado del repo: <sha corto> · <fecha>` con el `origin/main` real.
-   **Avisa, no bloquees** — pero el aviso **escala**: lee y actualiza
-   `<!-- umbral avisado: … -->`; de la 2.ª vez en adelante es incumplimiento
-   del contrato, con los días. Mecánica:
-   [`backlog`](references/backlog-pendientes.md) ·
-   [`estado del repo`](references/grafos-y-estado-del-repo.md).
+   cuenta los checkboxes de primer nivel; los umbrales y **por qué el aviso
+   escala** están en
+   [`backlog`](references/backlog-pendientes.md). En el mismo gesto actualiza
+   (o añade si falta) `Estado del repo: <sha corto> · <fecha>` con el
+   `origin/main` real ([`cómo`](references/grafos-y-estado-del-repo.md)).
 8. **Verifica y despide**: **relee las secciones que editaste** (el reporte
    de una edición no es la edición: un old_string que casó a medias deja
    fragmentos rotos), confirma qué se actualizó y responde con el "próximo

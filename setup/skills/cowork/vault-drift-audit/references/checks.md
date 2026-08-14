@@ -212,3 +212,21 @@ setup: la convención escrita no muerde.
 Los `CLAUDE.md` de otros proyectos viven fuera de este repo, así que el check
 solo alcanza el propio salvo que le pases sus rutas. **Eso es un límite, no una
 cobertura**: si auditas otro proyecto, pásale su `CLAUDE.md` o dilo.
+
+## Backlog y rutas — dos señales del paso 3
+
+Extraído del paso 3 del `SKILL.md` (sprint 4), literal.
+
+**Backlog `pendientes.md`** ([[ADR-20260801-higiene-vault]]): zombis con `alta:`
+de +30 días, duplicados o N desfasada entre `_PROJECT.md` y el backlog, y los dos
+umbrales — crear (>12 sin backlog) y disolver (≤8 con backlog).
+
+**Rutas de las skills**: `test-skill-paths.py` — ninguna debe mandar ejecutar
+nada por la ruta del repo ni por "búscalo en Atloos" (fallo del 08-07).
+
+## Por qué la poda NUNCA es un pase automático
+
+Extraído del paso 6 del `SKILL.md` (sprint 4), literal.
+
+**NUNCA un pase LLM automático sobre el catálogo completo** — lección del
+Curator de Hermes: 91M tokens quemados (`ecosistema/16` §R7).

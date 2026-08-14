@@ -30,24 +30,15 @@ donde se quedó. **Solo lectura** — no escribe memoria en este paso.
    enganchado → sugiere `project-onboard` y para. Si existe
    `codebase-map.md`, léelo también — es el mapa CURADO del proyecto (el
    `codebase-map-snapshot.md` es el volcado del hook: no lo abras al arrancar).
-   Si trae la línea `Backlog: N ítems → [[pendientes]]`, **menciónala sin abrir
-   el archivo** ("hay N más en el backlog"): el arranque debe costar lo mismo
-   que antes. Solo cárgalo si el usuario pregunta por el backlog.
-   Compara **`Estado del repo:`** contra `origin/main`: si difieren, avisa
-   *"el vault va atrás — tómalo como orientación, no como verdad"*. Si el campo
-   no está (proyecto anterior a la convención), **dilo UNA vez**: `session-close`
-   lo añadirá al cerrar.
+   Menciona el backlog **sin abrirlo**, y compara **`Estado del repo:`** contra
+   `origin/main`: si difieren, el vault va atrás y es orientación, no verdad.
+   Los dos matices, en `references/arranque-en-frio.md`.
 3. Lee `10-Projects/<nombre>/ADRs/_INDEX.md` — una línea por decisión, con su
    `summary`. **No abras los ADRs completos por defecto.** Abre uno entero solo
    si su fecha es ≥ la de la nota más reciente de `sessions/` (se decidió algo
    que aún no viviste) o si la tarea de hoy lo toca directamente.
-   Si `_INDEX.md` no existe, el proyecto aún no está migrado: lee los ~3 ADRs
-   más recientes como antes y avisa al usuario de que falta generar el índice.
-   El script se invoca por ruta absoluta —`sync-skills` lo instala en
-   `~/.claude/scripts/`, misma ruta en toda máquina y sin depender de OneDrive:
-   `py "$HOME/.claude/scripts/adr-index.py" <ruta ADRs>`
-   (PowerShell: `py "$env:USERPROFILE\.claude\scripts\adr-index.py" <ruta ADRs>`).
-   Si no está, corre `sync-skills` primero.
+   Si `_INDEX.md` no existe, el proyecto no está migrado: genéralo con
+   `adr-index.py` — invocación y fallback en `references/arranque-en-frio.md`.
 4. Revisa `bugs/` **solo los `status: open`** (vocabulario cerrado:
    `open | fixed | invalid | wontfix`). Los cerrados se abren únicamente si la
    tarea de hoy los roza.

@@ -38,21 +38,16 @@ lo durable vive en el vault. Esta skill cierra el pipeline
    NO copies el spec completo: código, comandos y checkboxes son memory rot.
 4. **Registra con `adr-writer`** (un ADR por decisión mayor, no un mega-ADR),
    citando el commit/PR de la implementación. **Si la decisión ya tiene ADR, la
-   cosecha lo ENRIQUECE — no crea otro**: dos ADRs del mismo asunto reproducen en
-   la capa durable la divergencia que la cosecha venía a eliminar. Si cosechaste
-   una nota de `sessions/`, márcala `harvested: true`.
+   cosecha lo ENRIQUECE — no crea otro** (por qué, en la reference). Si
+   cosechaste una nota de `sessions/`, márcala `harvested: true`.
 5. **Redirige las referencias entrantes antes de borrar.** "Git conserva la
    historia" es cierto para el contenido y **falso para los enlaces**. Grepea
    en TODO el repo **y en el vault**, no solo en `docs/`. Solo cuando el grep
    deje de devolver huérfanas se borra. Comandos y precedentes en la
    reference.
 
-5b. **¿El RFD vive en el VAULT y no en el repo?** El paso 6 NO aplica: el vault
-   **es** memoria, no andamiaje. Cosecha a ADR y **archiva** en `RFDs/_archive/`
-   con un **cartel** al ADR — nunca `git rm`. Y con **más de ~20** referencias
-   entrantes, el cartel es la **vía aceptada** en vez de reescribir cada cita:
-   118 citas lo probaron. Los wikilinks sobreviven al cambio de carpeta; solo se
-   reescriben las citas por RUTA.
+5b. **Si el RFD vive en el VAULT y no en el repo, el paso 6 NO aplica**: se
+   archiva con un cartel al ADR, nunca `git rm`. Detalle en la reference.
 
 6. **Borra los docs cosechados** con `git rm` — SOLO con el ADR ya escrito y la
    **lista exacta aprobada por el usuario**. Es seguro: git conserva la historia

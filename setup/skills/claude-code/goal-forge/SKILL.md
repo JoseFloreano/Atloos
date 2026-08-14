@@ -36,15 +36,13 @@ cierra la meta. Una condición mal forjada no es un detalle de estilo: es la ley
 4. **Cláusula de corte, obligatoria**: `o para a los 20 turnos`. Sin fondo, un
    bucle que no converge gasta hasta que alguien mira.
 5. **Rechaza lo que solo puede satisfacer una afirmación.** *"El código queda
-   limpio"* no es condición; *"`ruff check .` sale 0"* sí. Si no sabes qué
-   comando la prueba, el objetivo aún no está entendido — eso es lo que la
-   skill acaba de descubrir, y decirlo vale más que forjar algo vacío.
-6. **El artefacto no debe existir si el comando falló.** El guard comprueba que
-   está y que es fresco; si además **declara** su veredicto (`exit_code`, `ok`,
-   `fallos`) lo respeta, pero **no se inventa el que no está**. Un fichero que
-   se escribe igual en rojo —la salida de `ruff`, un log— cierra la meta con la
-   suite rota. Si no puedes garantizar esa semántica, envuelve el comando con
-   `gate-test.py`, que solo escribe con exit 0.
+   limpio"* no es condición; *"`ruff check .` sale 0"* sí. Y si no sabes qué
+   comando la prueba, el objetivo aún no está entendido (la reference lo
+   desarrolla).
+6. **El artefacto no debe existir si el comando falló.** Un fichero que se
+   escribe igual en rojo cierra la meta con la suite rota; si no puedes
+   garantizar esa semántica, envuelve el comando con `gate-test.py`. Qué mira
+   exactamente el guard: `references/mecanica-goal.md`.
 
 ## Pasos
 

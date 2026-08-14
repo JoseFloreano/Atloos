@@ -48,19 +48,9 @@ recurrentes — ponérsela a un script de una corrida es sobre-ingeniería.
    ejecutadas dentro de la transacción para poder abortarla. En cargas por
    lotes con commits intermedios: la compuerta rota detiene los lotes
    siguientes y registra hasta dónde quedó — la idempotencia permite reanudar.
-4. **Monitoreo** (solo recurrentes):
-   - Frescura: alerta si la última carga excede su periodo esperado.
-   - Volumen: alerta si las filas se desvían >30% de la mediana de las
-     últimas 7 corridas (default — ajústalo por pipeline y documenta). Con
-     menos de 7 corridas de historia, registra sin alertar.
-   - Antes de crear tabla propia, revisa qué YA registra corridas (Airflow
-     metadata, dbt artifacts/elementary, Great Expectations): la capa 4 se
-     construye sobre eso. `_pipeline_runs (pipeline, run_at, rows_loaded,
-     rows_rejected, status)` — misma definición que pipeline-designer — es
-     el mínimo viable cuando no hay nada.
-   - Una alerta necesita un canal que llegue solo (cron/orquestador que corre
-     la query de anomalías y notifica). Si solo entregas la query, dilo:
-     "monitoreo pasivo, requiere revisión manual".
+4. **Monitoreo** (solo recurrentes): frescura, volumen contra la mediana
+   histórica, dónde registrar las corridas, y el canal que hace que una alerta
+   llegue sola. Los cuatro, con sus defaults: `references/monitoreo.md`.
 
 ## Cómo aplicarlo
 
