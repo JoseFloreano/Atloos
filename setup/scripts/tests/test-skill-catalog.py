@@ -226,9 +226,25 @@ def excede_tope(palabras):
 def campo_resuelto(texto, clave):
     """Valor de `clave` en el frontmatter, TAL COMO LO VE EL CARGADOR.
 
-    Resuelve el escalar plegado (`>` / `|`, con sus variantes `-` y `+`): junta
-    las líneas sangradas y colapsa los espacios. Eso es lo que se valida contra
-    el límite; el texto crudo tiene saltos y sangría que no viajan.
+    Resuelve las TRES formas que puede tener un valor multilínea, porque el
+    limite se mide sobre la cadena que el cargador construye, no sobre el texto
+    crudo con sus saltos y su sangría:
+
+      · **plegado** (`>` / `|`, con sus variantes `-` y `+`);
+      · **entrecomillado** en una línea;
+      · **plano multilínea** — el que sale de escribir a mano y seguir en la
+        línea siguiente sin poner `>`. Es YAML válido.
+
+    EL PLANO SE AÑADIÓ PORQUE SE ESCAPABA (sprint 3b). El resolutor devolvía
+    solo la primera línea y paraba, así que **contaba de menos**, que es la
+    dirección peligrosa: 600 + 600 caracteres se medían como **600**, el arnés
+    daba verde y la subida fallaba igual — el fallo exacto que el check 4 existe
+    para impedir. Era latente (0 de 38 skills usan esa forma), y ese es el
+    momento de arreglarlo: cuando todavía no ha mordido.
+
+    No se importa un parser YAML a propósito: este arnés es **solo-stdlib**, y
+    meter una dependencia aquí rompería la disciplina justo en el fichero que la
+    sostiene.
 
     Devuelve None si la clave no está — que es un defecto distinto y lo reporta
     quien llama, no esta función.
@@ -255,6 +271,17 @@ def campo_resuelto(texto, clave):
             valor = " ".join(partes)
         elif len(valor) >= 2 and valor[0] == valor[-1] and valor[0] in "\"'":
             valor = valor[1:-1]
+        elif valor:
+            # ESCALAR PLANO: sigue en las líneas más sangradas. Misma mecánica
+            # que el plegado de arriba, con dos diferencias que importan:
+            #   · una línea en blanco CORTA (en el plegado solo separa párrafo);
+            #   · exige `valor` no vacío. `clave:` a secas y luego líneas
+            #     sangradas NO es un escalar: es un mapa anidado, y tragárselo
+            #     seria pasarse consumiendo — el riesgo de este arreglo.
+            for siguiente in lineas[i + 1:]:
+                if not siguiente.strip() or not siguiente.startswith((" ", "\t")):
+                    break
+                valor += " " + siguiente.strip()
         return re.sub(r"\s+", " ", valor).strip()
     return None
 
@@ -292,24 +319,49 @@ def autoprueba_desc():
     forma que tienen todas las nuestras: si el resolvedor no plegara, el conteo
     incluiría saltos y sangría y el borde se movería sin que nadie lo notara.
     """
-    def skill_con(n):
-        # 8 caracteres por línea + el espacio que los une = 9 por bloque.
+    def skill_con(n, plana=False):
+        # 8 caracteres por trozo + el espacio que los une = 9 por bloque.
         bloques, resto = divmod(n + 1, 9)
-        cuerpo_desc = "\n".join(["  " + "x" * 8] * bloques)
+        trozos = ["x" * 8] * bloques
         if resto:
-            cuerpo_desc += "\n  " + "x" * (resto - 1)
+            trozos.append("x" * (resto - 1))
+        if plana:
+            # El primer trozo va en la MISMA línea que la clave y el resto
+            # sangrados: escalar PLANO multilínea, sin `>`. Es la forma que sale
+            # de escribir a mano, y la que se escapaba del check.
+            cola = "".join("\n  " + t for t in trozos[1:])
+            return (f"---\nname: laboratorio\ndescription: {trozos[0]}{cola}\n"
+                    f"---\n\ncuerpo\n")
+        cuerpo_desc = "\n".join("  " + t for t in trozos)
         return f"---\nname: laboratorio\ndescription: >\n{cuerpo_desc}\n---\n\ncuerpo\n"
 
-    justo = campo_resuelto(skill_con(LIMITE_DESC), "description")
-    pasada = campo_resuelto(skill_con(LIMITE_DESC + 1), "description")
-    if justo is None or len(justo) != LIMITE_DESC:
-        return False, (f"el resolvedor no pliega el escalar `>`: mide "
-                       f"{len(justo or '')} donde hay {LIMITE_DESC}")
-    if excede_desc(len(justo)):
-        return False, f"{LIMITE_DESC} caracteres exactos deberían pasar, y bloquean"
-    if not excede_desc(len(pasada)):
-        return False, (f"{LIMITE_DESC + 1} caracteres NO bloquean — el límite de "
-                       f"la especificación vuelve a ser decorativo")
+    # Las DOS formas, en los DOS lados del borde. Probar solo la que el
+    # resolutor ya sabía leer es lo que dejó vivo el escape del plano: un
+    # resolutor verificado contra su propio caso fácil no está verificado.
+    for plana in (False, True):
+        forma = "plano multilínea" if plana else "plegado `>`"
+        justo = campo_resuelto(skill_con(LIMITE_DESC, plana), "description")
+        pasada = campo_resuelto(skill_con(LIMITE_DESC + 1, plana), "description")
+        if justo is None or len(justo) != LIMITE_DESC:
+            return False, (f"el resolvedor no resuelve el escalar {forma}: mide "
+                           f"{len(justo or '')} donde hay {LIMITE_DESC}")
+        if excede_desc(len(justo)):
+            return False, (f"{LIMITE_DESC} caracteres exactos en {forma} "
+                           f"deberían pasar, y bloquean")
+        if not excede_desc(len(pasada)):
+            return False, (f"{LIMITE_DESC + 1} caracteres en {forma} NO bloquean "
+                           f"— el límite de la especificación vuelve a ser "
+                           f"decorativo")
+
+    # Y el reverso del arreglo: `clave:` vacía seguida de líneas sangradas es un
+    # MAPA ANIDADO, no un escalar. Tragárselo sería pasarse consumiendo, que es
+    # el modo de fallo que este arreglo puede introducir.
+    anidado = campo_resuelto(
+        "---\ndescription:\n  type: user\n  otro: 2\nname: x\n---\n", "description")
+    if anidado:
+        return False, (f"un mapa anidado bajo `description:` se está leyendo "
+                       f"como valor ({anidado[:40]!r}): el resolutor consume de "
+                       f"más")
     if AVISO_DESC > LIMITE_DESC:
         return False, (f"AVISO_DESC ({AVISO_DESC}) por encima de LIMITE_DESC "
                        f"({LIMITE_DESC}): el aviso no llegaría antes que el corte")
