@@ -57,6 +57,32 @@ Convertir esto en un techo produciría falsos rojos justo cuando más frentes ha
 que es cuando el gate tiene que ser fiable. Un gate que grita en falso se
 desactiva, y entonces no queda gate.
 
+## El verde que el reloj NO caza: más skips de los esperados
+
+El suelo cubre la corrida que **no se ejecutó**. No cubre la que se ejecutó
+entera y **se saltó de más**, y esa es la misma enfermedad con otra cara.
+
+> Un worktree no hereda lo que git no versiona. Sin un CSV de 9,6 MB, la suite
+> **no avisa: finge.** Cae a un dataset sintético **a propósito** —está escrito
+> así— y salta **~115 tests de más**. Verde, exit 0, y una duración que puede
+> quedar dentro del rango. Costó **tres corridas de gate** descubrirlo.
+
+Por eso el conteo no es solo el diagnóstico del verde rápido: **es un detector
+por derecho propio.**
+
+- **El número de skips esperado se declara ANTES**, con el inventario del frente
+  (bloque 2 de `workstream-dispatch` → `references/plantilla-despacho.md`).
+- **Skips por encima de lo declarado ⇒ el verde no se acepta**, aunque el reloj
+  esté en su sitio y no haya un solo rojo.
+- **La frase que hay que poder decirle al frente**: *«si ves 115 skips de más,
+  no es que tu código esté bien: es que te falta un artefacto.»*
+
+⚠ **Firma, no techo** — igual que arriba. Un skip de más puede ser legítimo (un
+test marcado, una dependencia opcional ausente a propósito). Lo que dispara es
+la **diferencia contra un número declarado**, no un máximo inventado; y como la
+firma del bloque 2, es **lista cerrada**: lo que no esté en ella se investiga,
+no se excusa.
+
 ## Y el otro caso, el que ya estaba
 
 Un instrumento sin `load_dotenv()` "midió" 1,5 M de filas en **3,6 s**. Mismo

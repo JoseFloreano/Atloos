@@ -116,6 +116,60 @@ de fallos conocidos. Un rojo que NO esté en ella se reporta siempre — nunca s
 asume que «será del entorno». Convertir la firma en una excusa genérica sería
 peor que no darla.
 
+### El manifiesto de lo que git NO versiona — con tamaño y origen
+
+El inventario de arriba dice qué mirar. Esto dice **qué copiar antes de correr
+nada**, y va en el despacho como tabla cerrada:
+
+```
+FUERA DE GIT (traer ANTES de la primera corrida):
+  .venv/            ~400 MB   crear: py -m venv .venv && pip install -r req.txt
+  .env                 2 KB   copiar del checkout principal (NO enlazar — ver abajo)
+  data/padron.csv      9,6 MB  copiar de <ruta>
+  db/*.sqlite          179 MB  copiar de <ruta>
+SKIPS ESPERADOS CON TODO PRESENTE: 83     ← si ves más, te falta algo
+```
+
+**El tamaño no es decoración**: es lo que distingue «cópialo» de «enlázalo» y lo
+que avisa de que el frente va a tardar. 179 MB × 3 frentes es una decisión, no un
+detalle.
+
+> ⚠ **El verde silencioso.** Sin el CSV la suite **no falla: finge.** Cae a un
+> dataset sintético a propósito y salta **~115 tests de más**, con exit 0.
+> Descubrirlo costó **tres corridas de gate**. Un rojo se ve; un skip no.
+
+Por eso el **conteo de skips esperado** viaja en la firma y no como comentario:
+es el único detector de este fallo. La duración no lo caza —la corrida es
+completa, solo que de menos cosas—, y el exit code menos aún.
+
+### Y la decisión que faltaba: se aprovisiona el worktree, no se mueve el árbol
+
+Estaba implícita, y lo implícito se pagó tres veces (B1 de la auditoría 22, el
+CSV de hoy, y los `.venv` ausentes de once frentes). **Se decide así:**
+
+**El frente aprovisiona su worktree con el manifiesto de arriba, y el gate corre
+donde trabaja el frente.** No se centraliza en el checkout principal.
+
+El motivo no es la comodidad, es que la alternativa es peor: correr el gate en el
+checkout principal exige **hacer checkout de la rama ahí**, es decir mover el
+árbol de trabajo del humano — que es exactamente lo que rompió una sesión en
+directo (*«suspende los merge ahorita estoy presentando»*). Un gate que para
+verificar tiene que desplazar a quien lo invoca no es una compuerta: es una
+interrupción.
+
+Tres reglas que la hacen operativa:
+
+1. **El manifiesto es del repo, no del despacho.** Se escribe una vez y el
+   despacho lo cita; si cada brief lo reinventa, se desincroniza — que es la
+   enfermedad de siempre.
+2. **`.env` se COPIA, nunca se enlaza.** Un symlink hace que dos frentes lean y
+   escriban el mismo fichero de secretos, y basta que uno lo reescriba para
+   mover el entorno del otro sin dejar rastro. Y **nunca se hace `source` de
+   él** — ver las reglas de shell en `references/higiene-de-shell.md`.
+3. **La primera corrida del frente valida el aprovisionamiento**, comparando su
+   conteo de skips contra el declarado. Si no casa, el frente **no reporta**:
+   arregla y repite.
+
 ### La regla que cierra el bloque 2: `[SUPUESTO]`
 
 **Toda afirmación de hecho lleva su comando de verificación, o se marca
@@ -175,7 +229,42 @@ sitio compartido donde constara.
 
 ---
 
-## 5 · Presupuesto con número
+## 5 · Presupuesto con número — y MODELO por frente
+
+**Campo obligatorio, y nunca vacío:**
+
+```
+MODELO: <cuál>   PORQUE: <una línea>
+```
+
+Sale de un gasto medido: **$361,77 en una sola sesión**, con el **100 %** en
+sesiones con subagentes, el **79 %** en sesiones de 8 h o más, el **73 %** por
+encima de 150k de contexto y el **31 %** en agentes de propósito general
+(*general-purpose*, sin backticks: es un tipo de agente, no una skill). Y el
+diagnóstico es del propio coordinador:
+
+> *«No usé un modelo más barato para ningún frente, ni siquiera para los
+> mecánicos. Es un fallo de diseño mío, no del harness.»*
+
+Nada obligaba a decidirlo, así que no se decidió. Ahora se decide **antes de
+despachar**, que es cuando cuesta una línea.
+
+**La regla por defecto:**
+
+- **Frente mecánico** —mover ficheros, aplicar un patrón ya definido, correr un
+  barrido, renombrar, propagar un cambio decidido— → **el modelo barato**. Si el
+  brief te dice exactamente qué hacer, no estás pagando por razonar.
+- **Frente con juicio** —diseñar, arbitrar, auditar, decidir entre opciones,
+  cualquier cosa que pueda equivocarse de forma cara— → **el modelo caro**.
+- **El revisor NO baja de modelo** aunque el frente que revisa sea mecánico: su
+  trabajo es encontrar lo que el otro no vio, y ahí el ahorro se paga en
+  hallazgos perdidos.
+- **Ante la duda, el caro** — pero la duda se escribe en el `PORQUE:`, para que
+  la próxima vez haya un dato en vez de un reflejo.
+
+⚠ **Aquí no van precios.** Cambian, y una tabla desactualizada en una skill es
+peor que ninguna: lo que se fija es **la obligación de elegir y justificar**. Los
+números del día se miran donde vivan (`/cost`, el panel), no aquí.
 
 - **Procesos y RAM permitidos**, con cifra. Un agente aislado **no puede ver a
   sus hermanos**: lanzó carga sintética, provocó `MemoryError` en procesos

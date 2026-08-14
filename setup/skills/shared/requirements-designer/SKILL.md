@@ -8,14 +8,11 @@ description: >
   el MVP de X", "quiero una herramienta/un sistema que X", "necesito que
   detecte/avise/prediga X", "haz X para <persona>", "¿se puede hacer X con estos
   datos?", "¿esto es viable?", "levanta los requisitos", "define el alcance",
-  "qué tiene que hacer el sistema", "escribe la especificación", "los criterios
-  de aceptación", or ANTES de `schema-designer` y `api-design`, que diseñan
-  suponiendo que los requisitos ya se conocen. Reparto con
-  `superpowers:brainstorming`, que NO la sustituye: brainstorming cuando **no sé
-  qué construir**; la fase 0 de esta cuando **sé qué quiero y no sé si se
-  puede**. Si aplican las dos, brainstorming primero y la fase 0 sobre lo que
-  salga. NO usar para un cambio pequeño ni antes de haber explorado el
-  comportamiento — eso es burocracia.
+  "los criterios de aceptación", or ANTES de `schema-designer` y `api-design`,
+  que ya los suponen conocidos. Reparto con `superpowers:brainstorming`: esa es
+  para **no sé qué construir**; la fase 0, para **sé qué quiero y no sé si se
+  puede**. Si aplican las dos, brainstorming primero. NO usar para un cambio
+  pequeño ni antes de haber explorado el comportamiento — eso es burocracia.
 ---
 
 # Requirements Designer

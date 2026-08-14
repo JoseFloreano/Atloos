@@ -64,6 +64,30 @@ Los dos umbrales son distintos y hacen cosas distintas:
     la suite en rojo. Hoy el máximo son 499, así que nace en verde: es un alambre
     puesto antes de que alguien lo pise, no un refactor pendiente.
 
+EL CHECK 4 MIDE UN LÍMITE DE LA PLATAFORMA, NO NUESTRO (sprint 3, S1). La
+especificación de Agent Skills obliga a `description` de 1 a 1024 caracteres y
+`name` de 1 a 64. **Claude Code no usa ese límite** —trunca a 1536 en el listado
+y encima es configurable (`skillListingMaxDescChars`)—, así que una skill por
+encima de 1024 **carga y funciona aquí** y falla solo al subirla. Eso es lo que
+pasó: `requirements-designer` llegó a **1074** al ganar la fase 0 y bloqueó la
+subida sin que nada de este repo lo dijera.
+
+  **Un límite de la plataforma que el repo no mide es un límite que se descubre
+  el día que bloquea.** Es la tercera vez: el tope de 500 palabras vivía dentro
+  de una cadena de texto (H7), el arnés de deriva verificaba el contrato
+  equivocado (sprint 2, S2), y ahora esto. El patrón no es el número — es que
+  medimos lo que se nos ocurrió medir.
+
+Se mide la description **RESUELTA**, no el texto crudo: el frontmatter usa
+escalares plegados (`>`), y lo que el cargador valida es la cadena de una sola
+línea, sin los saltos ni la sangría. Medir el crudo daría un número mayor que el
+real y el arnés mentiría en la dirección cómoda.
+
+Va el ÚLTIMO aunque BLOQUEE, y a propósito: los números de check ya se citan
+fuera de este fichero ("el check 3 bajó de 22 a 19" vive en el vault y en dos
+encargos). Renumerar para colocarlo por severidad rompería ese vocabulario
+compartido, que es más caro que el orden.
+
 Uso:  py setup/scripts/tests/test-skill-catalog.py          [repo]
       py setup/scripts/tests/test-skill-catalog.py --tabla  [repo]
 Salidas: 0 sin referencias colgantes y sin skills sobre el tope · 1 hay hallazgos.
@@ -84,6 +108,14 @@ RAIZ = Path(__file__).resolve().parents[2]        # setup/
 SKILLS = RAIZ / "skills"
 SATURACION = 475        # umbral de AVISO; una skill nueva nace en ≤450
 TOPE_DURO = 500         # el que BLOQUEA (auditoría 22, H7). 501 pone la suite en rojo
+
+# Los DOS números de la especificación de Agent Skills, en CARACTERES —no en
+# palabras: son unidades distintas y confundirlas es el fallo que S1 arregla.
+# `AVISO_DESC` es la misma idea que SATURACION: avisar antes del precipicio, con
+# margen para que una edición del disparador no lo cruce sin querer.
+LIMITE_DESC = 1024      # BLOQUEA. 1024 es el último valor admisible; 1025 rojo
+AVISO_DESC = 950        # AVISO. Una description nueva nace por debajo
+LIMITE_NAME = 64        # BLOQUEA. Mismo origen, y hoy el máximo son 24
 
 # Superficies en las que se despliega una skill, y qué puede ver cada una.
 # `shared` va a las dos, así que es la más restringida: solo ve `shared`.
@@ -189,6 +221,99 @@ def excede_tope(palabras):
     contra una reimplementación no está verificado: está duplicado.
     """
     return palabras > TOPE_DURO
+
+
+def campo_resuelto(texto, clave):
+    """Valor de `clave` en el frontmatter, TAL COMO LO VE EL CARGADOR.
+
+    Resuelve el escalar plegado (`>` / `|`, con sus variantes `-` y `+`): junta
+    las líneas sangradas y colapsa los espacios. Eso es lo que se valida contra
+    el límite; el texto crudo tiene saltos y sangría que no viajan.
+
+    Devuelve None si la clave no está — que es un defecto distinto y lo reporta
+    quien llama, no esta función.
+    """
+    texto = texto.replace("\r", "")
+    if not texto.startswith("---"):
+        return None
+    fin = texto.find("\n---", 3)
+    lineas = (texto[4:fin] if fin != -1 else texto).split("\n")
+    for i, linea in enumerate(lineas):
+        m = re.match(r"^" + re.escape(clave) + r":\s*(.*)$", linea)
+        if not m:
+            continue
+        valor = m.group(1).strip()
+        if valor in (">", "|", ">-", "|-", ">+", "|+"):
+            partes = []
+            for siguiente in lineas[i + 1:]:
+                if not siguiente.strip():
+                    partes.append("")
+                    continue
+                if not siguiente.startswith((" ", "\t")):
+                    break                      # empezó la clave siguiente
+                partes.append(siguiente.strip())
+            valor = " ".join(partes)
+        elif len(valor) >= 2 and valor[0] == valor[-1] and valor[0] in "\"'":
+            valor = valor[1:-1]
+        return re.sub(r"\s+", " ", valor).strip()
+    return None
+
+
+def excede_desc(chars):
+    """¿Pasa del límite de la especificación? 1024 pasa; 1025 bloquea.
+
+    Función y no un `>` suelto por lo mismo que `excede_tope`: `autoprueba_desc`
+    ejerce ESTA decisión, no una reimplementación suya.
+    """
+    return chars > LIMITE_DESC
+
+
+def mide_frontmatter():
+    """[(skill, chars_desc, chars_name)] de todas las skills, sin filtrar."""
+    filas = []
+    for skill_md in sorted(SKILLS.rglob("SKILL.md")):
+        partes = skill_md.relative_to(SKILLS).parts
+        if "_build" in partes or partes[0] == "_template":
+            continue
+        texto = skill_md.read_text(encoding="utf-8")
+        desc = campo_resuelto(texto, "description")
+        nombre = campo_resuelto(texto, "name")
+        filas.append((f"{partes[0]}/{partes[1]}",
+                      -1 if desc is None else len(desc),
+                      -1 if nombre is None else len(nombre)))
+    return filas
+
+
+def autoprueba_desc():
+    """Mutación: fabrica los dos lados del borde de 1024 y exige la decisión.
+
+    (bool, motivo). Se ejerce el par real —`campo_resuelto` + `excede_desc`—, y
+    con la description escrita como escalar plegado en varias líneas, que es la
+    forma que tienen todas las nuestras: si el resolvedor no plegara, el conteo
+    incluiría saltos y sangría y el borde se movería sin que nadie lo notara.
+    """
+    def skill_con(n):
+        # 8 caracteres por línea + el espacio que los une = 9 por bloque.
+        bloques, resto = divmod(n + 1, 9)
+        cuerpo_desc = "\n".join(["  " + "x" * 8] * bloques)
+        if resto:
+            cuerpo_desc += "\n  " + "x" * (resto - 1)
+        return f"---\nname: laboratorio\ndescription: >\n{cuerpo_desc}\n---\n\ncuerpo\n"
+
+    justo = campo_resuelto(skill_con(LIMITE_DESC), "description")
+    pasada = campo_resuelto(skill_con(LIMITE_DESC + 1), "description")
+    if justo is None or len(justo) != LIMITE_DESC:
+        return False, (f"el resolvedor no pliega el escalar `>`: mide "
+                       f"{len(justo or '')} donde hay {LIMITE_DESC}")
+    if excede_desc(len(justo)):
+        return False, f"{LIMITE_DESC} caracteres exactos deberían pasar, y bloquean"
+    if not excede_desc(len(pasada)):
+        return False, (f"{LIMITE_DESC + 1} caracteres NO bloquean — el límite de "
+                       f"la especificación vuelve a ser decorativo")
+    if AVISO_DESC > LIMITE_DESC:
+        return False, (f"AVISO_DESC ({AVISO_DESC}) por encima de LIMITE_DESC "
+                       f"({LIMITE_DESC}): el aviso no llegaría antes que el corte")
+    return True, ""
 
 
 def revisa_referencias(inv, artefactos):
@@ -411,10 +536,54 @@ Tres arreglos legítimos, por orden de preferencia:
         for rel, n, _t, detalle, _x in superficie_mal:
             print(f"    {rel}:{n}  →  {detalle}")
 
-    # Tres motivos de rojo, y el tercero es el propio arnés: si su autoprueba
-    # cae, lo que este fichero afirma sobre el tope deja de estar respaldado, y
-    # un check no verificado en verde es exactamente el agujero de H7.
-    return 1 if (hallazgos or excedidas or not ok_tope) else 0
+    print("\n── Check 4 · límites de la especificación (BLOQUEA) " + "─" * 22 + "\n")
+    ok_desc, motivo_desc = autoprueba_desc()
+    print(f"  [AUTOPRUEBA] {'OK' if ok_desc else 'FALLIDA'} — {LIMITE_DESC} "
+          f"caracteres pasan y {LIMITE_DESC + 1} bloquean"
+          + (f"\n               {motivo_desc}" if not ok_desc else ""))
+    fm = mide_frontmatter()
+    sin_campo = [(s, d, n) for s, d, n in fm if d < 0 or n < 0]
+    pasadas = [(s, d, n) for s, d, n in fm
+               if excede_desc(d) or n > LIMITE_NAME]
+    avisos_desc = [(s, d, n) for s, d, n in fm
+                   if AVISO_DESC < d <= LIMITE_DESC]
+    if sin_campo:
+        print(f"\n  {len(sin_campo)} skill(s) sin `name` o sin `description` en "
+              f"el frontmatter:\n")
+        for s, d, n in sin_campo:
+            falta = " y ".join(x for x, v in (("description", d), ("name", n))
+                               if v < 0)
+            print(f"    {s:<34}falta {falta}")
+    if pasadas:
+        print(f"\n  {len(pasadas)} skill(s) POR ENCIMA de la especificación "
+              f"(description ≤{LIMITE_DESC}, name ≤{LIMITE_NAME}):\n")
+        for s, d, n in pasadas:
+            exceso = []
+            if excede_desc(d):
+                exceso.append(f"description {d} (+{d - LIMITE_DESC})")
+            if n > LIMITE_NAME:
+                exceso.append(f"name {n} (+{n - LIMITE_NAME})")
+            print(f"    {s:<34}{' · '.join(exceso)}")
+        print(f"\n  Esto SÍ tumba el arnés, y no es cosmético: la skill CARGA en\n"
+              f"  Claude Code (que trunca a 1536) y falla AL SUBIRLA. El arreglo\n"
+              f"  no es subir el número —no es nuestro—: es acortar el disparador\n"
+              f"  sin tocar las frases gatillo, que son su razón de ser.")
+    if avisos_desc:
+        print(f"\n  {len(avisos_desc)} en la banda de aviso "
+              f"({AVISO_DESC + 1}-{LIMITE_DESC}): margen escaso para la próxima "
+              f"edición.\n")
+        for s, d, _n in avisos_desc:
+            print(f"    {s:<34}{d:>9}   (a {LIMITE_DESC - d} del corte)")
+    if not (sin_campo or pasadas or avisos_desc):
+        mayor = max(fm, key=lambda f: f[1])
+        print(f"\n  Las {len(fm)} descriptions por debajo de {AVISO_DESC}. "
+              f"La mayor: {mayor[0]} ({mayor[1]}).")
+
+    # Cinco motivos de rojo, y dos son las propias autopruebas: si caen, lo que
+    # este fichero afirma sobre sus topes deja de estar respaldado, y un check no
+    # verificado en verde es exactamente el agujero de H7.
+    return 1 if (hallazgos or excedidas or pasadas or sin_campo
+                 or not ok_tope or not ok_desc) else 0
 
 
 if __name__ == "__main__":

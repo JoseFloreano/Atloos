@@ -193,6 +193,43 @@ def main():
               rc == 2 and "Sin comando de test declarado" in err,
               f"rc={rc} err={err[:200]!r}")
 
+    # --- Caso 8: invocado desde la RAMA EQUIVOCADA (sprint 3, S2) ---
+    # El fallo de campo: se corrió cuatro veces desde otra rama y las cuatro se
+    # creyeron corridas. Tres cosas tienen que cumplirse a la vez, y las tres se
+    # comprueban aquí porque en campo fallaron las tres a la vez:
+    #   (a) exit != 0, y ademas != 1 — "no corrio" no es "rojo";
+    #   (b) la salida es UTF-8 DECODIFICABLE. Se lee en BYTES y se decodifica en
+    #       estricto: con `errors="replace"` este caso pasaria siempre, que es
+    #       justo la venda que hizo invisible el bug;
+    #   (c) NO queda `gate-verde.json`: un "no corrio" que deja evidencia seria
+    #       peor que el bug original.
+    with tempfile.TemporaryDirectory(prefix="gatetest-") as tmp:
+        r = repo(os.path.join(tmp, "repo"))
+        settings(r, verde("settings"))
+        git(["checkout", "-q", "-b", "otra"], r)
+        entorno = dict(os.environ)
+        entorno.pop("GATE_TEST_CMD", None)
+        p = subprocess.run([sys.executable, SCRIPT, "main"], cwd=r, env=entorno,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        crudo = p.stdout + p.stderr
+        try:
+            texto = crudo.decode("utf-8")       # ESTRICTO, sin "replace"
+            decodifica = True
+        except UnicodeDecodeError:
+            texto, decodifica = "", False
+        check("8a. rama equivocada -> exit propio (3), que no es 0 ni 1",
+              p.returncode == 3,
+              f"rc={p.returncode} err={crudo[:160]!r}")
+        check("8b. rama equivocada -> salida UTF-8 decodificable en estricto",
+              decodifica and "NO CORRIO" in texto,
+              f"decodifica={decodifica} texto={texto[:160]!r}")
+        check("8c. rama equivocada -> NO deja gate-verde.json",
+              cmd_registrado(r) is None,
+              f"cmd={cmd_registrado(r)!r}")
+        check("8d. la primera linea es ASCII puro (sobrevive a cp1252)",
+              decodifica and texto.strip().splitlines()[0].isascii(),
+              f"primera={texto.strip().splitlines()[0][:120]!r}" if decodifica else "no decodifica")
+
     fallos = [n for n, ok, _ in results if not ok]
     print(f"\n{len(results) - len(fallos)}/{len(results)} casos OK")
     if fallos:

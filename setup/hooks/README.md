@@ -225,10 +225,10 @@ encendida, mínimo 1 hora, no ve ficheros locales) o **tareas de escritorio**
 `/goal` pide **v2.1.139+**; el `stop: true` de `ScheduleWakeup`, **v2.1.202+**;
 el filtro de skills auto-invocables en disparos programados, **v2.1.196+**.
 
-## Graphify: tres cosas que conviene saber antes (RFD 10 C8)
+## Graphify: cuatro cosas que conviene saber antes (RFD 10 C8)
 
 La herramienta es **externa** — este sync no la gestiona, y está bien así. Pero
-tres cosas se aprendieron usándola en campo y no están en su documentación:
+cuatro cosas se aprendieron usándola en campo y no están en su documentación:
 
 1. **`graphify claude install` registra `PreToolUse` en `.claude/settings.json`**,
    además de la sección del `CLAUDE.md` que sí documenta. Esos hooks **inyectan
@@ -256,3 +256,44 @@ tres cosas se aprendieron usándola en campo y no están en su documentación:
 3. **Su hook reconstruye en cada cambio de rama** — en una jornada se disparó
    unas seis veces, compitiendo por RAM con tres subagentes. **Cuenta en el
    presupuesto de máquina** del bloque 5 del despacho.
+
+   **Y tiene coste de reputación, que es el que de verdad se paga.** En campo se
+   reportó que *"los hooks de graphify tardaban mucho"* — y esa impresión se
+   transfiere entera al comando de consulta, que es otra cosa y no cuesta lo
+   mismo. Medido en una copia aislada de este repo (334 ficheros, 3,1 MB →
+   2.475 nodos): el hook (`graphify update`) **5,6 s**, en cada commit que toque
+   código; la consulta (`graphify query`) **0,5 s**, once veces menos. Este repo
+   es de docs, así que en uno de código el hook cuesta **más**, no menos.
+   **Lo lento no es lo que se evita**, pero la resistencia se acumula igual: al
+   pedir que se invoque a mano, da el número de la consulta — si no lo das, el
+   usuario descuenta el del hook.
+4. **Son DOS hooks de git, no uno** — este README decía "su hook" en singular y
+   por eso el coste se contaba a la mitad. Enumerados en un repo enganchado
+   (`ls .git/hooks/`, AlphaDogs, 2026-08-13):
+
+   | Hook | Bytes | Marcador | Cuándo dispara |
+   |---|---:|---|---|
+   | `post-checkout` | 8593 | `# graphify-checkout-hook-start` | cada cambio de rama |
+   | `post-commit` | 9186 | `# graphify-hook-start` | cada commit |
+
+   Los dos los pone `graphify hook install` (lo dicen ellos mismos, en su
+   cabecera). Eso explica los **dos prefijos distintos** que el campo vio en un
+   solo comando —`git checkout -b` + `git merge --squash` disparó
+   `[graphify] Branch switched…` **y** `[graphify hook] launching background
+   rebuild`—: dos reconstrucciones en paralelo, en un comando que ya tardó
+   **4 m 54 s**, compitiendo por la RAM que el humano nombró como fricción nº 1.
+
+   **Recomendación operativa: en una sesión con gates, quita el `post-checkout`.**
+   No hace falta un flag; el fichero no está versionado y basta apartarlo:
+
+   ```bash
+   mv .git/hooks/post-checkout .git/hooks/post-checkout.off   # quitar
+   mv .git/hooks/post-checkout.off .git/hooks/post-checkout   # devolver
+   ```
+
+   ⚠ **Lo que se pierde, dicho con precisión**: el mapa deja de regenerarse *al
+   cambiar de rama*, así que tras un `checkout` queda **desfasado hasta el
+   siguiente commit**, que es cuando `post-commit` lo rehace. En una jornada de
+   frentes eso es exactamente lo que quieres —el mapa de una rama a medio
+   construir no vale— y a cambio te ahorras una reconstrucción por cada salto.
+   Si tu trabajo es *leer* código saltando de rama sin commitear, déjalo puesto.

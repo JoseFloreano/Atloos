@@ -20,6 +20,16 @@ import os
 import re
 import sys
 
+# Segunda instancia de la clase que S2 barrió (sprint 3): la línea 78 escribe un
+# guion largo a stderr, y sin esto sale como byte inválido en una consola cp1252
+# — que es lo que convirtió el aviso de `gate-test.py` en "Binary file matches".
+# Este script lo invoca `project-resume` en cada arranque de sesión.
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 FRONTMATTER = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.S)
 FECHA_EN_NOMBRE = re.compile(r"^ADR-(\d{4})(\d{2})(\d{2})-")
 ENCABEZADO_DECISION = re.compile(r"^##\s+Decisi[oó]n\s*$", re.I | re.M)

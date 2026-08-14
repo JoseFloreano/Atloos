@@ -1,33 +1,31 @@
 ---
 name: workstream-dispatch
 description: >
-  Despacha subagentes implementadores y revisores con el contrato completo que
-  la evidencia local exige: estado del mundo generado, ownership por archivo,
-  presupuesto con número, predicción, destino de la rama y escalación por
-  categoría de riesgo con el coordinador de juez. Use when the user says
+  Despacha subagentes implementadores y revisores con el contrato que la
+  evidencia local exige: estado del mundo generado, ownership por archivo,
+  presupuesto y modelo por frente, predicción, destino de la rama y escalación
+  por categoría de riesgo con el coordinador de juez. Use when the user says
   "despacha subagentes", "lanza implementadores", "reparte el plan", "monta los
   frentes", "coordina este plan", "revisa lo que hizo el subagente", or antes de
   mandar cualquier tarea a un subagente que vaya a escribir código. ÚSALA JUNTO
   A `superpowers:subagent-driven-development`, no en su lugar: SDD pone el CICLO
-  (controller → implementer → reviewer, y el revisor por tarea, que sigue siendo
-  obligatorio) y esta pone el CONTRATO del despacho y los LÍMITES (8 bloques,
-  ownership por archivo, máximo 3 frentes). Donde discrepen en un número, gana
-  el más restrictivo. NO usar para despachar investigación de solo lectura (eso
-  es `superpowers:dispatching-parallel-agents`).
+  (controller → implementer → reviewer, con revisor por tarea obligatorio) y
+  esta pone el CONTRATO del despacho y los LÍMITES (8 bloques, máximo 3
+  frentes). Donde discrepen en un número, gana el más restrictivo. NO usar para
+  despachar investigación de solo lectura (eso es
+  `superpowers:dispatching-parallel-agents`).
 ---
 
 # Workstream Dispatch
 
-**Añade lo que `superpowers:subagent-driven-development` (SDD) no trae**, y que
-22 despachos reales demostraron necesario
-(`docs/subagentes/05-LIMITACIONES-OBSERVADAS.md`). La conclusión que la
-gobierna: **el desfase casi nunca vino del modelo, vino del traspaso.**
+**Añade lo que `superpowers:subagent-driven-development` (SDD) no trae**, medido
+en 22 despachos reales (`docs/subagentes/05-LIMITACIONES-OBSERVADAS.md`): **el
+desfase casi nunca vino del modelo, vino del traspaso.**
 
 ## Quién gobierna qué cuando SDD también está cargada
 
-Decir *"capa delgada sobre SDD"* no bastó: el agente mezcló las dos sin que
-ninguna mandara — **sin revisores por tarea** (los pide SDD) y con **5 frentes**
-contra el máximo de 3, y ninguna avisó del conflicto.
+Decir *"capa delgada sobre SDD"* no bastó: el agente mezcló las dos y ninguna
+avisó del conflicto.
 
 | Materia | Manda |
 |---|---|
@@ -47,8 +45,8 @@ contra el máximo de 3, y ninguna avisó del conflicto.
 
 ## Requisitos
 
-- SDD instalado (`superpowers:sdd-workspace`, `superpowers:task-brief`); sin él
-  los briefs se extraen a mano, nunca pegando el plan entero.
+- SDD instalado (`superpowers:sdd-workspace`, `superpowers:task-brief`); sin él,
+  briefs a mano — nunca el plan entero.
 - Workspace en `.superpowers/sdd/<plan>/`, **gitignorado**: lo que deba
   sobrevivir va al vault o al mensaje de commit.
 
@@ -56,20 +54,22 @@ contra el máximo de 3, y ninguna avisó del conflicto.
 
 1. **Presenta la partición al usuario** antes del primer despacho de 2+ frentes
    y espera su OK: es la decisión de mayor apalancamiento y la única barata.
-2. **Genera el estado del mundo** con comandos, no de memoria (bloque 2), con
-   **la firma del fallo de entorno conocido** — sin ella seis frentes te
-   devuelven el mismo rojo mal diagnosticado.
-3. **Arma el despacho con los 8 bloques** → `references/plantilla-despacho.md`.
-   El criterio de salida del bloque 7 **es** la condición de meta si el frente
-   corre desatendido: fórjala con `claude-code:goal-forge`. Y el bloque 8, el
-   destino de la rama, se decide **aquí**.
+2. **Genera el estado del mundo** con comandos (bloque 2): **manifiesto de lo
+   que git no versiona** y **firma del fallo conocido con su conteo de skips**.
+   Sin firma, seis frentes te devuelven el mismo rojo mal diagnosticado; un
+   verde con skips de más no es código sano, es un artefacto que falta.
+3. **Arma el despacho con los 8 bloques** → `references/plantilla-despacho.md`,
+   con **modelo por frente y su porqué** (bloque 5) e higiene de shell →
+   `references/higiene-de-shell.md`. El criterio de salida (bloque 7) **es** la
+   condición de meta si el frente corre desatendido: fórjala con
+   `claude-code:goal-forge`. El destino de la rama (bloque 8) se decide **aquí**.
 4. **Al recibir `NEEDS_CONTEXT`**, actúa de juez →
    `references/protocolo-escalacion.md`, y registra la resolución **antes** de
    re-despachar.
 5. **Revisor con contexto limpio** → `references/revisor.md`. Muta, no opina.
    Uno por tarea, que es de SDD y no es opcional.
-6. **Verifica el artefacto, no el reporte**: hashes, reporte, worktree limpio. Y
-   ejecuta el destino de cada rama al cerrar su frente. Para mergear:
+6. **Verifica el artefacto, no el reporte**: hashes, worktree limpio, y ejecuta
+   el destino de cada rama al cerrar su frente. Para mergear:
    `workstream-merge-gate`.
 
 ## Las tres prohibiciones del coordinador
@@ -78,5 +78,5 @@ contra el máximo de 3, y ninguna avisó del conflicto.
 - **No paralelices implementadores dentro del mismo frente** (lo prohíbe SDD y
   lo confirmó el C compiler de 16 agentes).
 - **Máximo 3 frentes**, ya no criterio sino **medición**: con 5 la suite pasó de
-  ~330 s a **677 s (×2,05)** y una prueba de latencia falló **por carga, no por
-  código**. El techo es la máquina.
+  ~330 s a **677 s (×2,05)** y una prueba de latencia falló por carga. El techo
+  es la máquina.

@@ -49,6 +49,27 @@ if (-not (Test-Path $SkillsRoot)) {
 }
 Write-Info "Fuente: $SkillsRoot"
 
+# ── Procedencia del despliegue (sprint 3, S5) ─────────────────────────────
+# El canal de feedback pide `setup_sha`: que version de las skills tenia la
+# maquina. Se pedia un `git rev-parse` de `~/.claude/`, que NO es un repo git,
+# asi que el campo era infalsificable por diseno y volvia `no-disponible`.
+# Quien SI sabe el sha es este script, que es el que despliega. Lo escribe al
+# desplegar y el reporte lo lee de ahi.
+# `dirty` no es decoracion: un sha limpio sobre un arbol sucio miente igual que
+# no tenerlo, y aqui se despliega desde el arbol de trabajo, no desde el commit.
+$originSha = ""
+$originDirty = $false
+try {
+    $originSha = (& git -C $PSScriptRoot rev-parse --short HEAD | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) { $originSha = "" }
+    $originDirty = [bool](& git -C $PSScriptRoot status --porcelain)
+} catch { $originSha = "" }
+if ($originSha) {
+    Write-Info "Procedencia: $originSha$(if ($originDirty) { ' (arbol SUCIO)' })"
+} else {
+    Write-Warn "Sin sha de origen: el despliegue no dejara procedencia comprobable."
+}
+
 # ── Recolectar skills fuente (carpetas con SKILL.md) ──────────────────────
 function Get-Skills { param($cats)
     $found = @{}
@@ -145,6 +166,23 @@ foreach ($cfg in $configDirs) {
     } else {
         Write-Warn "Manifest NO actualizado: sigue recordando las huerfanas."
     }
+
+    # PROCEDENCIA, en fichero aparte y escrita SIEMPRE. Son dos preguntas
+    # distintas y por eso no van juntas: `_onedrive-sync.json` responde "que
+    # skills gestiono yo" y solo se reescribe si no hay huerfanas; esta responde
+    # "que version se instalo" y tiene que existir precisamente cuando algo va
+    # raro. Meterla en el otro fichero la haria desaparecer en ese caso.
+    $procedencia = [ordered]@{
+        setup_sha = $(if ($originSha) { $originSha } else { "sin-git" })
+        dirty     = $originDirty
+        syncedAt  = (Get-Date -Format 'yyyy-MM-dd HH:mm')
+        skills    = $codeSkills.Count
+        source    = $SkillsRoot
+    } | ConvertTo-Json
+    # Sin BOM: lo lee un `json.load` de Python (B4).
+    [IO.File]::WriteAllText((Join-Path $target ".sync-manifest.json"), $procedencia,
+        (New-Object System.Text.UTF8Encoding($false)))
+
     $m = if ($previous) { $previous.Count } else { 0 }
     Write-OK "$($codeSkills.Count) skills → $target  (manifest: $m)"
 }

@@ -41,24 +41,19 @@ aislamiento activo.
 6. *(Solo si graphiti-memory está disponible)* copia la plantilla `.graphiti.json`
    a la raíz del proyecto ajustando `project_id`/`group_id` al nombre. Si Graphiti
    no está montado, omite este paso.
-7. *(Opcional — si el repo usará Graphify)* instala el hook git post-commit que
-   mantiene `codebase-map-snapshot.md` fresco en el vault (el `codebase-map.md`
-   curado NO lo toca nadie automáticamente — RFD 10 C2). ⚠ Antes de correr
-   `graphify claude install`, lee los 3 avisos de `setup/hooks/README.md`:
-   registra `PreToolUse` no documentados (peligroso con agentes en paralelo),
-   es una primera pasada y no una respuesta, y su hook cuenta en el
-   presupuesto de máquina:
-   `cp setup/hooks/git-post-commit-graph-report.sh .git/hooks/post-commit` +
-   `chmod +x` (ver `hooks/README.md`). Sin Graphify, omite sin avisar.
-
-   ⚠ **El disparador ya viaja en el snippet** (paso 5), así que un proyecto
-   recién enganchado lo tiene sin que nadie haga nada. Este paso ya NO es la vía
-   por la que llega: es solo el **parche** para un repo que YA arrastra la línea
-   que escribe `graphify claude install` —*"For codebase questions, first run
-   `graphify query`"*—. Bórrala. Esa línea es la que el agente lee de verdad, y
-   dejarla en pie mantiene viva la mala instrucción: dice QUÉ, no dice CUÁNDO
-   (F14, incumplida 2 jornadas de 2).
-8. **Verifica**: existe `10-Projects/<nombre>/_PROJECT.md`; el `CLAUDE.md` del
+7. *(Opcional — si el repo usará Graphify)* instala el `.git/hooks/post-commit` que
+   mantiene fresco el `codebase-map-snapshot.md` del vault, y **borra la línea
+   vieja** que escribe `graphify claude install`: el disparador bueno ya viaja
+   en el snippet (paso 5). Antes de instalar nada, lee
+   `references/graphify-al-enganchar.md`. Sin Graphify, omite sin avisar.
+8. **Da el proyecto de alta en `setup/telegram-bridge/projects.json`** del repo
+   Atloos, con su ruta absoluta. **Enganchar sin dar de alta no engancha nada
+   comprobable**: de ahí saca `test-claude-md-drift.py` los `CLAUDE.md` vivos,
+   así que un proyecto ausente **nunca se audita**. Pasó: el proyecto de los
+   cuatro reportes de campo no estaba, y nada lo dijo.
+   ⚠ El registro es **por máquina** (gitignorado, rutas absolutas): en la otra
+   laptop se repite el alta allí.
+9. **Verifica**: existe `10-Projects/<nombre>/_PROJECT.md`; el `CLAUDE.md` del
    proyecto contiene el snippet y NO queda ningún `<project-name>` sin
    reemplazar. Y `py setup/scripts/tests/test-claude-md-drift.py <CLAUDE.md>` [repo]
    comprueba que el snippet llegó entero y caza la línea vieja de Graphify.
@@ -67,3 +62,5 @@ aislamiento activo.
 
 - `references/memory-snippet.md` — bloque a insertar en el CLAUDE.md del proyecto
   (~300 tokens; reemplaza `<project-name>`).
+- `references/graphify-al-enganchar.md` — qué instalar, qué borrar y los cuatro
+  avisos, si el repo usará Graphify (paso 7).

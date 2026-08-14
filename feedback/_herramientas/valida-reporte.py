@@ -149,7 +149,13 @@ def revisa_confirmacion(cuerpo):
 
 def valida(ruta):
     fallos, avisos = [], []
-    crudo = ruta.read_bytes().decode("utf-8", "replace")
+    # El BOM se quita antes de nada. `Set-Content -Encoding UTF8` de PowerShell
+    # 5.1 lo escribe SIEMPRE, así que un reporte guardado desde PowerShell —lo
+    # normal en esta máquina— llegaba con `﻿` delante del `---` y el
+    # validador respondía "no tiene frontmatter YAML" seguido de 16 claves que
+    # faltaban. Un diagnóstico falso y aterrador para un fichero correcto.
+    # Encontrado al probar este mismo cambio: mi propio instrumento lo produjo.
+    crudo = ruta.read_bytes().decode("utf-8", "replace").lstrip("﻿")
     texto = crudo.replace("\r\n", "\n")
 
     # Los ficheros que empiezan por `_` son plantilla/ejemplo: no llevan fecha.
@@ -176,10 +182,29 @@ def valida(ruta):
         fallos.append("`coste_medido: no` obliga a decirlo en la sección 4: "
                       "escribe ahí por qué no se corrió `/cost` (literal: "
                       "\"no se corrió `/cost`\")")
+    # `setup_sha` volvió `no-disponible` en el reporte del 08-13, y con razón: se
+    # pedía un `git rev-parse` de `~/.claude/`, que no es un repo git. El campo
+    # era infalsificable POR DISEÑO. Ahora lo escribe `sync-skills` al desplegar,
+    # así que el validador puede decir DÓNDE está en vez de aceptar el hueco en
+    # silencio — que es lo que hacía: solo comprobaba el formato.
+    # El `+` final es la marca de "desplegado desde un árbol sucio" (PROMPT.md).
     sha = fm.get("setup_sha", "")
-    if sha and not re.fullmatch(r"[0-9a-f]{7,40}", sha):
-        fallos.append(f"`setup_sha: {sha}` no parece un sha de git — es el "
-                      f"commit del repo desde el que se corrió `sync-skills`")
+    if sha and not re.fullmatch(r"[0-9a-f]{7,40}\+?", sha):
+        detalle = (f"`setup_sha: {sha}` no parece un sha de git — es el commit "
+                   f"del repo desde el que se corrió `sync-skills`.")
+        if sha.lower() in {"no-disponible", "no disponible", "n/a", "-", "?"}:
+            detalle = (f"`setup_sha: {sha}` ya no vale: desde el sprint 3 el sha "
+                       f"lo escribe `sync-skills` al desplegar.")
+        fallos.append(
+            detalle + "\n           Sácalo de ahí, literal:\n"
+            "             Windows: Get-Content "
+            "\"$env:USERPROFILE\\.claude\\skills\\.sync-manifest.json\"\n"
+            "             Linux:   cat ~/.claude/skills/.sync-manifest.json\n"
+            "           Si ese JSON trae \"dirty\": true, escribe el sha con un "
+            "`+` detrás.\n"
+            "           Si el fichero no existe, esa máquina no ha corrido "
+            "`sync-skills` con\n           esta versión: córrelo antes de "
+            "reportar.")
 
     cuerpo = texto[texto.find("\n---\n", 4) + 5:] if fm else texto
     for s in SECCIONES:

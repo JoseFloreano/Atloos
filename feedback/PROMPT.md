@@ -49,6 +49,28 @@ Y saca del contexto de esta sesión, **sin adivinar**:
   skills tenía — y esa es la pregunta que decide si el reporte prueba algo:
   ¿estaba instalada la skill que "no disparó"?
 
+  **De dónde se saca, literal** — lo escribe `sync-skills` al desplegar, porque
+  `~/.claude/` no es un repo git y un `git rev-parse` ahí no existe (por eso el
+  reporte del 08-13 traía `no-disponible`, y el fallo era del diseño del campo):
+
+  ```powershell
+  # Windows
+  Get-Content "$env:USERPROFILE\.claude\skills\.sync-manifest.json"
+  ```
+  ```bash
+  # Linux / macOS
+  cat ~/.claude/skills/.sync-manifest.json
+  ```
+
+  Copia `setup_sha` tal cual. ⚠ **Si trae `"dirty": true`**, el despliegue se
+  hizo desde un árbol con cambios sin commitear: escribe el sha **con un `+`
+  detrás** (`b2e27fa+`) y dilo en la sección 2. Un sha limpio sobre un árbol
+  sucio miente igual que no tener sha.
+
+  Si el fichero no está, la máquina nunca corrió `sync-skills` con esta versión:
+  córrelo y vuelve a mirar, o pon `no-disponible` **y di por qué** en la
+  sección 2.
+
 **Y lo de Graphify, que tiene sección propia porque es lo que peor se cumple:**
 
 ```bash

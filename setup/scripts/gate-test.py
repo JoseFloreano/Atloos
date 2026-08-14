@@ -29,6 +29,35 @@ comando de test declarado no hay verde posible, y sin verde no se mergea.
 
 Ruta estable: `sync-skills` lo instala en `~/.claude/scripts/` (F13 — una skill
 corre desde el cwd de cualquier proyecto, así que no puede citar rutas del repo).
+
+POR QUÉ NO CORRIÓ ES AHORA RUIDOSO (sprint 3, S2). En campo se invocó CUATRO
+veces desde la rama equivocada y las cuatro se creyeron corridas:
+
+  · este era el único de los seis scripts del repo SIN reconfigurar la
+    codificación de salida, y tiene 17 caracteres acentuados en sus mensajes.
+    En una consola cp1252 el `así` de la línea del aviso salía como `est?s`,
+    que no es UTF-8 válido ⇒ `grep` declaró el fichero **binario** ⇒ se leyó
+    "Binary file matches" como "sí, salió". Tres instrumentos rotos seguidos
+    para leer un resultado que no existía;
+  · y el aviso salía con `exit 2`, el mismo código que "no hay comando
+    declarado": indistinguible en una tubería.
+
+**Ese bug ya se había arreglado en `merge-gate-guard.py` (sprint 2) y no se
+barrió la clase.** Cinco de seis lo tenían; el que no, era el que el humano
+invoca a mano diez veces por sesión. Cuarta vez en este repo que se arregla la
+instancia y no la clase.
+
+Dos salidas posibles y se elige la segunda **a propósito**: (a) hacer el
+checkout él mismo es cómodo pero mueve el árbol de trabajo bajo los pies de
+quien lo llamó, y eso ya rompió una presentación en directo ("suspende los
+merge ahorita estoy presentando"); (b) salir con un código propio (**3**) y una
+primera línea **sin acentos** y con prefijo estable — `[gate-test] NO CORRIO:` —
+que sobrevive a cualquier consola y se puede `grep`ear. Un gate no debe mover el
+mundo por su cuenta: debe ser imposible de confundir con uno que corrió.
+
+Códigos de salida:
+  0 verde registrado · 1 suite en rojo · 2 no se puede resolver (uso, comando
+  ausente, rama inexistente) · **3 NO CORRIÓ: estás en otra rama**
 """
 import json
 import os
@@ -37,7 +66,21 @@ import subprocess
 import sys
 import time
 
+# La consola de Windows es cp1252 y este script escribe acentos. Sin esto, el
+# mensaje sale con bytes inválidos, `grep` lo declara binario y "Binary file
+# matches" se lee como una corrida. Es la línea que faltaba (S2), y la llevan
+# los otros cinco scripts del repo.
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 EVIDENCIA = os.path.join(".claude", "gate-verde.json")
+
+# Exit propio del "no corrió". Distinto de 2 a propósito: 2 significa "no pude
+# resolver qué correr" y se confundía con este en cualquier tubería.
+NO_CORRIO = 3
 
 
 def git(args, cwd="."):
@@ -120,11 +163,20 @@ def main():
 
     actual = git(["rev-parse", "--abbrev-ref", "HEAD"], raiz)
     if actual != rama:
-        print(f"[gate-test] AVISO: estás en '{actual}' y la evidencia se pide "
-              f"para '{rama}'.\n            La suite corre sobre el árbol de "
-              f"trabajo actual, así que\n            haz checkout de '{rama}' "
-              f"antes, o la evidencia mentirá.", file=sys.stderr)
-        return 2
+        # PRIMERA LÍNEA SIN ACENTOS Y CON PREFIJO ESTABLE, a propósito: es la
+        # única que sobrevive a una consola cp1252 y a un `grep`. El resto del
+        # mensaje sí lleva acentos — ya no hacen daño con el reconfigure puesto,
+        # pero la línea que se busca no depende de él.
+        print(f"[gate-test] NO CORRIO: estas en '{actual}' y se pide "
+              f"'{rama}'. La suite NO se ha ejecutado.\n"
+              f"            La suite corre sobre el árbol de trabajo actual, "
+              f"así que haz\n            checkout de '{rama}' antes, o la "
+              f"evidencia mentiría. No se toca\n            tu árbol por ti: "
+              f"mover la rama bajo los pies de quien llama ya\n"
+              f"            rompió una sesión en directo.\n"
+              f"            (exit {NO_CORRIO} = no corrio; 1 seria rojo, y no "
+              f"es lo mismo)", file=sys.stderr)
+        return NO_CORRIO
 
     print(f"[gate-test] {cmd}   (rama {rama} @ {sha[:8]})")
     rc = subprocess.run(cmd, shell=True, cwd=raiz).returncode
