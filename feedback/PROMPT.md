@@ -129,19 +129,28 @@ feedback/reportes/AAAA-MM-DD-<alias-maquina>-<slug-tarea>.md
 Ejemplo: `feedback/reportes/2026-08-09-legion-win11-merge-gate.md`
 
 Copia la estructura exacta de [`_PLANTILLA.md`](_PLANTILLA.md): el frontmatter
-completo y **las nueve secciones, todas**. Reglas de contenido:
+completo y **las nueve secciones, todas** — siguen siendo **nueve**, con la 4
+partida en `4a` y `4b`. **Nadie cuenta diez**, y la 9 sigue siendo la 9.
+Reglas de contenido:
 
-- **La sección «Qué NO funcionó» no puede quedar vacía.** Si de verdad no hubo
-  nada, escribe por qué crees que no lo hubo (tarea corta, camino muy trillado,
-  no se tocó código…). Un repo donde todos los reportes dicen "todo bien" no
-  tiene feedback: tiene cortesía.
+- **La sección 4 tiene dos mitades y las dos son obligatorias**: `4a` lo que
+  falló del setup, `4b` lo que fallaste tú. La 4b es la que más rinde: en los
+  cuatro reportes anteriores, cada fallo que un agente confesó ahí acabó siendo
+  un defecto del setup. **No adornes al usuario ni a ti mismo.**
+- **Ninguna de las dos puede quedar vacía.** Si de verdad no hubo nada, escribe
+  por qué crees que no lo hubo (tarea corta, camino muy trillado, no se tocó
+  código…) — y en la `4b`, **di además qué buscaste** para poder afirmarlo. Un
+  repo donde todos los reportes dicen "todo bien" no tiene feedback: tiene
+  cortesía; y un «ninguno» sin método es lo mismo que no haber mirado.
 - **En la sección 6, `graphify: no-usado` es una respuesta perfectamente
   válida** y probablemente la más útil. No la maquilles: si no está instalado,
   pon `no-instalado`, contesta la primera línea y borra el resto.
-- **Marca cada afirmación con `[R]`, `[AR]` o `[H]`.** Sin marca, no entra.
+- **Marca cada afirmación con `[R]`, `[AR]` o `[H]`.** Sin marca, no entra — y
+  eso incluye la `4b`: una confesión sin marca es una opinión.
 - **Pega salidas literales**, no resúmenes de salidas.
-- **No adornes al usuario ni a ti mismo.** Si te equivocaste, escríbelo: la
-  sección de fricciones es más útil que la de aciertos.
+- **`formato: 2` en el frontmatter.** Es la versión del contrato que cumple el
+  reporte, y un reporte nuevo no puede declarar la 1: esa existe solo para que
+  los reportes escritos antes del 2026-08-14 se puedan archivar tal como están.
 
 ### Paso 4 · Limpia antes de guardar
 

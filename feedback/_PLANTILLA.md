@@ -1,4 +1,5 @@
 ---
+formato: 2
 tipo: feedback
 fecha: 2026-08-09
 reporter: alias-o-nombre
@@ -20,7 +21,14 @@ bloqueantes: 0
 coste_medido: si
 ---
 
-<!-- Las tres claves nuevas, y por qué:
+<!-- `formato:` es la VERSIÓN DEL CONTRATO, y existe para que endurecerlo no
+     borre la historia. Si falta, el validador asume 1 — así los cuatro
+     reportes escritos antes de esto declaran su contrato POR OMISIÓN, sin
+     tocarlos. Una plantilla nueva nace en 2 y no puede elegir el viejo.
+     ⚠ No es una puerta trasera: un reporte con fecha posterior al 2026-08-14
+     que declare 1 se bloquea igual.
+
+     Las tres claves nuevas, y por qué:
      · setup_sha — el commit del repo desde el que se corrió `sync-skills` en
        ESTA máquina. `claude_code:` fija el harness y no dice qué skills había,
        que es justo lo que el reporte evalúa.
@@ -73,12 +81,42 @@ $ git status --porcelain | wc -l
 
 ## 4. Qué NO funcionó
 
-> **Obligatoria.** Si no hubo nada, explica por qué crees que no lo hubo.
+> **Obligatoria, las dos mitades.** Van separadas a propósito: mezclarlas hace
+> que la segunda se quede sin escribir.
 > Y si no corriste `/cost`, **dilo aquí con esas palabras**: «no se corrió
 > `/cost`». En los dos reportes de dos no se midió y nadie lo echó de menos,
 > porque no había ningún sitio donde faltara.
 
+### 4a · El setup
+
+> Lo que te estorbó, te bloqueó o te hizo perder tiempo: skills, hooks, gates,
+> worktrees, documentación que mentía. Si de verdad no hubo nada, escribe por
+> qué crees que no lo hubo. Un repo donde todos los reportes dicen "todo bien"
+> no tiene feedback: tiene cortesía.
+
 - [H] …
+
+### 4b · Yo, el agente
+
+> **Qué hiciste mal tú.** No lo que el setup te hizo: lo que hiciste tú con él.
+> Instrumentos mal elegidos, comandos mal leídos, supuestos que no verificaste,
+> reglas que conocías y te saltaste, trabajo que rehiciste por no mirar antes.
+>
+> **Esto no es penitencia: es el material más útil del reporte.** En los cuatro
+> reportes anteriores, cada fallo confesado aquí destapó un defecto real del
+> setup — porque **un agente competente que tropieza dos veces con lo mismo
+> está señalando una arista, no una torpeza**.
+>
+> Si de verdad no encontraste ninguno, dilo **y di qué buscaste** para
+> afirmarlo. «Ninguno» sin método es lo mismo que no haber mirado.
+>
+> ⚠ Esta guía va entre `>` A PROPÓSITO: el validador descarta las citas al
+> contar, así que una 4b sin rellenar tiene 2 caracteres útiles y bloquea. Si
+> la guía fuese texto normal, la propia plantilla satisfaría el check y éste
+> sería decorativo — que es el defecto que este repo lleva tres sprints
+> cazando.
+
+- [AR] …
 
 ## 5. Triggers — lo que se escribió literalmente
 

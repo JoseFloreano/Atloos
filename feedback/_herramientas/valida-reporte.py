@@ -29,10 +29,55 @@ for _s in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
-CLAVES = ["tipo", "fecha", "reporter", "maquina", "so", "superficie",
-          "claude_code", "setup_sha", "tarea", "veredicto", "skills_disparadas",
-          "skills_existentes_que_no_dispararon", "hooks_disparados", "graphify",
-          "bloqueantes", "coste_medido"]
+# ── LA VERSIÓN DEL CONTRATO ──────────────────────────────────────────────────
+#
+# POR QUÉ EXISTE. El contrato de este canal se endureció tres veces —`setup_sha`,
+# `coste_medido`, `skills_existentes_que_no_dispararon`, y ahora las dos mitades
+# de la sección 4— y cada vez se aplicó **hacia atrás**. Resultado medido en el
+# sprint 5: los cuatro reportes de campo que existen fallan el validador, y los
+# del 08-10 y 08-11 **no pueden pasar nunca**, porque les faltan claves que se
+# inventaron después de que se escribieran.
+#
+#   **Un canal que endurece su contrato retroactivamente no puede archivar su
+#   propia historia.** Y un canal cuyo archivo está vacío no es un canal.
+#
+# CÓMO. El reporte declara qué contrato cumple. Si no lo declara, es de antes de
+# que esto existiera y por tanto **es v1 por omisión** — así los cuatro reportes
+# viejos quedan bien clasificados sin tocarles una línea, que es la propiedad que
+# hace honesto el arreglo: no se reescribe la historia, se fecha.
+FORMATO_ACTUAL = 2
+FORMATO_POR_OMISION = 1
+
+# El día en que la v2 entró. Un reporte con fecha POSTERIOR que declare v1 no
+# está archivando historia: está esquivando el contrato, y se bloquea aunque el
+# fichero diga 1.
+#
+# ⚠ ESTRICTAMENTE POSTERIOR, no "posterior o igual". El propio día es ambiguo —
+# el reporte del 08-14 se escribió esa mañana, horas antes de que la v2
+# existiera— y tratarlo como v2 sería aplicar el contrato hacia atrás por unas
+# horas: exactamente el defecto que esta versión existe para quitar, cometido en
+# el mismo fichero que lo arregla. La duda de un día se resuelve a favor del
+# reporte; el que venga mañana ya no tiene excusa.
+FECHA_V2 = "2026-08-14"
+
+# Claves comunes a todas las versiones.
+CLAVES_V1 = ["tipo", "fecha", "reporter", "maquina", "so", "superficie",
+             "claude_code", "tarea", "veredicto", "skills_disparadas",
+             "hooks_disparados", "graphify", "bloqueantes"]
+
+# Lo que añadió la v2. `skills_que_faltaron` era el nombre viejo de
+# `skills_existentes_que_no_dispararon` y mentía en la dirección peor, así que
+# en v1 no se exige ninguno de los dos: exigir el nombre nuevo a un reporte que
+# usó el viejo es pedirle que adivinara el futuro.
+CLAVES_V2 = ["setup_sha", "skills_existentes_que_no_dispararon", "coste_medido",
+             "formato"]
+
+
+def claves_de(version):
+    return CLAVES_V1 + (CLAVES_V2 if version >= 2 else [])
+
+
+CLAVES = CLAVES_V1 + CLAVES_V2      # el contrato de hoy, para quien lo importe
 
 # `setup_sha` es el commit del repo desde el que se corrió `sync-skills` en esa
 # máquina. Sin él, la pregunta que decide la conclusión más importante de los
@@ -60,10 +105,18 @@ VEREDICTOS = {"sirvio", "sirvio-con-fricciones", "no-sirvio"}
 # alguien lo reporte no sabemos si funcionó.
 GRAPHIFY = {"usado", "no-usado", "no-instalado"}
 
+# SIGUEN SIENDO NUEVE. La 4 se partió en `4a`/`4b` sin renumerar nada a
+# propósito: «la sección 9» se cita en el vault, en tres encargos y en los
+# mensajes de este mismo fichero. Renumerar rompe un vocabulario compartido, y
+# eso cuesta más que el orden — el mismo argumento por el que el check de 1024
+# se quedó de cuarto aunque bloquee.
 SECCIONES = ["1. Qué se intentó", "2. Evidencia de máquina", "3. Qué funcionó",
              "4. Qué NO funcionó", "5. Triggers", "6. Graphify",
              "7. Fricciones menores", "8. Lo que esperaba y no existe",
              "9. Confirmación del humano"]
+
+# Subsecciones que añade la v2. Van como `###`, dentro de la 4.
+SUBSECCIONES_V2 = ["4a · El setup", "4b · Yo, el agente"]
 
 # Bloquean: revelan un secreto reutilizable por un tercero.
 SECRETOS = [
@@ -156,6 +209,73 @@ def revisa_confirmacion(cuerpo):
     return fallos
 
 
+MINIMO_4B = 80      # caracteres útiles. Más que la 9 (60): «me equivoqué» no vale
+
+
+def revisa_4b(cuerpo):
+    """La 4b tiene que estar escrita, y con marca. Solo en v2.
+
+    Mismo criterio que la sección 9 y por el mismo motivo: es la mitad que se
+    queda sin escribir si no se le exige. Y se le exige marca porque **una
+    confesión sin marca es una opinión** — la regla `[R]/[AR]/[H]` ya rige en
+    todo el documento, pero aquí es donde más barato sale saltársela.
+
+    ⚠ Se corta en la sección 5, no en el final del fichero: sin eso, cualquier
+    marca del resto del reporte contaría como si estuviera en la 4b.
+    """
+    m = re.search(r"^###\s*4b[^\n]*$(.*?)(?=^##\s|\Z)", cuerpo, re.S | re.M)
+    if not m:
+        return []          # su ausencia ya la canta el bucle de SUBSECCIONES_V2
+    util = [l for l in m.group(1).splitlines()
+            if l.strip() and not l.lstrip().startswith(">")]
+    texto = "\n".join(util).strip()
+
+    fallos = []
+    if len(re.sub(r"[^\wáéíóúñÁÉÍÓÚÑ]", "", texto)) < MINIMO_4B:
+        fallos.append(
+            f"la sección 4b tiene menos de {MINIMO_4B} caracteres útiles: no "
+            f"está escrita. Si de verdad no encontraste ningún fallo propio, "
+            f"dilo Y di qué buscaste — «ninguno» sin método es lo mismo que no "
+            f"haber mirado")
+    marcas = sorted({x.group(0) for x in SIN_CONFIRMAR.finditer(texto)})
+    if marcas:
+        fallos.append(
+            "la sección 4b sigue con texto de plantilla — lleva " +
+            ", ".join(f"`{x}`" for x in marcas[:4]))
+    if not re.search(r"\[(R|AR|H)\]", texto):
+        fallos.append("la sección 4b no lleva ni una marca [R]/[AR]/[H]: una "
+                      "confesión sin marca es una opinión")
+    return fallos
+
+
+def version_de(fm, ruta):
+    """(version_efectiva, declarada, motivo_del_ajuste).
+
+    Sin `formato:` el reporte es de antes de que la versión existiera → v1.
+    Pero declarar v1 con fecha posterior a la v2 no es historia: es esquivar el
+    contrato, y entonces se exige v2 igualmente.
+    """
+    crudo = (fm.get("formato") or "").strip()
+    if not crudo:
+        declarada = FORMATO_POR_OMISION
+    else:
+        try:
+            declarada = int(crudo)
+        except ValueError:
+            return FORMATO_ACTUAL, crudo, (
+                f"`formato: {crudo}` no es un número; se exige el contrato "
+                f"v{FORMATO_ACTUAL}")
+    fecha = (fm.get("fecha") or "").strip()
+    if declarada < FORMATO_ACTUAL and fecha and fecha > FECHA_V2:
+        return FORMATO_ACTUAL, declarada, (
+            f"el reporte declara `formato: {declarada}` pero su `fecha: "
+            f"{fecha}` es POSTERIOR al {FECHA_V2}, el día en que entró la v2. "
+            f"La versión existe para que los reportes VIEJOS se puedan "
+            f"archivar, no para escribir nuevos con el contrato viejo: se "
+            f"exige v{FORMATO_ACTUAL}")
+    return declarada, declarada, ""
+
+
 def valida(ruta):
     fallos, avisos = [], []
     # El BOM se quita antes de nada. `Set-Content -Encoding UTF8` de PowerShell
@@ -175,20 +295,25 @@ def valida(ruta):
     if fm is None:
         fallos.append("no tiene frontmatter YAML delimitado por `---`")
         fm = {}
-    for k in CLAVES:
+
+    version, declarada, ajuste = version_de(fm, ruta)
+    if ajuste:
+        fallos.append(ajuste)
+    for k in claves_de(version):
         if k not in fm:
-            fallos.append(f"falta la clave `{k}` en el frontmatter")
+            fallos.append(f"falta la clave `{k}` en el frontmatter"
+                          + (f" (contrato v{version})" if version >= 2 else ""))
     if fm.get("veredicto") and fm["veredicto"] not in VEREDICTOS:
         fallos.append(f"`veredicto: {fm['veredicto']}` no es uno de {sorted(VEREDICTOS)}")
     if fm.get("graphify") and fm["graphify"] not in GRAPHIFY:
         fallos.append(f"`graphify: {fm['graphify']}` no es uno de {sorted(GRAPHIFY)}")
     if fm.get("tarea", "").startswith("Una línea con"):
         fallos.append("`tarea` sigue siendo el texto de la plantilla")
-    if fm.get("coste_medido") and fm["coste_medido"].lower() not in COSTE:
+    if version >= 2 and fm.get("coste_medido") and fm["coste_medido"].lower() not in COSTE:
         fallos.append(f"`coste_medido: {fm['coste_medido']}` no es `si` ni `no`")
-    if fm.get("coste_medido", "").lower() == "no" and \
+    if version >= 2 and fm.get("coste_medido", "").lower() == "no" and \
             "no se corrió `/cost`" not in texto and "no se corrio `/cost`" not in texto:
-        fallos.append("`coste_medido: no` obliga a decirlo en la sección 4: "
+        fallos.append("`coste_medido: no` obliga a decirlo en la sección 4a: "
                       "escribe ahí por qué no se corrió `/cost` (literal: "
                       "\"no se corrió `/cost`\")")
     # `setup_sha` volvió `no-disponible` en el reporte del 08-13, y con razón: se
@@ -197,7 +322,14 @@ def valida(ruta):
     # así que el validador puede decir DÓNDE está en vez de aceptar el hueco en
     # silencio — que es lo que hacía: solo comprobaba el formato.
     # El `+` final es la marca de "desplegado desde un árbol sucio" (PROMPT.md).
-    sha = fm.get("setup_sha", "")
+    #
+    # ⚠ SOLO EN v2, y por la misma razón que las claves: bajo v1 este campo no
+    # existía en el contrato, y `no-disponible` era la respuesta HONESTA de la
+    # época —se pedía un `git rev-parse` de `~/.claude/`, que no es un repo—.
+    # Exigirle formato a una clave que su contrato no pedía es aplicar el
+    # contrato de hoy hacia atrás, que es justo lo que la versión quita. La
+    # regla general, sin casos especiales: **una clave de v2 se valida bajo v2.**
+    sha = fm.get("setup_sha", "") if version >= 2 else ""
     if sha and not re.fullmatch(r"[0-9a-f]{7,40}\+?", sha):
         detalle = (f"`setup_sha: {sha}` no parece un sha de git — es el commit "
                    f"del repo desde el que se corrió `sync-skills`.")
@@ -240,6 +372,20 @@ def valida(ruta):
     # exactamente lo que este canal existe para no ser.
     fallos.extend(revisa_confirmacion(cuerpo))
 
+    # LO QUE SÍ DEPENDE DE LA VERSIÓN: las dos mitades de la sección 4. Un
+    # reporte v1 se escribió cuando la 4 era una sola, así que exigírselas sería
+    # el defecto que la versión existe para arreglar, cometido en el mismo
+    # commit que la introduce.
+    if version >= 2:
+        for s in SUBSECCIONES_V2:
+            if f"### {s}" not in cuerpo:
+                fallos.append(f"falta la subsección `### {s}` (contrato v2)")
+        fallos.extend(revisa_4b(cuerpo))
+
+    # LO QUE NO DEPENDE DE LA VERSIÓN, y por eso va fuera del `if`: los
+    # secretos, la sección 9 confirmada por un humano (arriba) y las marcas.
+    # Eso no es contrato de formato — es la razón de existir del canal, y
+    # dejarlo pasar por ser "de otra época" vaciaría la versión de sentido.
     if not re.search(r"\[(R|AR|H)\]", cuerpo):
         fallos.append("no hay ni una marca [R]/[AR]/[H] en el cuerpo")
 
@@ -250,7 +396,7 @@ def valida(ruta):
         if re.search(patron, texto):
             avisos.append(f"{que} — sustitúyelo por `<redactado>` o por una ruta relativa al repo")
 
-    return fallos, avisos
+    return fallos, avisos, version
 
 
 def main():
@@ -270,8 +416,12 @@ def main():
             print(f"[FALLO] {ruta}: no existe")
             total_fallos += 1
             continue
-        fallos, avisos = valida(ruta)
-        estado = "OK   " if not fallos else "FALLO"
+        fallos, avisos, version = valida(ruta)
+        # LA VERSIÓN SE ENSEÑA SIEMPRE, y en el verde más que en el rojo: un
+        # `[OK]` a secas sobre un reporte v1 se lee como "cumple el contrato de
+        # hoy", y no lo cumple — cumple el suyo. Ese malentendido es barato de
+        # evitar aquí y caro de deshacer dentro de dos meses.
+        estado = (f"OK v{version}" if not fallos else "FALLO ").ljust(6)
         print(f"[{estado}] {ruta.name}")
         for f in fallos:
             print(f"         ✗ {f}")

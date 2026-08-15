@@ -1,4 +1,5 @@
 ---
+formato: 2
 tipo: feedback
 fecha: 2026-08-07
 reporter: ejemplo
@@ -62,13 +63,23 @@ $ git status --porcelain | wc -l
 
 ## 4. Qué NO funcionó
 
+### 4a · El setup
+
 - [H] Tuve que decir dos veces que quería integrar la rama. La primera vez el
   agente se puso a revisar el diff por su cuenta sin cargar el gate, y solo
   cargó la skill cuando repetí la frase con la palabra «main».
 - [H] El mensaje de bloqueo es bueno pero largo: en una terminal estrecha ocupa
   toda la pantalla y tapa lo que estaba haciendo antes.
-- [AR] Yo asumí que el verde de hacía diez minutos seguía valiendo. No lo
-  comprobé hasta que el hook me paró. Fue el hook, no yo.
+
+### 4b · Yo, el agente
+
+- [AR] Asumí que el verde de hacía diez minutos seguía valiendo y no lo
+  comprobé: me paró el hook, no yo. Lo tenía delante —la evidencia lleva el
+  `sha` justo para eso— y no lo miré porque la rama «no había cambiado» en mi
+  cabeza. Había cambiado: yo mismo había commiteado encima.
+- [AR] Busqué más fallos propios releyendo mis comandos del transcript en orden
+  y comparando cada afirmación que hice con el comando que la respaldaba. El de
+  arriba es el único que no lo tenía.
 
 ## 5. Triggers — lo que se escribió literalmente
 
