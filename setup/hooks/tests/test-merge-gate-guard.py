@@ -38,6 +38,14 @@ for _s in (sys.stdout, sys.stderr):
 HOOK = os.path.normpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)), os.pardir, "merge-gate-guard.py"))
 
+# El hook, importado como módulo, para preguntarle DÓNDE busca la evidencia en
+# vez de suponerlo. Lo sigue ejerciendo como subproceso —que es como corre de
+# verdad—; esto es solo para el fixture.
+import importlib.util as _il
+_spec = _il.spec_from_file_location("merge_gate_guard", HOOK)
+GUARD_MOD = _il.module_from_spec(_spec)
+_spec.loader.exec_module(GUARD_MOD)
+
 results = []
 
 
@@ -71,8 +79,22 @@ def head(d, ref):
 
 
 def escribe_evidencia(d, branch, sha, cmd="py -m pytest -q"):
-    os.makedirs(os.path.join(d, ".claude"), exist_ok=True)
-    with open(os.path.join(d, ".claude", "gate-verde.json"), "w") as f:
+    """Deja el verde DONDE EL GUARD LO BUSCA, preguntándoselo al propio guard.
+
+    La ruta se resuelve importando `ruta_evidencia` del hook real en vez de
+    escribirla aquí a mano. Escribirla a mano es lo que había, y por eso este
+    arnés se puso rojo al mover la evidencia al directorio git común (H2 del
+    08-14): el fixture afirmaba una ruta por su cuenta, así que medía su propia
+    copia de la regla y no la regla.
+
+    ⚠ Y fíjate en la DIRECCIÓN del fallo: los casos que se rompieron fueron los
+    que esperaban PASAR; los que esperaban bloquear siguieron bloqueando. Un
+    desajuste de rutas en esta compuerta falla cerrado, que es lo que tiene que
+    hacer — pero no por eso deja de ser un desajuste.
+    """
+    destino = GUARD_MOD.ruta_evidencia(d)
+    os.makedirs(os.path.dirname(destino), exist_ok=True)
+    with open(destino, "w") as f:
         json.dump({"branch": branch, "sha": sha,
                    "ts": "2026-08-08T10:00:00", "cmd": cmd}, f)
 

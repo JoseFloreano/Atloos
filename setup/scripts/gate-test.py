@@ -76,7 +76,55 @@ for _s in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
-EVIDENCIA = os.path.join(".claude", "gate-verde.json")
+EVIDENCIA = os.path.join(".claude", "gate-verde.json")   # el sitio de respaldo
+
+# Nombre del fichero de evidencia dentro del directorio git COMÚN. Tiene que ser
+# idéntico en `merge-gate-guard.py`, que lo resuelve con esta misma función
+# copiada: son dos procesos distintos (un hook en ~/.claude/hooks/ y un script en
+# ~/.claude/scripts/) y no comparten módulo. La duplicación no se puede quitar,
+# pero SÍ se puede vigilar: `test-gate-test.py` afirma que los dos resuelven la
+# MISMA ruta sobre el mismo repo, así que si alguien cambia una y no la otra, el
+# arnés lo dice. Un contenido con dos puntos de consumo y un check encima deja
+# de ser la enfermedad de siempre.
+NOMBRE_EVIDENCIA = "gate-verde.json"
+
+
+def ruta_evidencia(cwd):
+    """Dónde vive el verde. Resuelto contra el directorio git COMÚN.
+
+    POR QUÉ NO `.claude/` DEL ÁRBOL (auditoría del 08-14, H2). La ruta era
+    relativa al árbol de trabajo, y los dos extremos usaban árboles distintos:
+    `gate-test.py` escribía en `git rev-parse --show-toplevel` —en un worktree,
+    el worktree— y `merge-gate-guard.py` leía en el `cwd` de quien integra —el
+    checkout principal—. **La evidencia producida donde la skill manda no la veía
+    quien integra**, así que el procedimiento documentado no se podía ejecutar.
+
+    `--git-common-dir` apunta al `.git` compartido desde cualquier worktree, así
+    que un verde producido en un worktree lo ve quien integra sin copiar nada
+    entre árboles — la salida que el campo ya rechazó, y con razón: copiar
+    ficheros de evidencia es fabricar el verde a mano.
+
+    SE ELIGE ESTO Y NO «EL GATE SE CORRE DONDE SE INTEGRA» porque esa alternativa
+    obliga a hacer checkout de la rama en el checkout principal, es decir a mover
+    el árbol de trabajo del humano — que es exactamente lo que rompió una sesión
+    en directo (*«suspende los merge ahorita estoy presentando»*). El sprint 3 ya
+    lo decidió al revés por ese motivo; cambiarlo ahora para arreglar un bug de
+    rutas sería pagar un coste real para evitar uno menor.
+
+    ⚠ ESTO NO ABRE EL GATE. La evidencia sigue llevando `branch` y `sha`, y el
+    guard sigue comparando el árbol del tip contra el del sha registrado: un
+    verde de OTRA rama sigue sin valer, y uno anterior al último commit caduca
+    solo. Lo único que cambia es DÓNDE se busca el fichero, no qué se le exige.
+
+    Sin git utilizable se cae al sitio de siempre: un directorio que no es un
+    repo no tiene dónde compartir nada, y ahí `.claude/` del árbol es correcto.
+    """
+    comun = git(["rev-parse", "--git-common-dir"], cwd)
+    if not comun:
+        return os.path.join(cwd, EVIDENCIA)
+    if not os.path.isabs(comun):
+        comun = os.path.join(cwd, comun)
+    return os.path.join(os.path.abspath(comun), NOMBRE_EVIDENCIA)
 
 # Exit propio del "no corrió". Distinto de 2 a propósito: 2 significa "no pude
 # resolver qué correr" y se confundía con este en cualquier tubería.
@@ -186,13 +234,15 @@ def main():
               file=sys.stderr)
         return 1
 
-    destino = os.path.join(raiz, EVIDENCIA)
+    destino = ruta_evidencia(raiz)
     os.makedirs(os.path.dirname(destino), exist_ok=True)
     with open(destino, "w", encoding="utf-8") as f:
         json.dump({"branch": rama, "sha": sha,
                    "ts": time.strftime("%Y-%m-%dT%H:%M:%S"), "cmd": cmd}, f)
-    print(f"\n[gate-test] VERDE registrado en {EVIDENCIA} ({rama} @ {sha[:8]}).\n"
-          f"            Si llega otro commit, esta evidencia caduca sola.")
+    print(f"\n[gate-test] VERDE registrado en {destino} ({rama} @ {sha[:8]}).\n"
+          f"            Vive en el directorio git común, así que lo ve quien\n"
+          f"            integre desde cualquier worktree de este repo. Si llega\n"
+          f"            otro commit, esta evidencia caduca sola.")
     return 0
 
 

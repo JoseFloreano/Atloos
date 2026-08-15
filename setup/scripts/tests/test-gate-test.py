@@ -62,20 +62,43 @@ def claude_md(raiz, cmd):
     escribe(raiz, "CLAUDE.md", f"# Proyecto\n\n## Comando de test\n\n```\n{cmd}\n```\n")
 
 
-def run(raiz, *args, env_extra=None):
+def run(raiz, *args, env_extra=None, rama="main"):
+    """`rama` es el positional del gate. Por defecto `main`, que es lo que miden
+    los casos 1-8; el caso del worktree pide otra, y pasarla mal producía un
+    exit 3 ("estas en 'frente' y se pide 'main'") que parecia un fallo del gate
+    y era del fixture."""
     entorno = dict(os.environ)
     entorno.pop("GATE_TEST_CMD", None)
     if env_extra:
         entorno.update(env_extra)
-    p = subprocess.run([sys.executable, SCRIPT, "main", *args], cwd=raiz,
+    p = subprocess.run([sys.executable, SCRIPT, rama, *args], cwd=raiz,
                        env=entorno, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return (p.returncode,
             p.stdout.decode("utf-8", "replace"),
             p.stderr.decode("utf-8", "replace"))
 
 
+def resuelve(modulo, cwd):
+    """`ruta_evidencia(cwd)` del módulo indicado, cargado por ruta.
+
+    Se importa el fichero REAL en vez de reimplementar la resolución: un check
+    verificado contra su propia copia no está verificado, está duplicado — que
+    es justo lo que este caso vigila entre los dos scripts.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("m_" + os.path.basename(modulo), modulo)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return os.path.normcase(os.path.abspath(m.ruta_evidencia(cwd)))
+
+
+GUARD = os.path.normpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir,
+    "hooks", "merge-gate-guard.py"))
+
+
 def cmd_registrado(raiz):
-    ruta = os.path.join(raiz, ".claude", "gate-verde.json")
+    ruta = resuelve(SCRIPT, raiz)
     if not os.path.exists(ruta):
         return None
     with open(ruta, "r", encoding="utf-8") as f:
@@ -229,6 +252,70 @@ def main():
         check("8d. la primera linea es ASCII puro (sobrevive a cp1252)",
               decodifica and texto.strip().splitlines()[0].isascii(),
               f"primera={texto.strip().splitlines()[0][:120]!r}" if decodifica else "no decodifica")
+
+    # --- Caso 9: el verde producido en un WORKTREE lo ve quien integra ---
+    # Es H2 de la auditoría del 08-14, convertido en caso. La evidencia iba por
+    # ruta relativa al árbol de trabajo: `gate-test.py` escribía en la raíz de SU
+    # árbol —el worktree— y el guard leía en el `cwd` de quien integra —el
+    # principal—. El procedimiento que la skill manda no se podía ejecutar, y el
+    # 14/14 no lo delataba porque se medía donde los dos coinciden.
+    with tempfile.TemporaryDirectory(prefix="gatetest-") as tmp:
+        r = repo(os.path.join(tmp, "repo"))
+        settings(r, verde("worktree"))
+        # El settings SE COMMITEA a propósito: un worktree nace del árbol
+        # versionado, así que una declaración sin commitear sencillamente no
+        # llega — y el frente se encuentra un "sin comando de test declarado"
+        # que parece un fallo del gate y es un fallo de traspaso. Es la mitad
+        # documental de S2, ejercida aquí como caso.
+        git(["add", "-A"], r)
+        git(["commit", "-q", "-m", "declara el comando de test"], r)
+        git(["branch", "frente"], r)
+        wt = os.path.join(tmp, "wt")
+        git(["worktree", "add", "-q", wt, "frente"], r)
+        # El gate corre DONDE TRABAJA EL FRENTE, que es lo que decidió el sprint 3.
+        rc, out, err = run(wt, rama="frente")
+        check("9. gate corrido en un worktree -> exit 0",
+              rc == 0, f"rc={rc} err={err[:200]!r}")
+        # …y quien integra lo lee desde el checkout PRINCIPAL, sin copiar nada.
+        desde_principal = resuelve(GUARD, r)
+        check("9b. el guard, desde el checkout principal, VE ese verde",
+              os.path.exists(desde_principal),
+              f"buscaba en {desde_principal!r}")
+        ev = {}
+        if os.path.exists(desde_principal):
+            with open(desde_principal, encoding="utf-8") as f:
+                ev = json.load(f)
+        check("9c. la evidencia conserva branch y sha (no se relaja nada)",
+              ev.get("branch") == "frente" and len(ev.get("sha", "")) == 40,
+              f"ev={ev!r}")
+
+        # 9d · LA DUPLICACIÓN, VIGILADA. Los dos scripts llevan la misma función
+        # copiada porque son procesos distintos y no comparten módulo. Que no se
+        # pueda quitar no significa que no se pueda comprobar.
+        check("9d. gate-test.py y merge-gate-guard.py resuelven la MISMA ruta",
+              resuelve(SCRIPT, wt) == resuelve(GUARD, wt)
+              and resuelve(SCRIPT, r) == resuelve(GUARD, r),
+              f"worktree: {resuelve(SCRIPT, wt)!r} vs {resuelve(GUARD, wt)!r}")
+
+        # 9e · SIGUE FALLANDO CERRADO, que es lo único que NO se puede haber
+        # roto al mover la ruta: cambiar DÓNDE se busca el fichero no es relajar
+        # QUÉ se le exige. `main` avanza un commit después del verde —el caso
+        # real: gateas una rama y la protegida se mueve— y entonces el sha
+        # registrado deja de cubrir el árbol que aterrizaría.
+        #
+        # ⚠ Sin ese commit este caso pasaba en falso por construcción: `frente`
+        # nace EN `main`, así que los dos shas eran el mismo y la comparación no
+        # distinguía nada.
+        escribe(r, "otro.txt", "avanza main\n")
+        git(["add", "-A"], r)
+        git(["commit", "-q", "-m", "main avanza tras el verde"], r)
+        sha_main = subprocess.run(["git", "rev-parse", "main"], cwd=r,
+                                  stdout=subprocess.PIPE).stdout.decode().strip()
+        check("9e. el verde de otra rama NO cubre main (sigue fallando cerrado)",
+              bool(ev) and ev.get("sha") != sha_main and ev.get("branch") != "main",
+              f"ev={ev!r} sha_main={sha_main!r}")
+        subprocess.run(["git", "worktree", "remove", "--force", wt], cwd=r,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     fallos = [n for n, ok, _ in results if not ok]
     print(f"\n{len(results) - len(fallos)}/{len(results)} casos OK")

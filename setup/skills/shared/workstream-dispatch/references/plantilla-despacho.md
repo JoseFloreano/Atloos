@@ -236,11 +236,33 @@ sitio compartido donde constara.
 
 ## 5 · Presupuesto con número — y MODELO por frente
 
-**Campo obligatorio, y nunca vacío:**
+**El barato es el DEFECTO. El caro es el que se justifica:**
 
 ```
-MODELO: <cuál>   PORQUE: <una línea>
+MODELO: barato                          ← no lleva PORQUE: es el defecto
+MODELO: caro   CATEGORIA: <mecánico|con juicio>   PORQUE: <una línea>
 ```
+
+### ⚠ Un campo obligatorio no es una decisión obligatoria
+
+Este bloque existe desde el sprint 3, está bien escrito, cita por su nombre al
+coordinador que falló… y **el mismo error se repitió con la regla delante**: doce
+subagentes, **los doce en el modelo caro**, incluido un *fixer* cuyas tres
+quintas partes eran editar comentarios. Y el diagnóstico es otra vez del propio
+coordinador:
+
+> *«Escribí el `PORQUE:` en los doce, así que el campo se rellenó sin cumplir su
+> función: si todos dicen «el caro», el campo no está eligiendo nada.»*
+
+La corrección no es disciplina, es diseño: **invertir la carga**. Un campo neutro
+se rellena con lo de siempre y el formulario queda perfecto; **uno con valor por
+defecto obliga a decir por qué te sales**. Es la tercera vez que este repo
+aprende lo mismo con otro disfraz — la convención escrita no muerde, y ahora
+también: **un campo que acepta cualquier valor tampoco.**
+
+⚠ Y la **CATEGORIA va escrita al lado**, no en la cabeza: es lo que permite
+mirar diez despachos y ver si «con juicio» significa algo o es la casilla que se
+marca siempre.
 
 Sale de un gasto medido: **$361,77 en una sola sesión**, con el **100 %** en
 sesiones con subagentes, el **79 %** en sesiones de 8 h o más, el **73 %** por
@@ -254,18 +276,34 @@ diagnóstico es del propio coordinador:
 Nada obligaba a decidirlo, así que no se decidió. Ahora se decide **antes de
 despachar**, que es cuando cuesta una línea.
 
-**La regla por defecto:**
+**La regla, ya con la carga invertida:**
 
 - **Frente mecánico** —mover ficheros, aplicar un patrón ya definido, correr un
-  barrido, renombrar, propagar un cambio decidido— → **el modelo barato**. Si el
-  brief te dice exactamente qué hacer, no estás pagando por razonar.
+  barrido, renombrar, propagar un cambio decidido— → **el barato, y sin
+  justificar nada**. Si el brief te dice exactamente qué hacer, no estás pagando
+  por razonar.
 - **Frente con juicio** —diseñar, arbitrar, auditar, decidir entre opciones,
-  cualquier cosa que pueda equivocarse de forma cara— → **el modelo caro**.
+  cualquier cosa que pueda equivocarse de forma cara— → **el caro, con su
+  `PORQUE:`**. Aquí el `PORQUE:` no es burocracia: es la frase que alguien podrá
+  contrastar contra lo que el frente acabó haciendo.
 - **El revisor NO baja de modelo** aunque el frente que revisa sea mecánico: su
   trabajo es encontrar lo que el otro no vio, y ahí el ahorro se paga en
-  hallazgos perdidos.
+  hallazgos perdidos. Es la única excepción que no pide justificación.
 - **Ante la duda, el caro** — pero la duda se escribe en el `PORQUE:`, para que
   la próxima vez haya un dato en vez de un reflejo.
+
+### ⚠ Y el barato NO viene solo: va atado a la no-pérdida
+
+El reverso está medido, y es del mismo mes. En el sprint 4 el frente mecánico
+con el modelo barato **acertó los siete números y destruyó contenido**: no
+extrajo, comprimió y borró. Así que las dos reglas viajan juntas o ninguna:
+
+> **Frente mecánico con criterio de aceptación NUMÉRICO → barato **sí**, y
+> entonces la cláusula de NO-PÉRDIDA es obligatoria**, con las dos medidas en el
+> reporte. `references/no-perdida.md`.
+
+Abaratar sin la segunda medida es cambiar un coste visible —la factura— por uno
+invisible —el contenido que ya no está—. Ese cambio no es un ahorro.
 
 ⚠ **Aquí no van precios.** Cambian, y una tabla desactualizada en una skill es
 peor que ninguna: lo que se fija es **la obligación de elegir y justificar**. Los

@@ -85,7 +85,8 @@ except Exception:
     pass
 
 PROTEGIDAS = {"main", "master"}
-EVIDENCIA = os.path.join(".claude", "gate-verde.json")
+EVIDENCIA = os.path.join(".claude", "gate-verde.json")   # el sitio de respaldo
+NOMBRE_EVIDENCIA = "gate-verde.json"   # dentro del directorio git COMUN
 
 # Subcomandos de `git merge` que NO son una integración.
 NO_MERGE = {"--abort", "--continue", "--quit"}
@@ -99,6 +100,33 @@ def git(args, cwd):
         return p.stdout.decode("utf-8", "replace").strip()
     except Exception:
         return ""
+
+
+def ruta_evidencia(cwd):
+    """Dónde se busca el verde. GEMELA de la de `setup/scripts/gate-test.py`.
+
+    Las dos tienen que resolver la MISMA ruta sobre el mismo repo. Son procesos
+    distintos —este hook vive en `~/.claude/hooks/`, el otro en
+    `~/.claude/scripts/`— y no comparten módulo, así que la copia no se puede
+    evitar; lo que sí se puede es vigilarla, y lo hace `test-gate-test.py`
+    afirmando que ambas coinciden. Si tocas una, toca la otra.
+
+    POR QUÉ EL DIRECTORIO GIT COMÚN Y NO `.claude/` DEL ÁRBOL (auditoría del
+    08-14, H2): `gate-test.py` escribía en la raíz de SU árbol —en un worktree,
+    el worktree— y este guard leía en el `cwd` de quien integra —el checkout
+    principal—. La evidencia producida donde la skill manda **no la veía quien
+    integra**, así que el procedimiento documentado no se podía ejecutar. El
+    `--git-common-dir` es el mismo `.git` desde cualquier worktree.
+
+    ⚠ No abre nada: lo que se le exige a la evidencia —`branch`, `sha`, y que el
+    árbol del tip coincida con el del sha registrado— no cambia ni una línea.
+    """
+    comun = git(["rev-parse", "--git-common-dir"], cwd)
+    if not comun:
+        return os.path.join(cwd, EVIDENCIA)
+    if not os.path.isabs(comun):
+        comun = os.path.join(cwd, comun)
+    return os.path.join(os.path.abspath(comun), NOMBRE_EVIDENCIA)
 
 
 # Un ref de git no lleva estos caracteres. Si el "nombre de rama" los trae, no
@@ -437,7 +465,7 @@ def revisa_push(rama_dst, ref_src, cwd, mutadas):
     if remoto and remoto == tip:
         return
 
-    ruta = os.path.join(cwd, EVIDENCIA)
+    ruta = ruta_evidencia(cwd)
     if not os.path.exists(ruta):
         bloquea_push(f"No existe `{EVIDENCIA}`: no hay ningún verde registrado, "
                      f"y a `{rama_dst}`\nviajaría `{tip[:8]}`.", rama_dst)
@@ -529,7 +557,7 @@ def main():
                 helper.replace("<rama>", "<rama>") + "   # y `git merge <rama>`")
         helper = helper.replace("<rama>", fuente)
 
-        ruta = os.path.join(cwd, EVIDENCIA)
+        ruta = ruta_evidencia(cwd)
         if not os.path.exists(ruta):
             bloquea(f"No existe `{EVIDENCIA}`: no hay ningún verde registrado "
                     f"para `{fuente}` → `{destino}`.", helper)
