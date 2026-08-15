@@ -43,10 +43,34 @@ eso cada hallazgo se imprime con la frase de la que salió: para poder mirarla.
 Por eso el exit 1 significa **«hay que mirar N palabras»**, no «está mal». Quien
 lo llame decide si las justifica; lo que no puede es no verlas.
 
+EL CONJUNTO SE COMPARA ENTERO, Y EN LOS DOS LADOS (arreglado el 2026-08-14, a
+las horas de nacer). La primera versión tomaba como ANTES **solo el SKILL.md**,
+así que lo que ya vivía en una `references/` no tenía antes del que desaparecer:
+destripar un reference de 85 líneas a 3 daba **exit 0 y «ninguna palabra de
+contenido desaparece»**. El comparador certificaba como extracción limpia
+exactamente el borrado que existe para cazar.
+
+  **Un guardián que solo mira una de las dos puertas no es un guardián con un
+  hueco: es un guardián que además te dice que la casa está cerrada.**
+
+Y el hueco hermano, del mismo tipo y arreglado a la vez: el frontmatter contaba
+en los dos lados —`cuerpo()` solo se usaba para imprimir el contexto—, así que
+**esconder un párrafo en la `description` valía como destino**. Ahora el
+frontmatter se quita al leer, y la `description` deja de ser un escondite.
+
+LÍMITE DECLARADO, porque callarlo sería el fallo que este script persigue: **un
+fichero que no existía en `<rev>` no tiene antes**, así que destriparlo no
+produce hallazgo contra esa base. No es un hueco del método —un comparador no
+puede echar de menos lo que nunca hubo— pero sí una trampa de uso: **comparar
+contra una base vieja mide menos que comparar contra la anterior**. La regla
+práctica es `--base` = el commit desde el que arrancó el trabajo, no el de hace
+tres sprints, y el encabezado imprime cuántas `references/` vio en cada lado
+para que la diferencia se note a simple vista.
+
 Uso:
   py setup/scripts/no-perdida.py <dir-de-skill> [--base <rev>]
-      ANTES = el SKILL.md en <rev> (default HEAD); DESPUÉS = el SKILL.md de
-      disco MÁS todas sus `references/*.md`.
+      ANTES = SKILL.md **más todas sus `references/*.md`** en <rev> (default
+      HEAD); DESPUÉS = lo mismo en disco. Los dos lados, sin frontmatter.
 
   py setup/scripts/no-perdida.py --antes <fichero> --despues <fichero>...
       Sin git. Es el modo que ejerce el arnés, y el que sirve para comparar
@@ -106,12 +130,19 @@ def normaliza(texto):
 
 
 def cuerpo(texto):
-    """El .md sin frontmatter y sin CR.
+    """El .md sin frontmatter y sin CR. Se aplica AL LEER, no al medir.
 
-    El frontmatter se quita porque no es contenido que se extraiga: la
-    `description` es el disparador y vive donde vive. Medirla aquí haría que
-    reescribir un trigger apareciera como pérdida de cuerpo, que es otra cosa
-    y se mide con `test-skill-catalog.py`.
+    El frontmatter se quita porque no es un destino legítimo: la `description`
+    es el disparador, no el sitio donde se guarda lo que sale del cuerpo.
+
+    ⚠ ESTO ERA UN AGUJERO, y de los que este script existe para no tener. La
+    primera versión llamaba a `cuerpo()` solo desde `frases()` —el contexto que
+    se imprime— y NO desde el conteo, así que **el frontmatter contaba en los
+    dos lados** y esconder un párrafo del cuerpo dentro de la `description`
+    salía en cero: destino válido para el comparador, sitio equivocado para el
+    lector. Se autolimitaba solo por el tope de 1024 caracteres del check 4 —una
+    defensa de otra cosa que tapaba ésta por accidente, que es la peor forma de
+    estar protegido.
     """
     texto = texto.replace("\r", "")
     if texto.startswith("---"):
@@ -122,14 +153,15 @@ def cuerpo(texto):
 
 
 def frases(texto):
-    """El texto partido en unidades legibles, para poder citar el contexto.
+    """El cuerpo partido en unidades legibles, para poder citar el contexto.
 
+    Recibe texto YA sin frontmatter —lo quitan `lee()` y el modo git al leer—.
     Se corta por final de frase Y por salto de línea: en markdown media línea
     de una tabla o un bullet no termina en punto, y una «frase» de 40 líneas no
     sirve para mirar nada.
     """
     trozos = []
-    for linea in cuerpo(texto).splitlines():
+    for linea in texto.splitlines():
         for t in re.split(r"(?<=[.!?:;])\s+", linea.strip()):
             if t.strip():
                 trozos.append(t.strip())
@@ -172,7 +204,24 @@ def raiz_git(desde):
 
 
 def lee(rutas):
-    return "\n".join(Path(r).read_text(encoding="utf-8") for r in rutas)
+    """El cuerpo de cada fichero, concatenado.
+
+    Por fichero y no sobre la concatenación: `cuerpo()` mira el principio del
+    texto, así que aplicarlo al todo solo quitaría el frontmatter del primero y
+    contaría el de los demás como contenido.
+    """
+    return "\n".join(cuerpo(Path(r).read_text(encoding="utf-8")) for r in rutas)
+
+
+def ficheros_en_rev(repo, rel_dir, rev):
+    """Los `.md` que había bajo `rel_dir` en `rev`. Lista vacía si no existía."""
+    p = subprocess.run(["git", "ls-tree", "-r", "--name-only", rev, "--", rel_dir],
+                       cwd=repo, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                       timeout=30)
+    if p.returncode != 0:
+        return []
+    return sorted(l for l in p.stdout.decode("utf-8", "replace").splitlines()
+                  if l.endswith(".md"))
 
 
 def informa(hallazgos, etiqueta, n_antes):
@@ -211,6 +260,9 @@ def main(argv):
             return 2
         antes, despues = lee(antes_r), lee(despues_r)
         etiqueta = f"{len(antes_r)} fichero(s) antes → {len(despues_r)} después"
+        # ⚠ En este modo el conjunto lo eliges tú: si el ANTES no incluye las
+        # `references/` que ya existían, sus pérdidas no se pueden ver. El modo
+        # git lo hace solo; aquí es responsabilidad de quien llama.
     else:
         objetivos = [a for a in argv if not a.startswith("--")]
         if "--base" in argv:
@@ -230,16 +282,34 @@ def main(argv):
                   file=sys.stderr)
             return 2
         rel = skill.resolve().relative_to(Path(repo).resolve()).as_posix()
-        antes = texto_en_rev(repo, rel, base)
-        if antes is None:
+        crudo = texto_en_rev(repo, rel, base)
+        if crudo is None:
             print(f"`git show {base}:{rel}` no devuelve nada: ¿fichero nuevo? "
                   f"Un fichero que no existía en {base} no puede haber perdido "
                   f"nada, así que no hay nada que medir.", file=sys.stderr)
             return 2
+
+        # EL ANTES ES EL CONJUNTO ENTERO, no solo el SKILL.md. Este era el
+        # agujero de la primera versión: el `antes` se leía del cuerpo y ya, así
+        # que **lo que vivía en una `references/` no tenía antes del que
+        # desaparecer**. Destripar un reference de 85 líneas a 3 salía en exit 0
+        # con un «ninguna palabra desaparece» — el script certificaba como
+        # extracción limpia el borrado que existe para cazar, y encima en el
+        # lado del que menos se sospecha. El fallo no es del método: el
+        # multiconjunto no puede echar de menos lo que nunca contó.
+        refs_antes = ficheros_en_rev(repo, f"{Path(rel).parent.as_posix()}/references",
+                                     base)
+        partes = [cuerpo(crudo)]
+        for r in refs_antes:
+            texto = texto_en_rev(repo, r, base)
+            if texto is not None:
+                partes.append(cuerpo(texto))
+        antes = "\n".join(partes)
+
         refs = sorted((skill.parent / "references").glob("*.md"))
         despues = lee([skill] + refs)
-        etiqueta = (f"{rel} en {base} → disco (cuerpo + {len(refs)} "
-                    f"`references/`)")
+        etiqueta = (f"{rel} en {base} (cuerpo + {len(refs_antes)} `references/`) "
+                    f"→ disco (cuerpo + {len(refs)})")
 
     return informa(desaparecidas(antes, despues), etiqueta,
                    len(normaliza(antes)))

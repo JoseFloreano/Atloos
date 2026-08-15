@@ -28,6 +28,14 @@ Los cinco casos, y qué defecto caza cada uno:
      de un párrafo que por lo demás sobrevive. No basta con que salte: tiene que
      decir QUÉ palabra, porque el criterio de aceptación es justificarlas una a
      una y para eso hay que poder mirarlas.
+  6. **Una `references/` destripada** (ROJO) — el cuerpo intacto y el destino
+     vaciado. **Es el agujero real que tuvo la primera versión**, encontrado a
+     las horas de nacer: como el ANTES era solo el SKILL.md, lo que ya vivía en
+     un reference no tenía antes del que desaparecer, y 85 líneas → 3 salían en
+     exit 0. La destrucción puede pasar en cualquiera de los dos lados.
+  7. **Un párrafo escondido en la `description`** (ROJO) — el destino tiene que
+     ser un sitio donde alguien lo vaya a leer. El frontmatter es el disparador,
+     no un almacén; contarlo lo convertía en escondite legítimo.
 
 Se ejercen las funciones REALES importadas del script, no una reimplementación:
 un check verificado contra su propia copia no está verificado, está duplicado.
@@ -79,9 +87,14 @@ def escribe(carpeta, nombre, texto):
 
 def corre(antes, despues):
     """(exit, salida) de `main()` — el contrato que ve quien lo invoca."""
+    return corre_multi([antes], despues)
+
+
+def corre_multi(antes, despues):
+    """Igual, con VARIOS ficheros en el antes: el conjunto entero contra el entero."""
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
-        codigo = NP.main(["--antes", antes, "--despues"] + despues)
+        codigo = NP.main(["--antes"] + antes + ["--despues"] + despues)
     return codigo, buf.getvalue()
 
 
@@ -164,11 +177,46 @@ def main():
             print(f"      el hallazgo tiene que NOMBRAR la palabra: el criterio\n"
                   f"      es justificarlas una por una, y para eso hay que verlas\n{salida}")
 
+        # 6 · una `references/` destripada, con el cuerpo INTACTO.
+        # El párrafo ya vivía en el destino (extracción de ayer, el caso 3 ya
+        # cerrado), y hoy alguien vacía el destino sin tocar el cuerpo. Si el
+        # ANTES no incluyera el reference, este caso saldría verde — que es
+        # literalmente lo que pasaba.
+        ref_vacia = escribe(tmp, "ref-vacia.md", "# Extraído\n")
+        codigo, salida = corre_multi([borrado, refs], [borrado, ref_vacia])
+        ok6 = codigo == 1 and "contradicciones" in salida
+        print(f"  [6] una `references/` destripada, cuerpo intacto "
+              f"{'OK — exit 1' if ok6 else f'FALLIDO — exit {codigo}'}")
+        if not ok6:
+            fallos.append("6")
+            print(f"      el cuerpo no cambia y el destino se vacía, y el\n"
+                  f"      comparador no lo ve: es el agujero de la v1, donde el\n"
+                  f"      ANTES era solo el SKILL.md\n{salida}")
+
+        # 7 · el párrafo escondido en la `description`
+        escondido = (
+            "---\nname: laboratorio\ndescription: da igual, el frontmatter no se mide "
+            + PARRAFO.replace("\n", " ") +
+            "\n---\n\n# Laboratorio\n\n"
+            "Este cuerpo existe para que el comparador tenga algo estable alrededor\n"
+            "de la mutación. Habla de despachos, de frentes y de presupuestos.\n\n"
+            "\nY una cola que tampoco cambia nunca, con su tabla y su comando\n"
+            "`py setup/scripts/run-tests.py`, para que la puntuación intervenga.\n")
+        codigo, salida = corre(antes, [escribe(tmp, "escondido.md", escondido)])
+        ok7 = codigo == 1 and "contradicciones" in salida
+        print(f"  [7] el párrafo escondido en la `description` "
+              f"{'OK — exit 1' if ok7 else f'FALLIDO — exit {codigo}'}")
+        if not ok7:
+            fallos.append("7")
+            print(f"      el frontmatter cuenta como destino: la `description`\n"
+                  f"      es el disparador, no un almacén\n{salida}")
+
     if fallos:
         print(f"\n{len(fallos)} caso(s) fallidos ({', '.join(fallos)}). El "
               f"comparador no está midiendo lo que dice.")
         return 1
-    print("\n  5/5. Muerde el borrado, no muerde la extracción ni el reflow, y\n"
+    print("\n  7/7. Muerde el borrado —del cuerpo, de un destino y del que se\n"
+          "  esconde en el frontmatter—, no muerde la extracción ni el reflow, y\n"
           "  nombra la palabra que falta.")
     return 0
 
