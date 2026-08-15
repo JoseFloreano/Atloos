@@ -111,6 +111,11 @@ inventario:
 > **Un frente que sabe cómo se ve el fallo del entorno lo arregla; uno que no,
 > lo diagnostica mal y te lo devuelve como hallazgo.**
 
+Dicho en una línea, que es como viajaba en el cuerpo de la skill hasta que se
+extrajo aquí: **sin firma, seis frentes te devuelven el mismo rojo mal
+diagnosticado; un verde con skips de más no es código sano, es un artefacto que
+falta.**
+
 ⚠ Y el reverso, para no crear el fallo opuesto: la firma es una **lista cerrada**
 de fallos conocidos. Un rojo que NO esté en ella se reporta siempre — nunca se
 asume que «será del entorno». Convertir la firma en una excusa genérica sería
@@ -352,6 +357,18 @@ producir reportes.
 
 Sin meta, el criterio no se pierde: se queda donde siempre, en el contrato de
 reporte de arriba. Escribirlo así solo lo deja listo por si el frente se suelta.
+
+### ⚠ Si el criterio es NUMÉRICO, no viaja solo
+
+**Un número se cumple destruyendo.** Un frente mecánico acertó los siete números
+del sprint 4 —las siete skills bajo 460 palabras, `description` intacta, arnés en
+exit 0— y su trabajo se descartó entero: **no extrajo, comprimió y borró**, 102
+líneas sin destino. El agujero era del contrato, no del modelo.
+
+Así que todo criterio de aceptación numérico —palabras, líneas, tamaño, tiempo—
+**lleva al lado un criterio de NO-PÉRDIDA, y el frente entrega LAS DOS medidas**.
+Cómo se escribe y cómo se mide (`setup/scripts/no-perdida.py`):
+`references/no-perdida.md`.
 
 ---
 

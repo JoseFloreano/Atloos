@@ -56,8 +56,6 @@ avisó del conflicto.
    y espera su OK: es la decisión de mayor apalancamiento y la única barata.
 2. **Genera el estado del mundo** con comandos (bloque 2): **manifiesto de lo
    que git no versiona** y **firma del fallo conocido con su conteo de skips**.
-   Sin firma, seis frentes te devuelven el mismo rojo mal diagnosticado; un
-   verde con skips de más no es código sano, es un artefacto que falta.
 3. **Arma el despacho con los 8 bloques** → `references/plantilla-despacho.md`,
    con **modelo por frente y su porqué** (bloque 5) e higiene de shell →
    `references/higiene-de-shell.md`. El criterio de salida (bloque 7) **es** la
@@ -71,6 +69,9 @@ avisó del conflicto.
 6. **Verifica el artefacto, no el reporte**: hashes, worktree limpio, y ejecuta
    el destino de cada rama al cerrar su frente. Para mergear:
    `workstream-merge-gate`.
+7. **Criterio de aceptación numérico → cláusula de NO-PÉRDIDA al lado**, y el
+   frente entrega las dos medidas: `references/no-perdida.md`. Un número se
+   cumple destruyendo; dos, no.
 
 ## Las tres prohibiciones del coordinador
 

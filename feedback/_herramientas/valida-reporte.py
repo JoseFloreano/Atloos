@@ -110,9 +110,18 @@ def frontmatter(texto):
 # *«quitó la parte donde decía que todo fue fluido»*— pasaba a rojo. Un
 # validador que grita en falso se desactiva, y entonces no valida nada.
 # Por lo mismo NO se buscan puntos suspensivos: un humano los escribe.
+#
+# ⚠ `&lt;…&gt;` va al lado de `<…>` porque el hueco ESCAPADO se coló en campo
+# (sprint 5, 2026-08-14). El reporte del 08-13 llegó con
+# `**&lt;falta el alias&gt;**` en la línea de "Leído y corregido por", y el
+# validador lo dio por confirmado: el patrón `<[^>\n]{1,40}>` no ve un marcador
+# HTML-escapado, y ese reporte se escribió en un editor que escapa. Lo bloqueaba
+# otra cosa —`setup_sha: no-disponible`—, así que el hueco del check ni se notó:
+# el arnés acertó el veredicto por una razón que no era la suya. Es la misma
+# forma que H7 (el tope que vivía dentro de una cadena) con otro disfraz.
 SIN_CONFIRMAR = re.compile(
     r"(?i:pendiente|por confirmar|sin rellenar|rellenar)"
-    r"|\bTODO\b|<[^>\n]{1,40}>")
+    r"|\bTODO\b|<[^>\n]{1,40}>|&lt;[^&\n]{1,40}&gt;")
 
 # Mínimo de caracteres ÚTILES en la sección 9. Dos líneas de plantilla rellenas
 # de verdad pasan de largo; un `_(pendiente)_` no llega.
