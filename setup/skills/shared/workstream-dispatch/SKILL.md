@@ -10,8 +10,8 @@ description: >
   mandar cualquier tarea a un subagente que vaya a escribir código. ÚSALA JUNTO
   A `superpowers:subagent-driven-development`, no en su lugar: SDD pone el CICLO
   (controller → implementer → reviewer, con revisor por tarea obligatorio) y
-  esta pone el CONTRATO del despacho y los LÍMITES (8 bloques, máximo 3
-  frentes). Donde discrepen en un número, gana el más restrictivo. NO usar para
+  esta pone el CONTRATO del despacho y los LÍMITES (8 bloques, 3 frentes con
+  fecha). Donde discrepen en un número, gana el más restrictivo. NO usar para
   despachar investigación de solo lectura (eso es
   `superpowers:dispatching-parallel-agents`).
 ---
@@ -57,8 +57,9 @@ avisó del conflicto.
 2. **Genera el estado del mundo** con comandos (bloque 2): **manifiesto de lo
    que git no versiona** y **firma del fallo conocido con su conteo de skips**.
 3. **Arma el despacho con los 8 bloques** → `references/plantilla-despacho.md`,
-   con **modelo por frente y su porqué** (bloque 5) e higiene de shell →
-   `references/higiene-de-shell.md`. El criterio de salida (bloque 7) **es** la
+   con **modelo y núcleos por frente** (bloque 5) e higiene →
+   `references/higiene-de-shell.md`, `references/higiene-de-salida.md`. El
+   criterio de salida (bloque 7) **es** la
    condición de meta si el frente corre desatendido: fórjala con
    `claude-code:goal-forge`. El destino de la rama (bloque 8) se decide **aquí**.
 4. **Al recibir `NEEDS_CONTEXT`**, actúa de juez →
@@ -78,6 +79,6 @@ avisó del conflicto.
 - **No implementes tú lo que despachaste.** Tu contexto queda limpio para juzgar.
 - **No paralelices implementadores dentro del mismo frente** (lo prohíbe SDD y
   lo confirmó el C compiler de 16 agentes).
-- **Máximo 3 frentes**, ya no criterio sino **medición**: con 5 la suite pasó de
-  ~330 s a **677 s (×2,05)** y una prueba de latencia falló por carga. El techo
-  es la máquina.
+- **3 frentes por defecto — dato con fecha, no dogma**: una medición
+  autorreportada (2026-08-10, ×2,05 con 5) **de la suite de otro proyecto**, sin
+  máquina anotada. Se sube **midiendo** → `references/medir-el-techo.md`.

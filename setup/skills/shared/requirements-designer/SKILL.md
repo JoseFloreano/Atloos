@@ -6,7 +6,7 @@ description: >
   funcionales con número y unidad, reglas de negocio— más alcance negativo
   numerado y traspaso nominal a quien diseña. Use when the user says "desarrolla
   el MVP de X", "quiero una herramienta/un sistema que X", "necesito que
-  detecte/avise/prediga X", "haz X para <persona>", "¿se puede hacer X con estos
+  detecte/avise/prediga X", "haz X para Fulano", "¿se puede hacer X con estos
   datos?", "¿esto es viable?", "levanta los requisitos", "define el alcance",
   "los criterios de aceptación", or ANTES de `schema-designer` y `api-design`,
   que ya los suponen conocidos. Reparto con `superpowers:brainstorming`: esa es

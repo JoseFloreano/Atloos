@@ -88,6 +88,16 @@ escalares plegados (`>`), y lo que el cargador valida es la cadena de una sola
 línea, sin los saltos ni la sangría. Medir el crudo daría un número mayor que el
 real y el arnés mentiría en la dirección cómoda.
 
+EL CHECK 5 ES LA MISMA ASIMETRÍA POR TERCERA VEZ (sprint 8, S2). Un `<persona>`
+en la `description` de `requirements-designer` rompía la subida —el angular se
+parsea como etiqueta abierta— y **aquí no se notaba**, porque Claude Code escapa
+los angulares de la `description` a propósito. Tope de 1024, escalar plano
+multilínea, angulares: las tres funcionan en Code y fallan al subir, y las tres
+las descubrió el bloqueo. Se mide el valor RESUELTO por la misma razón que el
+check 4, y aquí es más urgente: las 39 skills abren con `description: >`, así
+que un check sobre el texto crudo daría 39 hallazgos el primer día y estaría
+apagado el segundo.
+
 Va el ÚLTIMO aunque BLOQUEE, y a propósito: los números de check ya se citan
 fuera de este fichero ("el check 3 bajó de 22 a 19" vive en el vault y en dos
 encargos). Renumerar para colocarlo por severidad rompería ese vocabulario
@@ -124,6 +134,27 @@ TOPE_DURO = 500         # el que BLOQUEA (auditoría 22, H7). 501 pone la suite 
 LIMITE_DESC = 1024      # BLOQUEA. 1024 es el último valor admisible; 1025 rojo
 AVISO_DESC = 950        # AVISO. Una description nueva nace por debajo
 LIMITE_NAME = 64        # BLOQUEA. Mismo origen, y hoy el máximo son 24
+
+# CHECK 5 · angulares en el frontmatter (sprint 8, S2). `requirements-designer`
+# llevaba `"haz X para <persona>"` en su description y eso ROMPE LA SUBIDA: el
+# angular se parsea como etiqueta abierta. En Claude Code no se nota porque Code
+# **escapa los angulares de la description** —"in text that reaches Claude, such
+# as the description, it also escapes angle brackets so the text can't imitate
+# Claude Code's internal formatting"—, así que la skill funciona aquí y falla
+# fuera. Es la TERCERA vez con la misma asimetría (el tope de 1024, el escalar
+# plano multilínea, y esto): el repo medía lo de Code y no medía lo del otro lado.
+#
+# SOLO EL FRONTMATTER, y no por prudencia sino por medición: en el cuerpo hay
+# angulares legítimos —huecos a rellenar como `<mecánico|con juicio>` en
+# `plantilla-despacho.md`, `<project-name>` en `memory-snippet.md`— y
+# bloquearlos sería el falso positivo que hace que alguien apague el check.
+#
+# LÍMITE DECLARADO: se exige `<` pegado a una letra (o a `/`), que es la forma
+# que un parser lee como etiqueta. Un `<` suelto seguido de espacio ("a < b")
+# NO se caza. Rompería XML igual, pero cazarlo metería en el saco toda
+# comparación escrita en prosa, y un check con falsos positivos se desactiva —
+# que es el modo de fallo que este arnés persigue en otras skills.
+ANGULARES = re.compile(r"</?[A-Za-z]")
 
 # Superficies en las que se despliega una skill, y qué puede ver cada una.
 # `shared` va a las dos, así que es la más restringida: solo ve `shared`.
@@ -391,6 +422,116 @@ def autoprueba_desc():
     if AVISO_DESC > LIMITE_DESC:
         return False, (f"AVISO_DESC ({AVISO_DESC}) por encima de LIMITE_DESC "
                        f"({LIMITE_DESC}): el aviso no llegaría antes que el corte")
+    return True, ""
+
+
+def claves_frontmatter(texto):
+    """Claves de primer nivel del frontmatter, en orden. [] si no hay.
+
+    Se enumeran en vez de mirar solo `name`/`description` porque el check 5 mide
+    el frontmatter ENTERO: el día que alguien añada `when_to_use` o `allowed-
+    tools`, el angular tiene que seguir bloqueando sin que nadie se acuerde de
+    ampliar una lista. Una lista a mano es otro catálogo que se desincroniza.
+    """
+    texto = texto.replace("\r", "")
+    if not texto.startswith("---"):
+        return []
+    fin = texto.find("\n---", 3)
+    cuerpo_fm = texto[4:fin] if fin != -1 else texto
+    claves = []
+    for linea in cuerpo_fm.split("\n"):
+        m = re.match(r"^([A-Za-z_][A-Za-z0-9_-]*):", linea)
+        if m and m.group(1) not in claves:
+            claves.append(m.group(1))
+    return claves
+
+
+def tiene_angulares(valor):
+    """El fragmento con angulares, o None. La decisión que ejerce la autoprueba.
+
+    Función y no un `search` suelto por lo mismo que `excede_tope` y
+    `excede_desc`: un check verificado contra una reimplementación no está
+    verificado, está duplicado.
+    """
+    m = ANGULARES.search(valor or "")
+    if not m:
+        return None
+    ini = max(0, m.start() - 22)
+    return valor[ini:m.start() + 26]
+
+
+def mide_angulares():
+    """[(skill, clave, fragmento)] — angulares en el frontmatter de cada skill.
+
+    SE MIDE EL VALOR RESUELTO, NO EL TEXTO CRUDO, y esa es toda la diferencia
+    entre un check y un falso positivo masivo: las 39 skills abren su
+    description con `description: >`, y ese `>` es el indicador de plegado de
+    YAML —sintaxis, no contenido—. Un check sobre el crudo diría «39 hallazgos»
+    el primer día y estaría desactivado el segundo.
+
+    Es la lección del sprint 7 aplicada antes de que muerda: **se mide el
+    contrato que llega al cargador, no el texto que se lee en la pantalla.**
+    """
+    filas = []
+    for skill_md in sorted(SKILLS.rglob("SKILL.md")):
+        partes = skill_md.relative_to(SKILLS).parts
+        if "_build" in partes or partes[0] == "_template":
+            continue
+        texto = skill_md.read_text(encoding="utf-8")
+        for clave in claves_frontmatter(texto):
+            fragmento = tiene_angulares(campo_resuelto(texto, clave))
+            if fragmento:
+                filas.append((f"{partes[0]}/{partes[1]}", clave, fragmento))
+    return filas
+
+
+def autoprueba_angulares():
+    """Mutación: mete un angular en una description y exige que se cace.
+
+    (bool, motivo). Los CUATRO lados, porque los tres últimos son los que
+    convierten un check en ruido:
+      · con `<algo>` → hallazgo;
+      · sin él → limpio;
+      · el `>` del plegado NO es hallazgo (si lo fuera, dispararía en las 39);
+      · un angular en el CUERPO no es hallazgo — ahí hay markdown legítimo, y
+        bloquearlo sería el falso positivo que desactiva el check. Hoy el cuerpo
+        de las skills usa angulares a propósito (`<mecánico|con juicio>` en la
+        plantilla de despacho es un hueco a rellenar, no una etiqueta).
+    """
+    def skill_con(desc):
+        return f"---\nname: laboratorio\ndescription: >\n  {desc}\n---\n\ncuerpo\n"
+
+    sucia = skill_con('usa "haz X para <persona>" como gatillo')
+    if not tiene_angulares(campo_resuelto(sucia, "description")):
+        return False, ("un `<persona>` en la description NO se caza: el check "
+                       "no vería el caso que lo motivó")
+    limpia = skill_con('usa "haz X para Fulano" como gatillo')
+    if tiene_angulares(campo_resuelto(limpia, "description")):
+        return False, "una description sin angulares da hallazgo: falso positivo"
+    # El plegado. Este es el que importa: `campo_resuelto` se come el `>` como
+    # sintaxis, así que el valor resuelto no lo lleva. Si algún día alguien
+    # cambia el resolutor y el `>` empieza a colarse en el valor, esto se pone
+    # rojo ANTES de que el check dispare 39 veces y alguien lo apague.
+    for skill_md in sorted(SKILLS.rglob("SKILL.md")):
+        partes = skill_md.relative_to(SKILLS).parts
+        if "_build" in partes or partes[0] == "_template":
+            continue
+        crudo = skill_md.read_text(encoding="utf-8").replace("\r", "")
+        fin = crudo.find("\n---", 3)
+        if "description: >" in crudo[:fin if fin != -1 else len(crudo)]:
+            if tiene_angulares(campo_resuelto(crudo, "description")):
+                continue                      # es un angular de verdad, no el `>`
+            break
+    else:
+        return False, ("ninguna skill usa `description: >`: la autoprueba del "
+                       "plegado ya no ejerce nada y hay que revisarla")
+    # Y el reverso declarado: el CUERPO no se mide. Se comprueba ejerciendo
+    # `mide_angulares` sobre una skill de laboratorio con angulares abajo.
+    if tiene_angulares("texto con <etiqueta> en el cuerpo") is None:
+        return False, ("el detector no ve `<etiqueta>`: no es que el cuerpo esté "
+                       "exento, es que el detector no detecta")
+    if AVISO_DESC > LIMITE_DESC:
+        return False, "AVISO_DESC por encima de LIMITE_DESC"
     return True, ""
 
 
@@ -684,12 +825,31 @@ Tres arreglos legítimos, por orden de preferencia:
         print(f"\n  Las {len(fm)} descriptions por debajo de {AVISO_DESC}. "
               f"La mayor: {mayor[0]} ({mayor[1]}).")
 
-    # Seis motivos de rojo, y TRES son las propias autopruebas: si caen, lo que
+    print("\n── Check 5 · angulares en el frontmatter (BLOQUEA) " + "─" * 23 + "\n")
+    ok_ang, motivo_ang = autoprueba_angulares()
+    print(f"  [AUTOPRUEBA] {'OK' if ok_ang else 'FALLIDA'} — un `<algo>` en la "
+          f"description se caza, el `>` del plegado no, y el cuerpo no se mide"
+          + (f"\n               {motivo_ang}" if not ok_ang else ""))
+    angulares = mide_angulares()
+    if angulares:
+        print(f"\n  {len(angulares)} campo(s) del frontmatter con angulares:\n")
+        for s, clave, frag in angulares:
+            print(f"    {s:<34}{clave}:  …{frag}…")
+        print(f"\n  Esto SÍ tumba el arnés, y no es cosmético: el angular se\n"
+              f"  parsea como etiqueta abierta y ROMPE LA SUBIDA. Aquí no se ve\n"
+              f"  porque Claude Code escapa los angulares de la `description`.\n"
+              f"  El arreglo no es borrar la frase gatillo —es su razón de ser—:\n"
+              f"  es quitarle los angulares. `<persona>` → `Fulano`.")
+    else:
+        print("  Ningún frontmatter lleva angulares: las 39 suben sin romper XML.")
+
+    # Ocho motivos de rojo, y CUATRO son las propias autopruebas: si caen, lo que
     # este fichero afirma sobre sus topes —y sobre dónde busca el hedge— deja de
     # estar respaldado, y un check no verificado en verde es exactamente el
     # agujero de H7.
-    return 1 if (hallazgos or excedidas or pasadas or sin_campo
-                 or not ok_tope or not ok_desc or not ok_ventana) else 0
+    return 1 if (hallazgos or excedidas or pasadas or sin_campo or angulares
+                 or not ok_tope or not ok_desc or not ok_ventana
+                 or not ok_ang) else 0
 
 
 if __name__ == "__main__":

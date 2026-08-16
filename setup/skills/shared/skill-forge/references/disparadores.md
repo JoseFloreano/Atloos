@@ -53,16 +53,44 @@ del usuario y no en las nuestras — la forma que usa `workstream-merge-gate`:
 
 Y si aplican las dos, se dice cuál va primero.
 
-## Los dos límites, en dos unidades distintas
+## Los límites: dos unidades distintas, y un carácter que no se admite
 
-Confundirlas costó una subida bloqueada (sprint 3, S1). Son medidas diferentes
-de cosas diferentes y **ningún número traduce a la otra**:
+Confundir las unidades costó una subida bloqueada (sprint 3, S1). Son medidas
+diferentes de cosas diferentes y **ningún número traduce a la otra**:
 
 | Qué | Unidad | Tope | Quién lo impone |
 |---|---|---|---|
 | Cuerpo del `SKILL.md` | **palabras** | ≤450 (duro 500) | nuestro, `test-skill-catalog.py` |
 | `description` | **caracteres** | **≤1024** (aviso a 950) | la **especificación** de Agent Skills |
 | `name` | caracteres | ≤64 | ídem |
+| **Frontmatter entero** | **angulares** | **ninguno** | el parser que lee la subida |
+
+### El tercero no es un número, y por eso se escapó dos años
+
+**`<algo>` en el frontmatter rompe la subida.** El angular se parsea como
+etiqueta abierta. `requirements-designer` llevaba `"haz X para <persona>"` entre
+sus frases gatillo —una notación de hueco, escrita sin malicia— y **bloqueaba la
+subida de la skill entera**.
+
+Y no se veía, porque **Claude Code escapa los angulares de la `description`** a
+propósito:
+
+> *«in text that reaches Claude, such as the description, it also escapes angle
+> brackets so the text can't imitate Claude Code's internal formatting»*
+
+Es la **tercera vez con la misma asimetría** —el tope de 1024, el escalar plano
+multilínea, y ahora esto—: Code **tolera** 1536 caracteres *y* escapa los
+angulares, así que la skill carga **aquí** y falla al **subirla**. El patrón no es
+el angular; es que el repo medía el lado que se ve. Lo mide el **check 5**, y
+solo en el frontmatter: en el cuerpo los angulares son legítimos (`<project-name>`
+en `memory-snippet.md`, `<mecánico|con juicio>` en la plantilla de despacho), y
+bloquearlos ahí sería el falso positivo que acaba con el check apagado.
+
+**El arreglo no es borrar la frase gatillo**, que es la razón de ser de la skill:
+es quitarle los angulares. `<persona>` → **`Fulano`** — que en español ya se lee
+como hueco *y* como nombre, así que el disparador no pierde nada y de paso se
+acerca a cómo habla el usuario, que es lo que este documento pide en su primera
+sección.
 
 ⚠ **Claude Code no aplica el límite de 1024.** Trunca `description` +
 `when_to_use` a **1536** en el listado, y encima es configurable

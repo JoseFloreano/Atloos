@@ -24,11 +24,11 @@ nuestras reglas de carpetas, sync y auditoría.
    se autodiagnostique el tipo de pregunta no se dispara nunca*. Y la
    descripción **jamás resume el CÓMO**, o el agente sigue el atajo y no lee el
    cuerpo. Los dos casos de campo: `references/disparadores.md`.
-2. **Dos unidades distintas, y confundirlas bloqueó una subida**: el cuerpo se
-   mide en **palabras** (≤450, duro 500); la `description`, en **caracteres**
-   (**≤1024** por especificación; Claude Code tolera 1536, así que carga aquí y
-   falla al subirla). Progressive disclosure: descripción (~60 tokens, siempre
-   en contexto) → cuerpo → `references/`. Lo extenso NUNCA va en el cuerpo.
+2. **Dos unidades y un carácter prohibido; confundirlas bloqueó una subida**: el
+   cuerpo se mide en **palabras** (≤450, duro 500); la `description`, en
+   **caracteres** (**≤1024**) **y no admite angulares** — `<persona>` rompe la
+   subida. Progressive disclosure: descripción (~60 tokens, siempre en
+   contexto) → cuerpo → `references/`. Lo extenso NUNCA va en el cuerpo.
 3. **Triggers estrechos > amplios**: disparar de más contamina todas las
    sesiones; revisa el solape contra `setup/skills/` y Superpowers ANTES de
    escribir.

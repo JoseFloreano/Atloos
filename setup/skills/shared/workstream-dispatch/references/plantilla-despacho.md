@@ -234,14 +234,63 @@ sitio compartido donde constara.
 
 ---
 
-## 5 · Presupuesto con número — y MODELO por frente
+## 5 · Presupuesto con número — MODELO y NÚCLEOS por frente
 
 **El barato es el DEFECTO. El caro es el que se justifica:**
 
 ```
 MODELO: barato                          ← no lleva PORQUE: es el defecto
 MODELO: caro   CATEGORIA: <mecánico|con juicio>   PORQUE: <una línea>
+NUCLEOS: <n>                            ← workers de test de ESTE frente
 ```
+
+### El presupuesto de núcleos, y la palanca correcta
+
+Un frente no compite solo por contexto: compite por CPU con los otros. El
+reparto se decide **al despachar**, porque el número depende de cuántos frentes
+haya vivos y eso no lo sabe el frente.
+
+**No es una tabla, es una fórmula** — una tabla nace rancia en cuanto cambias de
+máquina, y esta nació rancia: se escribió para 8 núcleos y la Legion tiene 24.
+
+```
+workers por frente = max(1, (os.cpu_count() - 2) // frentes_vivos)
+```
+
+Los **2 reservados** son para el coordinador y el sistema. Sale así:
+
+| Núcleos | 1 frente | 3 frentes | 5 frentes |
+|---:|---:|---:|---:|
+| 8 (SER8) | `-n 6` | `-n 2` | `-n 1` |
+| 24 (Legion) | `-n 22` | `-n 7` | `-n 4` |
+
+Se calcula al despachar, con la máquina delante:
+
+```bash
+py -c "import os; n=os.cpu_count(); f=3; print(f'{n} nucleos, {f} frentes -> -n {max(1,(n-2)//f)}')"
+```
+
+⚠ **La palanca es `PYTEST_XDIST_AUTO_NUM_WORKERS`, NO `taskset`.** `pytest -n
+auto` **ignora la afinidad**: pregunta a psutil primero, y `psutil.cpu_count()`
+no respeta `sched_getaffinity`. Verificado en laboratorio — `taskset -c 0 pytest
+-n auto` sigue creando 2/2 workers mientras `len(os.sched_getaffinity(0))` vale
+1. Un `taskset` puesto para acotar un frente no acota nada y da la falsa
+sensación de que sí.
+
+Y las dos reglas de configuración:
+
+- **`-n` NUNCA en `addopts`.** Lo elige quien invoca, porque el número depende
+  de cuántos frentes haya vivos — y en `addopts` se convierte en una fuga: cinco
+  frentes con `-n auto` heredado son 5 × núcleos procesos de test a la vez, con
+  el `auto` contando los del **host**, no los del frente.
+- **`--dist loadfile` sí en `addopts`**: agrupa por fichero, así que los tests
+  que comparten estado de módulo caen en el mismo worker.
+
+⚠ **En Atloos esto no aplica hoy y conviene saberlo**: no hay `pytest.ini` ni
+`addopts`, pytest-xdist **no está instalado**, y la suite (`run-tests.py`)
+corre cada arnés como subproceso **serial**. La fuga se buscó y no está
+(sprint 8 · S3). La regla queda escrita para los otros proyectos y para el día
+que aquí se adopte xdist.
 
 ### ⚠ Un campo obligatorio no es una decisión obligatoria
 

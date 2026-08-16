@@ -33,4 +33,6 @@ When saving decisions/bugs/conventions → `memory-keeper` skill. Architecture d
 
 **Para integrar CUALQUIER rama a `main`, el criterio es la skill `workstream-merge-gate`** — no otra. Vale igual si la rama la hizo un frente, un subagente o tú: `main` es rama protegida y su merge necesita verde posterior al último commit y OK humano explícito.
 
+**Higiene de salida — pide la respuesta, no el material** (medido en Atloos: −91 % a −99 % de bytes): `git log --oneline -n 50`, `git diff --stat`, `git status --short`, `find -maxdepth N`, y `Grep` + `Read` con `offset`/`limit` en vez del fichero entero. Dos tiempos: la forma barata para todo, la cara **solo para lo que ya falló** — nunca recortes el comando cuya falla estás diagnosticando. Y el exit code se lee **sin tubería**: `cmd > /tmp/a.txt 2>&1; echo "exit=$?"`.
+
 If the `graphiti-memory` MCP is unavailable, skip Graphiti silently — the vault is the primary record.

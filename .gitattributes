@@ -1,0 +1,45 @@
+# Fin de línea — decidido en el repo, no en la variable de cada máquina.
+#
+# POR QUÉ EXISTE (auditoría del sprint 8, H1/H2). Hasta hoy la única protección
+# era `core.autocrlf`, que se configura por máquina y no está escrita en ningún
+# sitio del proyecto. Consecuencias medidas, las dos el 2026-08-16:
+#
+#   · En Windows (`core.autocrlf=true`) la suite daba 18/18; desde una máquina
+#     sin la variable, 17/18 — `git-post-commit-graph-report.sh` moría con
+#     `$'\r': command not found`. Mismo commit, dos veredictos.
+#   · `git status --short` daba 0 ficheros en una máquina y **162** en la otra,
+#     sin un solo cambio real. Ningún juicio sobre «qué cambió» era portable
+#     entre el implementador y quien audita.
+#
+# Los blobs SIEMPRE estuvieron limpios (0 CR dentro de `git cat-file`): el
+# defecto nunca fue del repo, era del árbol de trabajo. Esto lo fija.
+#
+# ⚠ Y lo que viene: la SER8 corre Ubuntu. Si el repo llega ahí por `git clone`,
+# nada de esto importa. Si llega copiando la carpeta de OneDrive —que es como
+# viaja hoy entre las dos laptops—, `setup-new-machine.sh`, `sync-skills.sh` y
+# el hook `post-commit` aterrizan con CRLF y mueren en el primer minuto de la
+# instalación, con el error de arriba.
+
+# Por defecto: git normaliza a LF al guardar y respeta la convención local al
+# sacar. Es la línea que hace portables los diffs.
+* text=auto
+
+# Los que NO pueden llevar CR pase lo que pase: bash no admite el `\r` final y
+# falla con un error que no menciona el fin de línea.
+*.sh            text eol=lf
+*.bash          text eol=lf
+
+# Los de Windows, por simetría: `cmd` sí quiere CRLF.
+*.ps1           text eol=crlf
+*.psm1          text eol=crlf
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+
+# Binarios: git no debe tocarlos nunca.
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.pdf           binary
+*.zip           binary
+*.ico           binary

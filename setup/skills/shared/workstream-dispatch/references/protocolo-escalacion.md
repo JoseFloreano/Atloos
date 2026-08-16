@@ -95,5 +95,10 @@ Sin tope, el fix-loop se convierte en un bucle caro que nadie corta.
 2. **Nunca paraleliza implementadores dentro del MISMO frente.** Lo prohíbe SDD
    y lo confirmó el C compiler de 16 agentes: sin descomposición previa, "se
    sobrescribieron entre sí".
-3. **Máximo 3 frentes simultáneos** (RFD 04 C5). Las fuentes externas convergen
-   en 3–5; nuestro techo real fue la RAM.
+3. **3 frentes simultáneos por defecto** (RFD 04 C5). Las fuentes externas
+   convergen en 3–5. El nuestro es **un dato con fecha, no un techo**: una
+   medición del 2026-08-10 sin repetir, de otro proyecto y con la máquina sin
+   anotar. ⚠ Y ojo, que
+   esta línea decía «nuestro techo real fue la RAM» mientras el resto de la
+   skill lo atribuía a la CPU: **dos causas distintas para el mismo número, y
+   ninguna comprobada**. Se re-mide con `references/medir-el-techo.md`.
