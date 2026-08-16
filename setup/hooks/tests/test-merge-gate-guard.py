@@ -121,10 +121,16 @@ def commit_en(d, fichero, texto, msg):
     sh(["git", "commit", "-q", "-m", msg], d)
 
 
-def corre(d, comando, extra_env=None):
-    """Lanza el hook con el payload PreToolUse. Devuelve (rc, stderr)."""
+def corre(d, comando, extra_env=None, tool="Bash"):
+    """Lanza el hook con el payload PreToolUse. Devuelve (rc, stderr).
+
+    `tool` es parámetro desde el sprint 7 y no es cosmética: mientras estuvo
+    fijo en "Bash", este arnés **no podía ni expresar** el caso de la
+    herramienta PowerShell. La tercera puerta de un agujero de tres es la que
+    deja escribir la prueba; sin ella el fix se afirma, no se demuestra.
+    """
     payload = {"session_id": "s1", "hook_event_name": "PreToolUse",
-               "tool_name": "Bash", "tool_input": {"command": comando}}
+               "tool_name": tool, "tool_input": {"command": comando}}
     env = dict(os.environ)
     env["CLAUDE_PROJECT_DIR"] = d
     env.update(extra_env or {})
@@ -497,6 +503,156 @@ def main():
     rc, err = corre(d, "bash -c 'git push origin main'")
     caso("LÍMITE: `bash -c` se escapa, y está declarado en el docstring",
          rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # ══ La herramienta PowerShell (sprint 7) ═══════════════════════════════
+    # El pendiente decía "el matcher es Bash". Eran TRES puertas: el matcher de
+    # `sync-hooks.ps1`, el filtro `tool_name != "Bash"` del propio hook —que
+    # rechazaba el payload aunque el matcher lo dejara entrar— y este arnés, que
+    # con el `tool_name` fijo no podía ni escribir el caso.
+    print("\nJ · la herramienta PowerShell: mismo contrato, otra puerta")
+
+    # 37 · el caso del encargo: merge a protegida sin evidencia, por PowerShell
+    d = repo_lab()
+    sh(["git", "checkout", "-q", "main"], d)
+    rc, err = corre(d, "git merge feat/x", tool="PowerShell")
+    caso("merge a main SIN evidencia por PowerShell BLOQUEA", rc, 2, err)
+    enseña = "gate-test.py" in err and "feat/x" in err
+    results.append(enseña)
+    print(f"  [{'OK  ' if enseña else 'FALLA'}] el mensaje ENSEÑA igual que por Bash")
+    # 38 · y la evidencia válida pasa igual: el fix no es "bloquear más"
+    escribe_evidencia(d, "feat/x", head(d, "feat/x"))
+    rc, err = corre(d, "git merge --squash feat/x", tool="PowerShell")
+    caso("evidencia VÁLIDA por PowerShell pasa", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    # 39 · el push, que es el otro verbo del mismo contrato
+    d, bare = repo_lab_remoto()
+    sh(["git", "checkout", "-q", "main"], d)
+    commit_en(d, "doc.md", "sin gatear\n", "sin gatear")
+    rc, err = corre(d, "git push origin main", tool="PowerShell")
+    caso("push a main sin evidencia por PowerShell BLOQUEA", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 40 · una herramienta que NO es de shell sigue sin tocarse. El filtro se
+    #      ensancha a dos, no se quita: un payload de `Read` no trae comandos.
+    d = repo_lab()
+    sh(["git", "checkout", "-q", "main"], d)
+    rc, err = corre(d, "git merge feat/x", tool="Read")
+    caso("herramienta que no es de shell (`Read`) no se mira", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    print("\nK · sintaxis propia de PowerShell (el matcher es la mitad fácil)")
+
+    # 41 · el operador de llamada `&`, suelto y pegado
+    d = repo_lab()
+    sh(["git", "checkout", "-q", "main"], d)
+    for forma in ("& git merge feat/x", "&git merge feat/x",
+                  "$(git merge feat/x)", "(& git merge feat/x)"):
+        rc, err = corre(d, forma, tool="PowerShell")
+        caso(f"`{forma}` a main bloquea", rc, 2, err)
+    # 42 · `;` como separador, con el destino efectivo cruzando el separador
+    rc, err = corre(d, "git status; git merge feat/x", tool="PowerShell")
+    caso("`;` separa comandos (destino efectivo intacto)", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    d = repo_lab()          # HEAD en feat/x
+    rc, err = corre(d, "git checkout main; git merge feat/x", tool="PowerShell")
+    caso("`git checkout main; git merge feat/x` bloquea", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    # 43 · el push por `$( … )` y por `&`
+    d, bare = repo_lab_remoto()
+    sh(["git", "checkout", "-q", "main"], d)
+    commit_en(d, "doc.md", "sin gatear\n", "sin gatear")
+    for forma in ("$(git push origin main)", "& git push origin main"):
+        rc, err = corre(d, forma, tool="PowerShell")
+        caso(f"`{forma}` bloquea", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 44 · continuación por tilde invertida. NO se unen las líneas (límite
+    #      declarado), pero el marcador se retira para que el fallo caiga del
+    #      lado seguro: sin rama que comprobar, en protegida se bloquea. Antes
+    #      del sprint 7 el segmento `git merge ´` se leía como PROSA y el merge
+    #      se escapaba entero — fail-OPEN dentro de la protegida.
+    d = repo_lab()
+    sh(["git", "checkout", "-q", "main"], d)
+    rc, err = corre(d, "git merge `\n  feat/x", tool="PowerShell")
+    caso("merge partido por la tilde de continuación NO se escapa", rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    # 44b · el `&` corta FUERA de comillas y no dentro. El corte a ciegas del
+    #       primer intento metió un falso positivo NUEVO —y por la vía Bash, que
+    #       no había que tocar—: lo destapó la auditoría del sprint 7 midiendo el
+    #       antes y el después, no leyendo el diff. Los dos bordes, fijados.
+    d = repo_lab()
+    sh(["git", "checkout", "-q", "main"], d)
+    rc, err = corre(d, 'git commit -m "arregla el & git merge feat/x que quedo roto"')
+    caso("prosa con `&` entrecomillado NO se lee como comando", rc, 0, err)
+    rc, err = corre(d, 'git commit -m "arregla el & git merge feat/x"',
+                    tool="PowerShell")
+    caso("  ídem por la vía PowerShell", rc, 0, err)
+    rc, err = corre(d, "git status & git merge feat/x")
+    caso("y el `&` FUERA de comillas sigue cortando (bloquea)", rc, 2, err)
+    # El reverso declarado: `;` y `&&` sí cortan dentro de comillas, y eso es
+    # PREEXISTENTE. Se fija para que nadie lo lea como cobertura.
+    rc, err = corre(d, 'git commit -m "arregla el ; git merge feat/x"')
+    caso("LÍMITE: `;` entrecomillado sí corta (preexistente, declarado)",
+         rc, 2, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    print("\nL · y por la vía PowerShell los mismos falsos positivos siguen pasando")
+
+    # 45 · FP 1 · rama de trabajo. Fuera de las protegidas NO se cierra: el bot
+    #      de Telegram empuja a las suyas y no puede quedarse bloqueado.
+    d, bare = repo_lab_remoto()
+    commit_en(d, "b.py", "y = 3\n", "mas trabajo")
+    rc, err = corre(d, "git push -u origin feat/x", tool="PowerShell")
+    caso("FP1 · push a rama de trabajo NO interviene (PowerShell)", rc, 0, err)
+    rc, err = corre(d, "& git merge feat/x", tool="PowerShell")
+    caso("  ídem un `& git merge` fuera de protegida", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 46 · FP 2 · `--dry-run`
+    d, bare = repo_lab_remoto()
+    sh(["git", "checkout", "-q", "main"], d)
+    commit_en(d, "doc.md", "algo\n", "un commit en main")
+    rc, err = corre(d, "git push --dry-run origin main", tool="PowerShell")
+    caso("FP2 · `--dry-run` a main NO interviene (PowerShell)", rc, 0, err)
+    rc, err = corre(d, "git push -n origin main", tool="PowerShell")
+    caso("  ídem con `-n`", rc, 0, err)
+    # 47 · FP 3 · tags
+    sh(["git", "tag", "v1.0"], d)
+    rc, err = corre(d, "git push --tags", tool="PowerShell")
+    caso("FP3 · `git push --tags` estando en main NO interviene (PowerShell)",
+         rc, 0, err)
+    rc, err = corre(d, "git push origin v1.0", tool="PowerShell")
+    caso("  ídem empujando un tag por nombre", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 48 · FP 4 · el push del bot a su rama
+    d, bare = repo_lab_remoto()
+    sh(["git", "checkout", "-q", "-b", "tg/20260811-una-tarea"], d)
+    commit_en(d, "c.py", "z = 1\n", "trabajo del bot")
+    rc, err = corre(d, "git push -u origin tg/20260811-una-tarea",
+                    {"CLAUDE_TG_BOT": "1"}, tool="PowerShell")
+    caso("FP4 · push del bot a su rama NO interviene (PowerShell)", rc, 0, err)
+    rc, err = corre(d, "git push --force-with-lease -u origin tg/20260811-una-tarea",
+                    {"CLAUDE_TG_BOT": "1"}, tool="PowerShell")
+    caso("  ídem con el push forzado de `gitops.push_branch`", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
+
+    # 49 · el límite declarado de PowerShell, FIJADO igual que el de `bash -c`:
+    #      lo que el parser no entiende se declara, no se finge.
+    d, bare = repo_lab_remoto()
+    sh(["git", "checkout", "-q", "main"], d)
+    commit_en(d, "doc.md", "sin gatear\n", "sin gatear")
+    rc, err = corre(d, "Invoke-Expression 'git push origin main'",
+                    tool="PowerShell")
+    caso("LÍMITE: `Invoke-Expression` se escapa, y está declarado", rc, 0, err)
+    rc, err = corre(d, "& \"C:\\Program Files\\Git\\cmd\\git.exe\" push origin main",
+                    tool="PowerShell")
+    caso("LÍMITE: `& <ruta a git.exe>` se escapa, y está declarado", rc, 0, err)
     shutil.rmtree(d, ignore_errors=True); shutil.rmtree(bare, ignore_errors=True)
 
     print(f"\n{sum(results)}/{len(results)} casos OK")

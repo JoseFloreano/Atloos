@@ -31,9 +31,14 @@ desincronizan (ese es el problema del §1 del RFD 17 otra vez):
   1. **Artefactos del propio repo.** `sync-skills` es un `.ps1`, `gate-test` un
      `.py`. El inventario se lee del disco (`setup/**/*.py|ps1|sh`), así que se
      mantiene solo.
-  2. **Hedge declarado y greppable** en la MISMA línea ("si está instalada"),
-     igual que el `[repo]` de `test-skill-paths.py`. Ponerlo en la línea de
-     arriba no basta: el check es por línea.
+  2. **Hedge declarado y greppable** junto a la referencia ("si está
+     instalada"), igual que el `[repo]` de `test-skill-paths.py`. Desde el
+     sprint 7 se busca en una VENTANA de líneas: antes el check medía por línea
+     y la gente escribe cruzando líneas, así que un hedge partido por el
+     plegado del markdown no lo veía nadie —cuatro veces, incluidas dos del
+     auditor y una de quien escribió el aviso—. El número de la ventana y su
+     porqué, en `_ventana.py`; ancharlo más sería peor que el fallo, porque
+     encontraría el hedge de OTRA referencia.
 
 Y sube el listón que pidió la auditoría (A.4): no basta con que la skill
 exista, tiene que existir **en la superficie donde se manda usar**. Una skill
@@ -98,6 +103,9 @@ import sys
 from datetime import date
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _ventana import RADIO, autoprueba as autoprueba_ventana, marcada  # noqa: E402
+
 for _s in (sys.stdout, sys.stderr):
     try:
         _s.reconfigure(encoding="utf-8")
@@ -152,9 +160,27 @@ REF = re.compile(r"`(?:(" + "|".join(NAMESPACES) + r"):)?([a-z][a-z0-9]*(?:-[a-z
 # —"if the X MCP is unavailable, skip"—. Prefijarlo con `mcp:` lo habría metido
 # en los CLAUDE.md de proyectos ajenos, donde esta convención no rige; y el
 # arnés H3 lo cazó al instante, porque esa línea tiene TRES puntos de consumo.
-HEDGE = re.compile(r"si (?:está|estan|están|no está)\s+(?:instalad|disponible|presente)"
-                   r"|si existe|si lo tienes|opcional"
-                   r"|if .{0,40}\bis (?:unavailable|not installed|missing)", re.I)
+# El hedge tiene DOS formas y no se buscan igual (sprint 7).
+#
+# CLÁUSULA: "si está instalada", "si existe", "if X is unavailable". Es una
+# oración, alguien la escribe junto a la referencia y el plegado del markdown la
+# parte por la mitad. Esta se busca en una VENTANA de líneas.
+#
+# PALABRA SUELTA: "opcional". Esta se queda pegada a SU línea, y no por
+# purismo: al ensancharla, `api-design/SKILL.md:36` dejó de avisar porque una
+# línea antes decía "(campos nuevos opcionales)" — prosa de otra frase, sobre
+# otro tema. Medido, no hipotético. Una palabra corriente en una ventana silencia
+# por accidente, que es el falso negativo del que avisa `_ventana.py`; una
+# cláusula, no. La regla: **se ensancha lo que alguien escribe COMO exención,
+# no lo que puede aparecer por casualidad.**
+HEDGE_CLAUSULA = re.compile(
+    r"si (?:está|estan|están|no está)\s+(?:instalad|disponible|presente)"
+    r"|si existe|si lo tienes"
+    r"|if .{0,40}\bis (?:unavailable|not installed|missing)", re.I)
+HEDGE_SUELTO = re.compile(r"opcional", re.I)
+# El de siempre, para quien quiera preguntar "¿esta línea lleva hedge?" sin
+# distinguir formas. El check usa los dos de arriba, cada uno a su alcance.
+HEDGE = re.compile(HEDGE_CLAUSULA.pattern + r"|" + HEDGE_SUELTO.pattern, re.I)
 
 
 def es_comando(nombre, linea):
@@ -386,9 +412,16 @@ def revisa_referencias(inv, artefactos):
         rel = md.relative_to(RAIZ.parent).as_posix()
 
         texto = md.read_text(encoding="utf-8").replace("\r", "")
-        for n, linea in enumerate(texto.splitlines(), 1):
-            if HEDGE.search(linea):
-                continue                      # excepción declarada en su línea
+        lineas = texto.splitlines()
+        for i, linea in enumerate(lineas):
+            n = i + 1
+            # Excepción declarada JUNTO a la referencia, en una ventana de
+            # líneas y no en una sola (sprint 7). El hedge es una frase, y una
+            # frase la parte el plegado del markdown: "— si / está instalada"
+            # no lo veía nadie, y este arnés lo AVISABA en su propio mensaje
+            # mientras seguía mordiendo. El número, en `_ventana.py`.
+            if marcada(lineas, i, HEDGE_CLAUSULA) or HEDGE_SUELTO.search(linea):
+                continue
             for ns, nombre in REF.findall(linea):
                 if ns in EXTERNOS or ns == "cowork":
                     continue                  # otra superficie: no la podemos ver
@@ -525,6 +558,26 @@ def main():
           f"({', '.join(f'{s}: {sum(1 for d in inv.values() if s in d)}' for s in VISIBLE_DESDE)})\n")
 
     print("── Check 1 · referencias colgantes " + "─" * 38)
+    # La ventana del hedge, por los DOS bordes y con la frase real: dentro
+    # exime, a una línea más NO —si eximiera, encontraría el hedge de otra
+    # referencia y daría por buena una que no lo está—, y una frase partida por
+    # el plegado se ve, que es el fallo del sprint 1.
+    ok_ventana, motivo_ventana = autoprueba_ventana(
+        HEDGE_CLAUSULA, "usa `x` si está instalada",
+        partida=("— usa `x` si", "está instalada y sigue"))
+    if ok_ventana and marcada(["(campos nuevos opcionales) no versionan",
+                               "la política vive en `api-evolution`"], 1,
+                              HEDGE_CLAUSULA):
+        # El caso REAL que destapó la ventana: una palabra corriente en la línea
+        # de al lado no puede eximir. Si algún día `opcional` vuelve a entrar en
+        # la cláusula, esto se pone rojo antes de que silencie nada.
+        ok_ventana, motivo_ventana = False, (
+            "`opcional` en la línea vecina exime: una palabra suelta en la "
+            "ventana silencia por accidente (api-design:36, medido)")
+    print(f"  [AUTOPRUEBA] {'OK' if ok_ventana else 'FALLIDA'} — el hedge-cláusula "
+          f"exime a distancia {RADIO}, no a {RADIO + 1}, se ve partido por el "
+          f"salto, y `opcional` no cruza de línea"
+          + (f"\n               {motivo_ventana}" if not ok_ventana else ""))
     if hallazgos:
         print(f"\n{len(hallazgos)} referencia(s) que no resuelven:\n")
         for rel, n, tipo, detalle, texto in hallazgos:
@@ -631,11 +684,12 @@ Tres arreglos legítimos, por orden de preferencia:
         print(f"\n  Las {len(fm)} descriptions por debajo de {AVISO_DESC}. "
               f"La mayor: {mayor[0]} ({mayor[1]}).")
 
-    # Cinco motivos de rojo, y dos son las propias autopruebas: si caen, lo que
-    # este fichero afirma sobre sus topes deja de estar respaldado, y un check no
-    # verificado en verde es exactamente el agujero de H7.
+    # Seis motivos de rojo, y TRES son las propias autopruebas: si caen, lo que
+    # este fichero afirma sobre sus topes —y sobre dónde busca el hedge— deja de
+    # estar respaldado, y un check no verificado en verde es exactamente el
+    # agujero de H7.
     return 1 if (hallazgos or excedidas or pasadas or sin_campo
-                 or not ok_tope or not ok_desc) else 0
+                 or not ok_tope or not ok_desc or not ok_ventana) else 0
 
 
 if __name__ == "__main__":

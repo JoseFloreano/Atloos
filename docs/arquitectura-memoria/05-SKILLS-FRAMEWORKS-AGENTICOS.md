@@ -305,11 +305,16 @@ doc-writer              → documentación de APIs
 Justificación: "CLAUDE.md dice qué hacer; los hooks lo garantizan."
 
 **Seguridad — bloquear comandos peligrosos (PreToolUse):**
+
+> El matcher es `Bash|PowerShell`, no `Bash` a secas: las dos herramientas
+> entregan el comando en el mismo `tool_input.command`, y en Windows la de
+> PowerShell va por despliegue progresivo. Un ejemplo con `Bash` solo enseña la
+> frontera mal dibujada que este repo ya pagó tres veces (sprint 7).
 ```json
 {
   "hooks": {
     "PreToolUse": [{
-      "matcher": "Bash",
+      "matcher": "Bash|PowerShell",
       "hooks": [{
         "type": "command",
         "command": "echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'rm -rf /|DROP TABLE|DELETE FROM' && exit 2 || exit 0"

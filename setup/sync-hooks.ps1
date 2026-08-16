@@ -34,7 +34,13 @@ $HookMap = @(
     @{ File = "mark-code-dirty.py";            Event = "PostToolUse"; Matcher = "Write|Edit|MultiEdit" }
     @{ File = "check-vault-updated.py";        Event = "Stop";        Matcher = $null }
     @{ File = "memory-flush.py";               Event = "PreCompact";  Matcher = $null }
-    @{ File = "merge-gate-guard.py";           Event = "PreToolUse";  Matcher = "Bash" }
+    # `Bash|PowerShell`, no `Bash` a secas (sprint 7). La herramienta PowerShell
+    # manda el comando en el MISMO `tool_input.command` y en Windows va por
+    # despliegue progresivo, asi que puede encenderse sin que nadie lo decida:
+    # con el matcher viejo, media sesion de una maquina Windows corria sin gate.
+    # Arreglar solo esta linea no basta —el hook filtra ADEMAS por `tool_name`,
+    # ver HERRAMIENTAS_SHELL en merge-gate-guard.py—; son dos puertas.
+    @{ File = "merge-gate-guard.py";           Event = "PreToolUse";  Matcher = "Bash|PowerShell" }
     # Segundo hook en Stop, junto a check-vault-updated.py. Los dos corren, son
     # independientes y el orden lo fija este array (el cableado APENDE, así que
     # check-vault-updated va primero). Ver hooks/tests/test-goal-evidence-guard.py.
@@ -132,11 +138,35 @@ foreach ($cfg in $configDirs) {
         }
         $existing = @($s.hooks.$evt)
 
+        # La presencia se mide por COMANDO, pero el matcher tambien es contrato:
+        # si cambia (sprint 7, "Bash" -> "Bash|PowerShell") hay que reescribirlo
+        # in situ. Sin esto el cableado decia "ya cableado" y dejaba el matcher
+        # viejo para siempre: el arreglo estaba en el repo y no llegaba al disco.
         $present = $false
+        $reescrito = $false
         foreach ($e in $existing) {
-            foreach ($inner in @($e.hooks)) { if ($inner.command -eq $cmd) { $present = $true } }
+            foreach ($inner in @($e.hooks)) {
+                if ($inner.command -eq $cmd) {
+                    $present = $true
+                    $actual = if ($e.PSObject.Properties.Name -contains 'matcher') { $e.matcher } else { $null }
+                    if ($actual -ne $h.Matcher) {
+                        if ($h.Matcher) {
+                            if ($e.PSObject.Properties.Name -contains 'matcher') { $e.matcher = $h.Matcher }
+                            else { $e | Add-Member -NotePropertyName matcher -NotePropertyValue $h.Matcher }
+                        } elseif ($e.PSObject.Properties.Name -contains 'matcher') {
+                            $e.PSObject.Properties.Remove('matcher')
+                        }
+                        $changed = $true
+                        $reescrito = $true
+                        Write-OK "$($h.File) → $evt  (matcher '$actual' → '$($h.Matcher)')"
+                    }
+                }
+            }
         }
-        if ($present) { Write-Info "$($h.File) ya cableado en $evt"; continue }
+        if ($present) {
+            if (-not $reescrito) { Write-Info "$($h.File) ya cableado en $evt" }
+            continue
+        }
 
         $inner = @([PSCustomObject]@{ type = "command"; command = $cmd })
         $entry = if ($h.Matcher) { [PSCustomObject]@{ matcher = $h.Matcher; hooks = $inner } }

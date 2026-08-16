@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-"""
-merge-gate-guard.py — Hook PreToolUse (matcher Bash) de Claude Code.
+# El docstring va en RAW: nombra rutas de Windows (`…\git.exe`) y la barra de
+# continuación de POSIX, y sin la `r` Python avisa por `SyntaxWarning` —que sale
+# por stderr, el mismo canal por el que este hook explica sus bloqueos—.
+r"""
+merge-gate-guard.py — Hook PreToolUse (matcher `Bash|PowerShell`) de Claude Code.
 
 El W3 del RFD 04: la compuerta determinista que no depende de que una skill gane
 un concurso de descripciones.
@@ -39,20 +42,69 @@ cambia las dos cosas, que es exactamente lo que se escapó.
 
 FALSOS POSITIVOS DEL PUSH, que aquí son caros. No intervienen: push a una rama
 de trabajo (el filtro es la rama de DESTINO), `--dry-run`/`-n`, push de tags, y
-el push del bot de Telegram —que además va por subprocess del daemon y no por la
-herramienta Bash, así que este hook ni lo ve—. Un push que no adelanta nada
+el push del bot de Telegram —que además va por subprocess del daemon y no por
+una herramienta de shell, así que este hook ni lo ve—. Un push que no adelanta nada
 (local == `origin/<rama>`) tampoco se toca: no viaja ningún árbol.
 
+DOS HERRAMIENTAS, NO UNA (sprint 7). Hasta aquí el hook se registraba con
+matcher `Bash` y además **rechazaba por su cuenta** todo payload cuyo
+`tool_name` no fuera exactamente `Bash`. En una máquina Windows con la
+herramienta `PowerShell` encendida —`CLAUDE_CODE_USE_POWERSHELL_TOOL=1`, y en
+Windows va por despliegue progresivo, así que puede activarse sin que nadie lo
+decida— eso era media sesión sin compuerta: los `git` iban por la otra puerta y
+el hook salía 0 sin mirar nada. Es la TERCERA vez que la frontera está mal
+dibujada: primero el verbo (`merge` sí, `push` no — sprint 2), luego el entorno
+(el worktree — sprint 6) y ahora la herramienta. Las dos mandan el comando en el
+mismo `tool_input.command`, así que el parser es uno solo; lo que cambia es la
+sintaxis que puede llegar por él.
+
+LO QUE SE PARSEA DE POWERSHELL, y es poco a propósito:
+
+  · el **operador de llamada** `&`: `& git merge feat/x`. Se trata como
+    separador y además se pela si viene pegado (`&git merge …`).
+  · `;` como separador —igual que POSIX— y `&&` / `||`, que existen en PS7+.
+  · subexpresiones `$( … )` **cuando envuelven al comando entero**:
+    `$(git push origin main)` se pela igual que un subshell.
+
 LÍMITES DECLARADOS — la lista completa, porque una lista incompleta hace que la
-cobertura se lea más ancha de lo que es (auditoría 22, H6):
+cobertura se lea más ancha de lo que es (auditoría 22, H6). Un matcher que caza
+comandos que el parser no entiende sería peor que no cazarlos: fallaría abierto
+y en silencio, así que lo que no se puede parsear con confianza se declara aquí
+en vez de fingirse:
 
   · `git push --delete` a una protegida NO se bloquea. Borrar una rama no es
     integrar código y este hook no es un guardián de permisos.
   · **Todo lo que no sea texto plano de shell se escapa**: `bash -c '…'`,
     `if …; then git push …; fi`, bucles `for`, `xargs`, un script que por dentro
-    haga el push, o cualquier alias. Este hook es un parser de texto y ese es su
-    techo real; los subshells `( … )` y los grupos `{ …; }` sí se pelan porque
-    son un carácter de envoltorio, no una construcción.
+    haga el push, o cualquier alias. En PowerShell, sus equivalentes:
+    `Invoke-Expression`, `ForEach-Object { … }`, `if (…) { … }` y las funciones.
+    Este hook es un parser de texto y ese es su techo real; los subshells `( … )`
+    y los grupos `{ …; }` sí se pelan porque son un carácter de envoltorio, no
+    una construcción.
+  · **La continuación de línea NO se une**, ni la barra de POSIX ni la tilde
+    invertida de PowerShell. Se decidió así a propósito: unir por la tilde final
+    rompería el caso —muy de este repo— de una línea de prosa que TERMINA en
+    backtick de markdown, y al pegarle la línea siguiente se tragaría un
+    `git merge` de verdad. Lo que sí se hace es RETIRAR el marcador, para que el
+    fallo caiga del lado seguro: el `git merge` partido llega sin rama y en
+    protegida bloquea por no verificable, en vez de descartarse como prosa
+    —que es lo que hacía— y escaparse entero.
+  · **`;`, `&&` y `||` cortan también DENTRO de comillas**, desde el primer día:
+    `git commit -m "arregla el ; git merge x"` se lee como dos comandos y en
+    protegida bloquea. Es prosa tratada como comando —falso positivo, no
+    escape—, preexistente y no tocado aquí; lo amortigua la convención de la
+    casa, que nombra los comandos entre backticks, y un backtick está en
+    NO_ES_REF (caso 9 del arnés). El `&` **sí** es consciente de las comillas,
+    porque ese lo introdujo este sprint y su falso positivo era nuevo.
+  · **El escape de PowerShell es la tilde invertida, no la barra.** Una comilla
+    escapada con `` ` `` no la ve `_spans_citados`, escrito para POSIX; el
+    tramo citado se corta donde no toca. Consecuencia: prosa rara puede leerse
+    como comando (falso positivo, bloquea de más) o al revés. No se ha visto en
+    campo y arreglarlo pide un lexer, no un `find`.
+  · **`& "C:\…\git.exe" merge x` no se caza**: tras pelar el `&` el token es una
+    ruta entrecomillada, no la palabra `git`. Misma clase que un alias.
+  · Una substitución **embebida a media línea** —`echo $(git merge x)`, o su
+    gemelo POSIX— tampoco: solo se pela la que envuelve al segmento entero.
   · No juzga la CALIDAD del verde, ni el worktree limpio, ni pide la
     confirmación humana: un hook no puede preguntar (ver QUÉ NO HACE).
 
@@ -85,6 +137,13 @@ except Exception:
     pass
 
 PROTEGIDAS = {"main", "master"}
+
+# Herramientas que mandan una línea de shell en `tool_input.command`. Las DOS,
+# desde el sprint 7: cambiar el matcher de `sync-hooks.ps1` sin tocar esto no
+# arregla nada —el hook se registraría, se invocaría y saldría 0 sin mirar—, que
+# es la forma más cara de que un arreglo PAREZCA hecho. Comparar en minúsculas
+# porque lo que se afirma es la identidad de la herramienta, no su capitalización.
+HERRAMIENTAS_SHELL = {"bash", "powershell"}
 EVIDENCIA = os.path.join(".claude", "gate-verde.json")   # el sitio de respaldo
 NOMBRE_EVIDENCIA = "gate-verde.json"   # dentro del directorio git COMUN
 
@@ -213,7 +272,7 @@ def sin_heredocs(cmd):
 
 
 def pela_envoltorio(seg):
-    """`(git push …)` y `{ git push …; }` → `git push …`.
+    """`(git push …)`, `{ git push …; }` y `$(git push …)` → `git push …`.
 
     Un subshell y un grupo son UN carácter de envoltorio alrededor del mismo
     comando, así que pelarlos es honesto y barato. La auditoría 22 (H6) los
@@ -223,15 +282,70 @@ def pela_envoltorio(seg):
 
     Se pelan SUELTOS, no por pares: `segmentos()` corta antes por `;`, así que
     `{ git push …; }` llega aquí como `{ git push …` — sin su cierre. Y ningún
-    comando de git empieza por `(` o `{`, de modo que quitarlos no puede tapar
-    nada legítimo.
+    comando de git empieza por `(`, `{`, `$` o `&`, de modo que quitarlos no
+    puede tapar nada legítimo.
+
+    El `$` entra en el sprint 7 por las subexpresiones de PowerShell —`$(git
+    push origin main)`— y de paso cubre la substitución POSIX idéntica. El `&`
+    es el operador de llamada de PowerShell pegado al comando (`&git merge x`);
+    suelto ya lo corta `segmentos()`. Ojo con el reverso: un `$x = git merge y`
+    también pierde su `$`, y queda `x = git merge y`, que no ancla en `git` y se
+    descarta — igual que antes, ni mejor ni peor.
     """
-    return seg.strip().lstrip("({").rstrip(")}").strip()
+    return seg.strip().lstrip("({$&").rstrip(")}").strip()
+
+
+def separa_ampersand(cmd):
+    """Convierte en salto de línea el `&` SUELTO que está FUERA de comillas.
+
+    El `&` suelto sirve a las dos sintaxis: en PowerShell es el operador de
+    llamada que ABRE el comando (`& git merge x`), en POSIX el `cmd1 & cmd2`
+    que lo manda al fondo. Pero cortarlo a ciegas —como salió del sprint 7—
+    metía un falso positivo NUEVO y por la vía Bash, que no había que tocar:
+    `git commit -m "arregla el & git merge x"` pasaba de 0 a 2. Lo midió la
+    auditoría, y de paso corrigió el reporte: la familia (`;`, `&&`) sí cortaba
+    dentro de comillas desde el primer día, pero el `&` suelto era mío y era
+    nuevo, así que el ejemplo que cité como prueba de preexistencia era justo el
+    único caso que yo había cambiado.
+
+    Aquí solo se toca el `&`. `;`, `&&` y `||` siguen cortando dentro de
+    comillas exactamente como antes: arreglarles eso es otra decisión, con su
+    propia superficie de regresión, y no es lo que este sprint rompió.
+
+    Un `&&` no se toca (lo corta `segmentos()`), y un `&` dentro de un tramo
+    citado tampoco: ahí es prosa.
+    """
+    fuera = []
+    for linea in cmd.split("\n"):
+        spans = _spans_citados(linea)
+        trozos, i = [], 0
+        while i < len(linea):
+            c = linea[i]
+            if c == "&" and linea[i:i + 2] != "&&" and not (
+                    i and linea[i - 1] == "&"):
+                if any(a <= i <= b for a, b in spans):
+                    trozos.append(c)          # entrecomillado: es texto
+                else:
+                    trozos.append("\n")       # separador de verdad
+            else:
+                trozos.append(c)
+            i += 1
+        fuera.append("".join(trozos))
+    return "\n".join(fuera)
 
 
 def segmentos(cmd):
     """Parte una línea de shell en comandos, respetando el orden."""
     cmd = sin_heredocs(cmd)
+    # Continuación de línea: NO se une (ver LÍMITES), pero el marcador se
+    # RETIRA. Sin esto, `git merge `<tilde><salto>` feat/x` dejaba un segmento
+    # `git merge \`` cuyo único token lleva un carácter de NO_ES_REF, así que el
+    # parser lo descartaba como prosa y el merge se escapaba entero: fail-OPEN
+    # dentro de la protegida, justo lo que un guard no puede hacer. Quitado el
+    # marcador queda `git merge` sin rama, que en protegida bloquea por no
+    # verificable. Vale para la tilde de PowerShell y la barra de POSIX.
+    cmd = re.sub(r"[`\\][ \t]*(?=\n|$)", "", cmd)
+    cmd = separa_ampersand(cmd)
     return [pela_envoltorio(s) for s in re.split(r"&&|\|\||;|\n", cmd)
             if pela_envoltorio(s)]
 
@@ -503,7 +617,7 @@ def main():
     except Exception:
         sys.exit(0)                                   # fail-open: entrada ilegible
 
-    if (data.get("tool_name") or "") != "Bash":
+    if (data.get("tool_name") or "").strip().lower() not in HERRAMIENTAS_SHELL:
         sys.exit(0)
     cmd = ((data.get("tool_input") or {}).get("command") or "").strip()
     # Atajo barato. `pull` entra porque es fetch+merge y no lleva la palabra;
