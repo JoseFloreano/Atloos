@@ -1,7 +1,21 @@
-<!-- Insertar en el CLAUDE.md del proyecto. ~300 tokens (H4).
+<!-- Insertar en el CLAUDE.md del proyecto.
      Reemplaza TODAS las apariciones de <project-name> por el nombre real.
-     ⚠ COPIA SINCRONIZADA de setup/memory-instructions.md — si editas una,
-     actualiza la otra (mismo contenido, dos puntos de consumo). -->
+     COPIA SINCRONIZADA de setup/memory-instructions.md — si editas una,
+     actualiza la otra (mismo contenido, dos puntos de consumo).
+
+     PRESUPUESTO: 913 tokens MEDIDOS (tiktoken/o200k, 2026-08-16; 3 314
+     caracteres, 3,63 char/token). Antes decia "~300 tokens (H4)" y era un
+     numero que nadie habia medido: el real es x3,04 mayor. Se sube el numero
+     al real en vez de recortar —cada regla de aqui es la defensa contra la
+     alucinacion cruzada entre proyectos— y el tope queda en 950 tokens
+     MEDIDOS, el mismo margen que la `description` de una skill tiene contra
+     su 1024. Lo mide y BLOQUEA `test-claude-md-drift.py`, que ya leia este
+     fichero.
+     El sello de version cuesta 23 tokens; su primera redaccion costaba 51 y
+     dejaba 9 de margen, asi que se recorto — el margen es la funcion, no el
+     adorno.
+     Si hay que recortar, NO se corta por la linea de higiene (147 tokens,
+     17 %): se corta por el parentesis de codebase-map. -->
 
 ## Active Project: `<project-name>`   ← reemplazar al copiar
 
@@ -36,3 +50,5 @@ When saving decisions/bugs/conventions → `memory-keeper` skill. Architecture d
 **Higiene de salida — pide la respuesta, no el material** (medido en Atloos: −91 % a −99 % de bytes): `git log --oneline -n 50`, `git diff --stat`, `git status --short`, `find -maxdepth N`, y `Grep` + `Read` con `offset`/`limit` en vez del fichero entero. Dos tiempos: la forma barata para todo, la cara **solo para lo que ya falló** — nunca recortes el comando cuya falla estás diagnosticando. Y el exit code se lee **sin tubería**: `cmd > /tmp/a.txt 2>&1; echo "exit=$?"`.
 
 If the `graphiti-memory` MCP is unavailable, skip Graphiti silently — the vault is the primary record.
+
+`snippet v4 · 2026-08-16` — si tu copia dice otra, va atrás.

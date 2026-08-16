@@ -138,6 +138,15 @@ CUATRO_V2 = """
 CLAVES_V2_EN_FRONT = ("formato: 2\nsetup_sha: fd71659\n"
                       "skills_existentes_que_no_dispararon: []\ncoste_medido: si\n")
 
+# Lo que añadió la v3 (2026-08-16): el TAMAÑO de la máquina. Va aparte para que
+# se vea que son dos contratos distintos y no una lista que crece — cuando
+# llegue la v4, este bloque dirá cuál es cuál. Los casos de v2 de arriba siguen
+# usando `CLAVES_V2_EN_FRONT` porque su fixture está fechada ANTES de la v3, y
+# ahí declarar v2 sigue siendo legítimo: eso es lo que la versión protege.
+CLAVES_V3_EN_FRONT = "nucleos: 8\nram_gb: 16\n"
+CLAVES_ACTUALES_EN_FRONT = (CLAVES_V2_EN_FRONT.replace("formato: 2", "formato: 3")
+                            + CLAVES_V3_EN_FRONT)
+
 
 def escribe(carpeta, nombre, texto):
     p = Path(carpeta) / nombre
@@ -222,18 +231,46 @@ def main():
                        .replace("tipo: feedback", "formato: 1\ntipo: feedback")
                        .format(seccion4=CUATRO_V1))
         f7, v7 = valida(p7)
-        caso(4, "fecha posterior + formato: 1 → se exige v2",
-             v7 == 2 and any("no para escribir" in x for x in f7),
+        caso(4, "fecha posterior + formato: 1 → se exige el contrato de hoy",
+             v7 == 3 and any("no para escribir" in x for x in f7),
              f"version={v7} fallos={f7}")
 
         # …y el reverso: la MISMA fecha con formato: 2 y todo puesto, pasa.
         p8 = escribe(tmp, "2026-08-20-laboratorio-caso8.md",
                      V1.replace("fecha: 2026-08-10", "fecha: 2026-08-20")
-                       .replace("tipo: feedback", CLAVES_V2_EN_FRONT + "tipo: feedback")
+                       .replace("tipo: feedback", CLAVES_ACTUALES_EN_FRONT + "tipo: feedback")
                        .format(seccion4=CUATRO_V2))
         f8, v8 = valida(p8)
-        caso(4, "misma fecha con v2 completo pasa", not f8 and v8 == 2,
+        caso(4, "misma fecha con v3 completo pasa", not f8 and v8 == 3,
              f"version={v8} fallos={f8}")
+
+        # 4c · y la MUTACION de la v3: quitarle `nucleos` a un reporte por lo
+        # demas perfecto tiene que bloquear. Sin esto, las dos claves nuevas
+        # serian dos lineas en una plantilla que nadie exige — el patron que
+        # este repo lleva seis veces cometiendo.
+        p8b = escribe(tmp, "2026-08-20-laboratorio-caso8b.md",
+                      V1.replace("fecha: 2026-08-10", "fecha: 2026-08-20")
+                        .replace("tipo: feedback",
+                                 CLAVES_ACTUALES_EN_FRONT.replace("nucleos: 8\n", "")
+                                 + "tipo: feedback")
+                        .format(seccion4=CUATRO_V2))
+        f8b, _ = valida(p8b)
+        caso(4, "sin `nucleos` BLOQUEA (mutacion de la v3)",
+             any("nucleos" in x for x in f8b), f"fallos={f8b}")
+
+        # …y el reverso: un `nucleos` que no es numero tambien bloquea. Un
+        # campo que acepta `no-disponible` es el hueco que dejo el x2,05 sin
+        # atribuir durante cuatro sprints.
+        p8c = escribe(tmp, "2026-08-20-laboratorio-caso8c.md",
+                      V1.replace("fecha: 2026-08-10", "fecha: 2026-08-20")
+                        .replace("tipo: feedback",
+                                 CLAVES_ACTUALES_EN_FRONT.replace("nucleos: 8",
+                                                                  "nucleos: no-disponible")
+                                 + "tipo: feedback")
+                        .format(seccion4=CUATRO_V2))
+        f8c, _ = valida(p8c)
+        caso(4, "`nucleos: no-disponible` BLOQUEA",
+             any("no es un n" in x for x in f8c), f"fallos={f8c}")
 
     # 5 · el canario
     f9, v9 = valida(EJEMPLO)

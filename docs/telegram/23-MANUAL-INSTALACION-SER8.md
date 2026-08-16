@@ -686,6 +686,45 @@ git config --global user.email "jlfloreano@hotmail.com"
 git config --global init.defaultBranch main
 ```
 
+### 8.1b Cómo llega el repo a esta máquina — **`git clone`, NO la carpeta**
+
+> ⚠ **Este paso faltaba en el manual** y es el que decide si los scripts
+> arrancan. Lo cazó la auditoría 27.
+
+```bash
+cd ~
+git clone <url-del-remoto-privado> Atloos
+cd Atloos
+```
+
+**NO copies ni sincronices la carpeta de OneDrive.** Entre las dos laptops el
+repo viaja hoy por OneDrive y funciona porque las dos son Windows. Aquí no:
+
+- Los `.sh` de OneDrive llegan con **CRLF**, y `bash` muere con
+  `$'\r': command not found` — un error que **no menciona el fin de línea**.
+  Reproducido sobre el commit `e2ec4d5`: la misma suite daba **18/18 en Windows
+  y 17/18 en Linux**, y el que caía era el hook `post-commit`.
+- Afecta a `setup-new-machine.sh`, `sync-skills.sh` y
+  `setup/hooks/git-post-commit-graph-report.sh` — o sea, **al primer minuto de
+  la instalación**.
+- Un clone no tiene el problema: el repo lleva `.gitattributes` desde el sprint
+  9 (`* text=auto`, `*.sh text eol=lf`) y git escribe los ficheros con el fin de
+  línea correcto para esta máquina.
+
+**Compruébalo antes de seguir**, que cuesta un segundo:
+
+```bash
+py setup/scripts/tests/test-eol-blobs.py; echo "exit=$?"   # [repo]
+bash setup/hooks/git-post-commit-graph-report.sh; echo "exit=$?"
+```
+
+Los dos tienen que salir con `exit=0`. Si el segundo dice `command not found`
+de algo raro, **copiaste la carpeta en vez de clonarla**: borra y clona.
+
+⚠ Y lo que **sí** hay que traer a mano, porque git no lo versiona:
+`setup/telegram-bridge/.env` y `projects.json`. **Cópialos, no los enlaces**
+(`workstream-dispatch/references/higiene-de-shell.md` §1).
+
 ### 8.2 Claude Code — por apt, no por curl
 
 La documentación ofrece dos vías. **Para este servidor, apt es la correcta.**
@@ -745,19 +784,47 @@ sudo nano /etc/environment.d/99-claude.conf
 
 ```
 CLAUDE_CODE_RESUME_INTERRUPTED_TURN=1
-CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS=3
 CLAUDE_CODE_RETRY_WATCHDOG=1
 ```
 
-> **El `3` no es un número redondo**: es el máximo de frentes que
-> `workstream-dispatch` fija, y está medido — con 5 la suite pasó de ~330 s a
-> 677 s por contención de CPU. En esta máquina, con 8 núcleos, ese techo es aún
-> más importante que en la laptop.
+> ⚠ **Aquí había un `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS=3`. Sale, y no
+> vuelve.** Se quita por tres razones, y se escriben para que no se re-añada:
+>
+> 1. **Es un cap arbitrado en contra**, escondido en un fichero de entorno —
+>    el sitio que nadie relee. **[H]** *«lo que quiero es ir logrando ir
+>    aumentando la capacidad de subagentes»* (2026-08-16).
+> 2. **Los dos manuales decían números distintos**: este `=3` y
+>    `20-DIMENSIONADO…` un `=6`. Dos ajustes del mismo servidor, sin árbitro.
+> 3. **El 3 desciende del ×2,05**, que se quedó **sin explicación** (auditoría
+>    27 §7): una medición autorreportada, de la suite de **otro proyecto**, sin
+>    máquina anotada. **Y ninguno de los dos números se midió en esta máquina.**
+>
+> El defecto de Claude Code es **20**. Se deja el defecto.
+
+**En su lugar, mide en ESTA máquina — un paso, la primera semana:**
+
+```bash
+# Con una jornada real corriendo, mira el pico de memoria por proceso:
+systemctl --user status claude-* | grep -i memory
+ps -o rss=,comm= -C node --sort=-rss | head -5      # RSS en KB
+free -m
+```
+
+Con ese número —**RSS del pico real**, no una estimación— escribe el techo
+**con fecha y máquina**, igual que
+`setup/skills/shared/workstream-dispatch/references/medir-el-techo.md`, que es
+donde vive el procedimiento y la lista de lo que invalida una medición. **No lo
+repitas aquí**: enlázalo, o serán dos números otra vez.
+
+> **Y la barrera real de un headless de 24 GB no es la CPU: es la RAM** — y
+> Linux ya tiene el mecanismo, así que no hace falta poner techo a la ambición
+> (RFD 26 §1.4). El límite va en la unit, **en función de la RAM instalada**:
 
 **Y el cinturón de seguridad de verdad**, para cuando lo pongas como servicio:
 en el `[Service]` de cada unidad systemd que lance un agente, pon
 
 ```ini
+MemoryHigh=3G
 MemoryMax=4G
 OOMPolicy=kill
 Restart=on-failure
@@ -766,15 +833,32 @@ StartLimitBurst=10
 StartLimitIntervalSec=600
 ```
 
-`MemoryMax` hace que una fuga mate **ese** proceso en vez de tumbar la máquina
-entera; `StartLimitBurst` generoso evita que systemd se rinda y deje el servicio
-muerto tras tres reinicios rápidos.
+`MemoryHigh` **frena** el proceso (lo mete a recuperar memoria) antes de que
+`MemoryMax` lo **mate**: el primero avisa, el segundo corta. `MemoryMax` hace
+que una fuga mate **ese** proceso en vez de tumbar la máquina entera;
+`StartLimitBurst` generoso evita que systemd se rinda y deje el servicio muerto
+tras tres reinicios rápidos.
 
-> **El `4G` sale de una división, no de la costumbre.** Con 24 GB y un techo de
-> 3 frentes: 3 × 4 GB = 12 GB para los subagentes, más el coordinador, más la
-> base del sistema, más Docker. Cabe. **Con 8 GB por frente no cabe** — tres
-> frentes en su tope se comerían la máquina entera. Si acabas metiendo el módulo
-> de 32 GB y subes a 56 GB, este número puede volver a 8G.
+> **Esto es lo que sustituye al cap de subagentes**, y es mejor que él: falla
+> cerrado contra el OOM **sin poner techo a la ambición**. Un cap dice «no
+> lances más de 3» aunque quepan 6; `MemoryMax` deja lanzar los que quepan y
+> mata solo al que se desmadra.
+
+**Los números salen de la RAM instalada, no de la costumbre.** Con `T` = GB
+totales, reservando ~8 GB para sistema + Docker + coordinador:
+
+```
+MemoryMax  por frente ≈ (T − 8) / frentes_previstos
+MemoryHigh por frente ≈ MemoryMax × 0,75
+```
+
+| RAM instalada | 3 frentes | 5 frentes |
+|---:|---:|---:|
+| **24 GB** (la de compra) | `MemoryMax=5G` · `High=3G` | `MemoryMax=3G` · `High=2G` |
+| 56 GB (si metes el módulo de 32) | `MemoryMax=16G` · `High=12G` | `MemoryMax=9G` · `High=7G` |
+
+Los `3G/4G` de arriba son el valor **conservador** para arrancar con 24 GB;
+súbelos con el RSS medido en la mano, no antes.
 
 ### 8.4 Docker, para el staging
 

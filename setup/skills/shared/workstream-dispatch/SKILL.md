@@ -80,5 +80,5 @@ avisó del conflicto.
 - **No paralelices implementadores dentro del mismo frente** (lo prohíbe SDD y
   lo confirmó el C compiler de 16 agentes).
 - **3 frentes por defecto — dato con fecha, no dogma**: una medición
-  autorreportada (2026-08-10, ×2,05 con 5) **de la suite de otro proyecto**, sin
-  máquina anotada. Se sube **midiendo** → `references/medir-el-techo.md`.
+  autorreportada (2026-08-10, ×2,05 con 5) **de la suite de otra máquina**, cuyo
+  tamaño no consta. Se sube **midiendo** → `references/medir-el-techo.md`.

@@ -32,7 +32,21 @@ aplica, escribe `no disponible` — **no inventes ni estimes**.
 claude --version
 git -C . log --oneline -1
 git -C . status --porcelain | wc -l
+
+# v3 · el TAMANO de la maquina, obligatorio desde el 2026-08-16
+py -c "import os; print(os.cpu_count())"
+py -c "import psutil; print(round(psutil.virtual_memory().total/2**30))"
 ```
+
+> **Los dos ultimos van al frontmatter** (`nucleos:` y `ram_gb:`) **y tienen que
+> ser numeros** — `no disponible` no vale aqui, a diferencia del resto. La
+> seccion se llama «Evidencia de maquina» y hasta la v3 pedia la version del
+> harness, el sha y el estado del arbol: **ni una propiedad de la maquina**. Por
+> ese hueco, el x2,05 que gobierna el techo de frentes se midio en
+> `ProgramadoMaxi2` sin que nadie pueda decir de cuantos nucleos, y encima se le
+> construyo un presupuesto «para 8» que no era de esa maquina ni de esta.
+> Sin `psutil`: Windows `(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory`,
+> Linux `free -g`.
 
 Y saca del contexto de esta sesión, **sin adivinar**:
 
@@ -148,9 +162,15 @@ Reglas de contenido:
 - **Marca cada afirmación con `[R]`, `[AR]` o `[H]`.** Sin marca, no entra — y
   eso incluye la `4b`: una confesión sin marca es una opinión.
 - **Pega salidas literales**, no resúmenes de salidas.
-- **`formato: 2` en el frontmatter.** Es la versión del contrato que cumple el
-  reporte, y un reporte nuevo no puede declarar la 1: esa existe solo para que
-  los reportes escritos antes del 2026-08-14 se puedan archivar tal como están.
+- **`formato: 3` en el frontmatter.** Es la versión del contrato que cumple el
+  reporte, y un reporte nuevo no puede declarar una anterior: las viejas existen
+  solo para que los reportes ya escritos se puedan archivar tal como están. La
+  v2 entró el 2026-08-14; la **v3, el 2026-08-16**, y añade `nucleos` y `ram_gb`.
+- **TODA CIFRA DE TIEMPO NOMBRA LA SUITE Y EL PROYECTO DE LOS QUE SALE.** Un
+  tiempo sin suite es un número que viajará: *«la suite pasó de ~330 s a 677 s»*
+  no dice de qué suite, y acabó gobernando los despachos de otro repo cuya suite
+  tarda **43 s**. Escríbelo como *«la suite de \<proyecto\> (\<n\> tests) pasó
+  de X a Y»*.
 
 ### Paso 4 · Limpia antes de guardar
 

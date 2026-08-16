@@ -45,7 +45,7 @@ for _s in (sys.stdout, sys.stderr):
 # que esto existiera y por tanto **es v1 por omisión** — así los cuatro reportes
 # viejos quedan bien clasificados sin tocarles una línea, que es la propiedad que
 # hace honesto el arreglo: no se reescribe la historia, se fecha.
-FORMATO_ACTUAL = 2
+FORMATO_ACTUAL = 3
 FORMATO_POR_OMISION = 1
 
 # El día en que la v2 entró. Un reporte con fecha POSTERIOR que declare v1 no
@@ -60,6 +60,26 @@ FORMATO_POR_OMISION = 1
 # reporte; el que venga mañana ya no tiene excusa.
 FECHA_V2 = "2026-08-14"
 
+# La v3 entró el 2026-08-16 y añade DOS campos: `nucleos` y `ram_gb`.
+#
+# POR QUÉ, y es la causa raíz de un número que cruzó cuatro sprints. La sección
+# 2 se titula «Evidencia de máquina» y pedía la versión del harness, el sha de
+# git, el estado del árbol y el sha del setup — **ni una sola propiedad de la
+# MÁQUINA**. Ni núcleos ni RAM.
+#
+# Consecuencia medida: el ×2,05 que gobierna el techo de frentes de
+# `workstream-dispatch` se midió el 2026-08-10 en la máquina `ProgramadoMaxi2`,
+# y **nadie puede decir de cuántos núcleos**. Encima de ese hueco se construyó
+# un presupuesto «para 8 núcleos» que no era de esa máquina ni de esta (que
+# tiene 24), y sobrevivió a cuatro sprints y ocho ficheros porque no había
+# campo donde faltara. Un número de tiempo sin el tamaño de la máquina que lo
+# produjo no es una medición: es una anécdota que viaja.
+FECHA_V3 = "2026-08-16"
+
+# El día en que entró cada versión, para que `version_de` no tenga que saberse
+# los nombres. Escrito como tabla y no como cadena de `if` porque la v4 llegará.
+ENTRADA = {2: FECHA_V2, 3: FECHA_V3}
+
 # Claves comunes a todas las versiones.
 CLAVES_V1 = ["tipo", "fecha", "reporter", "maquina", "so", "superficie",
              "claude_code", "tarea", "veredicto", "skills_disparadas",
@@ -72,12 +92,19 @@ CLAVES_V1 = ["tipo", "fecha", "reporter", "maquina", "so", "superficie",
 CLAVES_V2 = ["setup_sha", "skills_existentes_que_no_dispararon", "coste_medido",
              "formato"]
 
+# Lo que añadió la v3: el TAMAÑO de la máquina. `maquina:` ya decía CUÁL era
+# —`ProgramadoMaxi2`, y eso siempre constó—; lo que no constaba, y es lo que
+# hace atribuible una cifra de tiempo, es cuánta máquina había debajo.
+CLAVES_V3 = ["nucleos", "ram_gb"]
+
 
 def claves_de(version):
-    return CLAVES_V1 + (CLAVES_V2 if version >= 2 else [])
+    return (CLAVES_V1
+            + (CLAVES_V2 if version >= 2 else [])
+            + (CLAVES_V3 if version >= 3 else []))
 
 
-CLAVES = CLAVES_V1 + CLAVES_V2      # el contrato de hoy, para quien lo importe
+CLAVES = CLAVES_V1 + CLAVES_V2 + CLAVES_V3   # el contrato de hoy
 
 # `setup_sha` es el commit del repo desde el que se corrió `sync-skills` en esa
 # máquina. Sin él, la pregunta que decide la conclusión más importante de los
@@ -266,13 +293,19 @@ def version_de(fm, ruta):
                 f"`formato: {crudo}` no es un número; se exige el contrato "
                 f"v{FORMATO_ACTUAL}")
     fecha = (fm.get("fecha") or "").strip()
-    if declarada < FORMATO_ACTUAL and fecha and fecha > FECHA_V2:
-        return FORMATO_ACTUAL, declarada, (
-            f"el reporte declara `formato: {declarada}` pero su `fecha: "
-            f"{fecha}` es POSTERIOR al {FECHA_V2}, el día en que entró la v2. "
-            f"La versión existe para que los reportes VIEJOS se puedan "
-            f"archivar, no para escribir nuevos con el contrato viejo: se "
-            f"exige v{FORMATO_ACTUAL}")
+    # Se busca la versión MÁS ALTA cuya fecha de entrada ya haya pasado: un
+    # reporte escrito hoy no puede acogerse al contrato de anteayer. Sigue
+    # siendo ESTRICTAMENTE POSTERIOR — la duda de un día se resuelve a favor del
+    # reporte, por el mismo motivo que se escribió para la v2.
+    if declarada < FORMATO_ACTUAL and fecha:
+        exigible = max((v for v, d in ENTRADA.items() if fecha > d), default=0)
+        if exigible > declarada:
+            return exigible, declarada, (
+                f"el reporte declara `formato: {declarada}` pero su `fecha: "
+                f"{fecha}` es POSTERIOR al {ENTRADA[exigible]}, el día en que "
+                f"entró la v{exigible}. La versión existe para que los reportes "
+                f"VIEJOS se puedan archivar, no para escribir nuevos con el "
+                f"contrato viejo: se exige v{exigible}")
     return declarada, declarada, ""
 
 
@@ -309,6 +342,28 @@ def valida(ruta):
         fallos.append(f"`graphify: {fm['graphify']}` no es uno de {sorted(GRAPHIFY)}")
     if fm.get("tarea", "").startswith("Una línea con"):
         fallos.append("`tarea` sigue siendo el texto de la plantilla")
+    # v3 · el tamaño de la máquina. Se exige NÚMERO, no texto: `no-disponible`
+    # es exactamente la respuesta que dejó el ×2,05 sin atribuir, y aquí el dato
+    # cuesta un comando de una línea que está escrito en la sección 2. Un campo
+    # que acepta cualquier valor no está eligiendo nada (la lección del bloque 5
+    # de `plantilla-despacho.md`, con otro disfraz).
+    if version >= 3:
+        for clave, unidad in (("nucleos", "núcleos"), ("ram_gb", "GB de RAM")):
+            crudo = str(fm.get(clave, "")).strip()
+            if not crudo:
+                continue                   # ya lo reportó el bucle de claves
+            try:
+                valor = float(crudo.replace(",", "."))
+            except ValueError:
+                fallos.append(
+                    f"`{clave}: {crudo}` no es un número. Es el tamaño de la "
+                    f"máquina en {unidad}, y sin él una cifra de tiempo no se "
+                    f"puede atribuir — así es como el ×2,05 cruzó cuatro "
+                    f"sprints.\n           Sácalo literal, sección 2:\n"
+                    f"             py -c \"import os; print(os.cpu_count())\"")
+                continue
+            if valor <= 0:
+                fallos.append(f"`{clave}: {crudo}` tiene que ser mayor que 0")
     if version >= 2 and fm.get("coste_medido") and fm["coste_medido"].lower() not in COSTE:
         fallos.append(f"`coste_medido: {fm['coste_medido']}` no es `si` ni `no`")
     if version >= 2 and fm.get("coste_medido", "").lower() == "no" and \

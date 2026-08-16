@@ -87,7 +87,47 @@ PROYECTOS = SETUP / "telegram-bridge" / "projects.json"
 # se caza por su nombre y no solo por las líneas nuevas que falten.
 LINEA_OBSOLETA = re.compile(r"for codebase questions.{0,60}graphify query", re.I)
 
+# El SELLO de version del snippet (sprint 9, S2). Es texto VISIBLE, no un
+# comentario HTML, precisamente para que viaje al `CLAUDE.md` desplegado y
+# cualquier maquina pueda contestar con un `grep` que version lleva. Antes la
+# unica forma de saberlo era diffear dos ficheros que ni siquiera tienen la
+# misma forma.
+SELLO = re.compile(r"snippet v(\d+)\s*[·.]\s*(\d{4}-\d{2}-\d{2})")
+
+# Presupuesto del snippet, en tokens MEDIDOS. El fichero declaraba "~300" y
+# nadie lo habia medido nunca: el real es 890 (tiktoken/o200k, 2026-08-16),
+# x2,97. Se sube el numero al real en vez de recortar el bloque —cada regla de
+# ahi es la defensa contra alucinacion cruzada entre proyectos— y se le pone
+# margen, igual que la `description` de una skill tiene 950 contra su 1024.
+# Ahora lo mide alguien, que es lo que le faltaba.
+PRESUPUESTO_TOKENS = 950
+
 hallazgos = []
+
+
+def sello_de(texto):
+    """(version, fecha) del snippet en `texto`, o (None, None)."""
+    m = SELLO.search(texto)
+    return (m.group(1), m.group(2)) if m else (None, None)
+
+
+def tokens_del_snippet():
+    """(n_tokens, metodo). Sin tokenizador, (None, motivo) — nunca un invento.
+
+    Se usa tiktoken porque esta instalado y es un tokenizador DE VERDAD. No es
+    el de Anthropic —ese solo se consulta por red— asi que el numero es una
+    aproximacion buena, y se dice: un `chars/3,5` no lo es, y este repo lleva
+    seis numeros escritos que nadie midio.
+    """
+    try:
+        import tiktoken
+    except ImportError:
+        return None, "tiktoken no instalado"
+    try:
+        enc = tiktoken.get_encoding("o200k_base")
+    except Exception as e:                     # sin red y sin cache del BPE
+        return None, f"no se pudo cargar o200k_base ({type(e).__name__})"
+    return len(enc.encode(cuerpo(SNIPPET.read_text(encoding="utf-8")))), "tiktoken/o200k"
 
 
 def cuerpo(texto):
@@ -187,7 +227,11 @@ def check_desplegado(ruta, explicito=False):
                   f"worktree o un clon nuevo no lo tienen. Ausencia no es "
                   f"deriva")
         return
-    hallazgos.extend(revisa_desplegado(ruta.read_text(encoding="utf-8"), ruta.name))
+    texto = ruta.read_text(encoding="utf-8")
+    ver, fecha = sello_de(texto)
+    marca = f"snippet v{ver} · {fecha}" if ver else "SIN SELLO (anterior a la v4)"
+    print(f"  [VER]  {ruta.name} ({ruta.parent.name}): {marca}")
+    hallazgos.extend(revisa_desplegado(texto, ruta.name))
 
 
 def objetivos_declarados(registro=None):
@@ -282,6 +326,31 @@ def main():
     print(f"  [AUTOPRUEBA] {'OK' if autoprueba_entorno() else 'FALLIDA'} — un "
           f"worktree sin los ficheros gitignorados NO produce hallazgos")
     check_gemelos()
+
+    # El sello y el presupuesto de la FUENTE. Van antes que los destinos porque
+    # si la fuente no lleva sello, ningún destino puede llevarlo.
+    ver_src, fecha_src = sello_de(SNIPPET.read_text(encoding="utf-8"))
+    if not ver_src:
+        hallazgos.append(
+            f"{SNIPPET.name} no lleva sello de versión (`snippet vN · fecha`). "
+            f"Sin él, una máquina no puede contestar con un `grep` qué versión "
+            f"de las reglas tiene desplegada")
+    else:
+        print(f"  [FUENTE] {SNIPPET.name}: snippet v{ver_src} · {fecha_src}")
+
+    n_tok, metodo = tokens_del_snippet()
+    if n_tok is None:
+        print(f"  [SKIP] presupuesto de tokens: {metodo} — no se estima, se "
+              f"dice. Un `caracteres/3,5` no es una medición")
+    elif n_tok > PRESUPUESTO_TOKENS:
+        hallazgos.append(
+            f"el snippet mide {n_tok} tokens ({metodo}) y el presupuesto es "
+            f"{PRESUPUESTO_TOKENS}: entra en el `CLAUDE.md` de CADA proyecto y "
+            f"se paga en CADA sesión. Recorta por el paréntesis de "
+            f"`codebase-map`, no por la línea de higiene")
+    else:
+        print(f"  [OK] snippet: {n_tok}/{PRESUPUESTO_TOKENS} tokens ({metodo}), "
+              f"{PRESUPUESTO_TOKENS - n_tok} de margen")
 
     argv = sys.argv[1:]
     objetivos = []

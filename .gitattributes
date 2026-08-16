@@ -1,45 +1,65 @@
 # Fin de línea — decidido en el repo, no en la variable de cada máquina.
 #
-# POR QUÉ EXISTE (auditoría del sprint 8, H1/H2). Hasta hoy la única protección
-# era `core.autocrlf`, que se configura por máquina y no está escrita en ningún
-# sitio del proyecto. Consecuencias medidas, las dos el 2026-08-16:
+# POR QUÉ EXISTE (auditoría del sprint 8, H1/H2). Hasta el sprint 9 la única
+# protección era `core.autocrlf`, que se configura por máquina y no estaba
+# escrita en ningún sitio del proyecto. Consecuencias medidas, las dos el
+# 2026-08-16 y las dos sobre el MISMO commit (`e2ec4d5`):
 #
 #   · En Windows (`core.autocrlf=true`) la suite daba 18/18; desde una máquina
 #     sin la variable, 17/18 — `git-post-commit-graph-report.sh` moría con
-#     `$'\r': command not found`. Mismo commit, dos veredictos.
-#   · `git status --short` daba 0 ficheros en una máquina y **162** en la otra,
-#     sin un solo cambio real. Ningún juicio sobre «qué cambió» era portable
-#     entre el implementador y quien audita.
+#     `$'\r': command not found` en la línea 34.
+#   · `git status --short` daba 0 ficheros en una máquina y 162 en la otra, sin
+#     un solo cambio real. Ningún juicio sobre «qué cambió» era portable entre
+#     quien implementa y quien audita.
 #
 # Los blobs SIEMPRE estuvieron limpios (0 CR dentro de `git cat-file`): el
-# defecto nunca fue del repo, era del árbol de trabajo. Esto lo fija.
+# defecto nunca fue del repo, era del árbol de trabajo. Esto lo fija, y
+# `test-eol-blobs.py` lo vigila.
 #
-# ⚠ Y lo que viene: la SER8 corre Ubuntu. Si el repo llega ahí por `git clone`,
-# nada de esto importa. Si llega copiando la carpeta de OneDrive —que es como
-# viaja hoy entre las dos laptops—, `setup-new-machine.sh`, `sync-skills.sh` y
-# el hook `post-commit` aterrizan con CRLF y mueren en el primer minuto de la
-# instalación, con el error de arriba.
+# ⚠ Y lo que viene: la SER8 corre Ubuntu. Por `git clone` no pasa nada. Por la
+# carpeta de OneDrive —que es como el repo viaja hoy entre las dos laptops—
+# `setup-new-machine.sh`, `sync-skills.sh` y el hook `post-commit` aterrizan
+# con CRLF y mueren con ese error en el primer minuto de la instalación.
+# El manual (`docs/telegram/23`) dice ahora `git clone` explícitamente.
+#
+# LA LISTA SALE DE MIRAR EL REPO, no de la memoria. `git ls-files` el
+# 2026-08-16, sobre 216 ficheros trackeados:
+#
+#     159 md · 36 py · 5 sh · 5 ps1 · 3 json · 3 gitkeep · 2 example
+#       1 yml · 1 yaml · 1 gitignore · 1 gitattributes
+#
+# No hay NI UN binario trackeado. Por eso abajo no hay reglas `binary` para
+# `*.png`/`*.pdf`/`*.zip`: serían reglas para ficheros que no existen, que es
+# la misma clase de contenido no medido que este repo persigue. Si algún día
+# entra un binario, `* text=auto` ya lo detecta solo — git no toca lo que
+# huele a binario.
 
 # Por defecto: git normaliza a LF al guardar y respeta la convención local al
 # sacar. Es la línea que hace portables los diffs.
 * text=auto
 
-# Los que NO pueden llevar CR pase lo que pase: bash no admite el `\r` final y
-# falla con un error que no menciona el fin de línea.
-*.sh            text eol=lf
-*.bash          text eol=lf
+# ── Los que NO pueden llevar CR pase lo que pase ──────────────────────────
+# bash no admite el `\r` final y falla con un error que ni menciona el fin de
+# línea. Es el fallo reproducido arriba.
+*.sh        text eol=lf
 
-# Los de Windows, por simetría: `cmd` sí quiere CRLF.
-*.ps1           text eol=crlf
-*.psm1          text eol=crlf
-*.bat           text eol=crlf
-*.cmd           text eol=crlf
+# Python tolera CRLF, pero estos `.py` son hooks que Linux ejecuta por shebang,
+# y ahí el `\r` vuelve a morder — por el intérprete, no por el lenguaje.
+*.py        text eol=lf
 
-# Binarios: git no debe tocarlos nunca.
-*.png           binary
-*.jpg           binary
-*.jpeg          binary
-*.gif           binary
-*.pdf           binary
-*.zip           binary
-*.ico           binary
+# Configuración que leen herramientas de Linux.
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.example   text eol=lf
+
+# ── Los del lado Windows ──────────────────────────────────────────────────
+# PowerShell tolera LF; se fija a CRLF por convención de la plataforma y para
+# que un `.ps1` abierto en un editor de Windows no salga en una sola línea.
+# No hay `.bat`/`.cmd` trackeados — esos sí lo exigirían.
+*.ps1       text eol=crlf
+
+# ── El resto: texto, con el fin de línea de cada plataforma ───────────────
+*.md        text
+*.json      text
+.gitignore  text
+.gitattributes text

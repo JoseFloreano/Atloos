@@ -10,21 +10,43 @@ escrito, cómo sacar uno nuevo y **qué hace inválida la medición**.
 |---|---|
 | Medición | 5 frentes: la suite pasó de ~330 s a **677 s** (**×2,05**), y una prueba de latencia falló por carga |
 | Cuándo | **2026-08-10**, en campo — **una sola vez, sin repetir** |
-| **De qué suite** | **NO la de Atloos.** Es la de **ProgramadoMaxi2** (`Downloads/2026-08-10-programadomaxi2-…`): pytest, ~3 960 tests, 416,99 s al cierre |
-| Máquina | **no consta en el registro**. El razonamiento que se construyó encima supone **8 núcleos** |
-| Calidad del dato | **`[AR]` — autorreportado.** Lo reportó el propio agente que corrió los 5 frentes; nadie lo replicó |
-| Qué se dedujo | «máximo 3 frentes», aplicado a **todos** los proyectos |
+| **De qué suite** | **NO la de Atloos.** Es la del proyecto de esa jornada — el MVP de avisos por corte para cobranza — y **su nombre no está en el reporte**: solo la tarea |
+| **Máquina** | **`ProgramadoMaxi2`, Windows 11 Pro** (campo `maquina:` de la cabecera). **Lo que NO consta es su tamaño**: ni núcleos ni RAM, en ninguno de los dos reportes |
+| Calidad del dato | **partida.** El **pico de 677 s es `[AR]`**, autorreportado por el propio agente que corrió los 5 frentes; el **suelo de ~330 s es `[R]`**, replicado — el gate lo usó ese día para cazar dos verdes falsos, de 117 s y 146 s |
+| Qué se dedujo | «máximo 3 frentes», aplicado a **todos** los proyectos y a **todas** las máquinas |
+
+> **Denominador replicado, numerador autorreportado.** Es la descripción más
+> exacta que se puede dar del único techo que gobierna los despachos, y merece
+> decirse así en vez de redondear a «medido» o a «sin medir».
+
+⚠ **`ProgramadoMaxi2` es una MÁQUINA, no un proyecto.** Lo dice el campo
+`maquina:` de los dos reportes, lo dice el contrato de nombres de fichero
+(`AAAA-MM-DD-<alias-maquina>-<slug-tarea>`) y lo confirma que no está en
+`projects.json`. Es la **tercera pasada** de esta confusión —la auditoría 22 la
+llama «el proyecto» y el sprint 8 etiquetó la suite con su nombre—, y por eso
+va escrito aquí en vez de arreglado en silencio.
+
+⚠ **La suite de esos ~330 s no está identificada con certeza.** El reporte del
+día siguiente (08-11, misma máquina) dice `3960 passed, 83 skipped, 4 xfailed`
+en **416,99 s**, y es *razonable* que sea la misma suite un día después. **Eso
+es una inferencia, no una medición**: los dos números vienen de reportes
+distintos y nadie los corrió juntos. Se escribe como inferencia a propósito —
+encadenar dos datos plausibles y llamarlo medido es cómo el ×2,05 llegó hasta
+aquí.
 
 **Y ahí están sus tres grietas, las tres verificadas el 2026-08-16:**
 
-1. **La medición no es de este repo.** El ×2,05 mide una suite de pytest con
-   ~3 960 tests en otro proyecto. La suite de Atloos son 18 arneses seriales que
-   hoy tardan **43 s**. Un techo deducido allí y escrito aquí **no es el mismo
-   número**, y hasta ahora nada lo decía.
-2. **Los 8 núcleos no son los de esta máquina.** `FLOREANO_LEGION` (Intel Core
-   Ultra 9 275HX) tiene **24** — `os.cpu_count()` y `psutil.cpu_count()`
-   coinciden. El presupuesto «3 × 2 workers + 2 reservados = 8» se escribió
-   contra un tamaño de máquina que aquí no existe, y nadie lo comprobó.
+1. **La medición no es de este repo ni de esta máquina.** El ×2,05 se midió en
+   `ProgramadoMaxi2` sobre la suite de otro proyecto — probablemente pytest con
+   ~3 960 tests, por la inferencia de arriba. La de Atloos son 18 arneses
+   seriales que hoy tardan **43 s**. Un techo deducido allí y escrito aquí **no
+   es el mismo número**, y hasta el sprint 9 nada lo decía.
+2. **Los 8 núcleos no son de nadie.** No salen del reporte —que no anota tamaño
+   de máquina— sino del dimensionado de la **SER8**, que ni está montada.
+   `FLOREANO_LEGION` (Intel Core Ultra 9 275HX) tiene **24**, y de
+   `ProgramadoMaxi2` no sabemos nada. El presupuesto «3 × 2 workers + 2
+   reservados = 8» se escribió contra un tamaño que no era el de ninguna de las
+   dos máquinas implicadas.
 3. **La contaminación por `-n auto` sigue SIN COMPROBAR — y es la hipótesis
    viva.** ⚠ Aquí se cometió el error que este documento existe para evitar: el
    sprint 8 grepeó `addopts` en **Atloos** —donde no hay pytest— y declaró la
@@ -45,11 +67,36 @@ grep -rn "addopts\|numprocesses\|-n auto" \
      <raiz-de-ProgramadoMaxi2>/{pyproject.toml,pytest.ini,setup.cfg,tox.ini}
 ```
 
-⚠ Y una frase que había que retirar: `gobierno-vs-sdd.md` afirmaba que los
-límites numéricos estaban **medidos en esta máquina**. No lo estaban — ni consta
-cuál era la máquina, ni el tamaño supuesto coincide con el de esta. Queda
-escrito aquí en vez de borrado, porque una afirmación retirada es más útil que
-una ausencia: dice qué se creía y por qué dejó de creerse.
+## Lo que este documento afirmó antes, y por qué dejó de afirmarlo
+
+Un fichero sobre números que sobreviven a su evidencia necesita su propio
+registro de retractaciones. Las que hubo que **retirar** van aquí en vez de
+borradas, porque es más **útil**: una afirmación retirada dice qué se creía y
+por qué dejó de creerse; una ausencia no dice nada. Y varias no **estaban**
+mal por descuido de redacción — **estaban** mal por no ir a mirar, que es peor
+y se corrige distinto: hay que **anotar** cada una con su causa.
+
+| Se afirmaba | Dónde | Qué pasó |
+|---|---|---|
+| «los límites numéricos están **medidos en esta máquina**» | `gobierno-vs-sdd.md`, hasta el sprint 8 | Falso. La medición es de otra máquina. |
+| «la **máquina** no consta / sin máquina **anotada**» | aquí y en tres sitios más, sprint 8 | **Falso, y por no leer.** El campo `maquina:` de la cabecera del reporte dice `ProgramadoMaxi2` desde el primer día; se leyó el cuerpo y no el frontmatter. Lo que no consta es el **tamaño**. |
+| «la suite de **ProgramadoMaxi2**» | aquí, sprint 8 | Etiquetaba la suite con un nombre de **máquina**. El proyecto de esa jornada era el MVP de avisos por corte, y su nombre no está en el reporte. |
+| «nadie lo **comprobó**» sobre los 8 núcleos | aquí, sprint 8 | Cierto pero incompleto: los 8 no salían de nadie, salían del dimensionado de la SER8. |
+| «se **construyó** encima un presupuesto para 8 núcleos» | aquí, sprint 8 | Se mantiene, con la corrección de arriba. |
+| «`os.cpu_count()` y `psutil` **coinciden** en 24» | aquí, sprint 8 | **Se mantiene**: replicado el 2026-08-16. |
+
+⚠ **`ProgramadoMaxi2` es una máquina, y esta es la tercera vez que se confunde
+con un proyecto** (la auditoría 22, el sprint 8, y por poco el 9). El contrato
+de nombres es `AAAA-MM-DD-<alias-maquina>-<slug-tarea>`: lo que va después de la
+fecha **es la máquina**. Los reportes de campo viven en `Downloads/`, no en el
+repo, así que nadie los ve por accidente — hay que ir a buscarlos, y hay que
+leerles la cabecera.
+
+**Y la causa raíz ya está arreglada donde tocaba**: el formato de feedback pide
+`nucleos` y `ram_gb` desde la v3 (2026-08-16), y `valida-reporte.py` los exige
+como número. Sin eso, el próximo tiempo medido volvería a viajar sin poder
+atribuirse — que es exactamente lo que se **replicó** aquí cuatro sprints
+seguidos.
 
 ## El procedimiento, cuando se re-mida
 

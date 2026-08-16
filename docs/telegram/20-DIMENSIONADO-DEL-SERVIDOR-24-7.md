@@ -141,7 +141,7 @@ acota la memoria de contexto.
 
 | Variable | Default |
 |---|---|
-| `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` | 20 (v2.1.217+) — **bájalo en el servidor** |
+| `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` | 20 (v2.1.217+) — **NO lo bajes**: arbitrado en contra, quien acota es `MemoryMax` |
 | `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` | 3 (v2.1.219+) |
 | `CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY` | 10 |
 | `CLAUDE_SUBAGENT_BG_SHELL_MAX_MS` | 60 min de vida a un shell en background de subagente |
@@ -175,7 +175,11 @@ presión de memoria tras 30 min ociosos. Activarla **desactiva** esa defensa.
 Environment=CLAUDE_CODE_RESUME_INTERRUPTED_TURN=1
 Environment=CLAUDE_CODE_RETRY_WATCHDOG=1
 Environment=CLAUDE_CODE_AUTO_COMPACT_WINDOW=150000
-Environment=CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS=6
+# ⚠ AQUÍ HABÍA UN `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS=6`. Sale (sprint 9,
+#   S3): el manual 23 decía =3 y este =6 — dos ajustes del mismo servidor
+#   con números distintos, los dos descendientes del ×2,05 que se quedó sin
+#   explicación, y ninguno medido en la SER8. Se deja el defecto (20) y
+#   quien acota es MemoryMax, abajo. Ver 23-MANUAL §8.3.
 MemoryHigh=3G          # throttle: el kernel reclama y frena
 MemoryMax=4G           # kill duro, acotado a ESTE cgroup
 MemorySwapMax=0

@@ -46,8 +46,8 @@ la suite de integración mide un estado que ya no existe.
 **Paraleliza lo que quieras, pero la validación pasa por un cuello único.** Y
 ese cuello mide también el coste: con 5 frentes en vez de 3, la suite pasó de
 ~330 s a **677 s (×2,05)**, se dijo que por contención de CPU — medido **una
-vez**, el 2026-08-10, en OTRO proyecto, sin la máquina anotada y sin repetir,
-así que la causa es
+vez**, el 2026-08-10, en OTRA máquina (`ProgramadoMaxi2`, que sí quedó
+**anotada** en el reporte; su tamaño, no) y sin repetir, así que la causa es
 la hipótesis de entonces y no un hecho. El número y su caducidad los gobierna
 `workstream-dispatch`, en **su** `references/medir-el-techo.md` — no en esta
 skill; aquí solo importa que paralelizar la validación se paga.

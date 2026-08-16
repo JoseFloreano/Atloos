@@ -63,7 +63,8 @@ a 475, ni a 500— mientras siete skills vivían entre 491 y 499. Era la ley 1
 aplicada al propio catálogo: la convención escrita no muerde. Ahora sí.
 
 Los dos umbrales son distintos y hacen cosas distintas:
-  · 475 (`SATURACION`) → **AVISO**. Mira hacia dónde va el catálogo y dice qué
+  · 450 (`SATURACION`) → **AVISO**. Es el número que el contrato cita («una
+    skill nueva nace en ≤450»), y desde el sprint 9 lo mide alguien. Dice qué
     skills ya no tienen dónde mover el detalle. No tumba el arnés.
   · 500 (`TOPE_DURO`)  → **BLOQUEA**. 500 es el último valor admisible; 501 pone
     la suite en rojo. Hoy el máximo son 499, así que nace en verde: es un alambre
@@ -124,7 +125,18 @@ for _s in (sys.stdout, sys.stderr):
 
 RAIZ = Path(__file__).resolve().parents[2]        # setup/
 SKILLS = RAIZ / "skills"
-SATURACION = 475        # umbral de AVISO; una skill nueva nace en ≤450
+# EL AVISO BAJA DE 475 A 450 (sprint 9, S4b). El 475 no lo citaba nadie: el
+# número que este repo usa de verdad es **450** —«una skill nueva nace en ≤450»
+# lo dice `skill-forge`, y los criterios de aceptación de cinco encargos piden
+# «cuerpos ≤450»—, y ese 450 vivía SOLO dentro de un comentario. Una skill a 460
+# incumplía el contrato escrito y pasaba en silencio: **sexta vez el mismo
+# patrón**, y esta dentro del arnés que persigue a las otras cinco.
+#
+# Se elige subir el arnés al número del contrato y no bajar el contrato al del
+# arnés, porque el 450 es el que la gente tiene que cumplir; el 475 no era un
+# umbral distinto, era un número sin dueño. Hoy sale gratis: la mayor de las 39
+# está en 475 y las cinco tocadas en el sprint 8 van entre 442 y 449.
+SATURACION = 450        # umbral de AVISO, y es EL número del contrato
 TOPE_DURO = 500         # el que BLOQUEA (auditoría 22, H7). 501 pone la suite en rojo
 
 # Los DOS números de la especificación de Agent Skills, en CARACTERES —no en
@@ -669,7 +681,7 @@ def tabla_markdown(filas, total):
            f"**Saturación del catálogo** — {sello()}",
            "",
            f"{len(filas)} de {total} skills en {SATURACION}+ palabras "
-           f"(tope duro 500; una skill nueva nace en ≤450).",
+           f"(aviso {SATURACION}, tope duro {TOPE_DURO})).",
            "",
            "| Skill | Palabras | `references/` |",
            "|---|---:|:---:|"]

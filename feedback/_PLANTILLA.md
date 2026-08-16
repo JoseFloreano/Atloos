@@ -1,10 +1,12 @@
 ---
-formato: 2
+formato: 3
 tipo: feedback
 fecha: 2026-08-09
 reporter: alias-o-nombre
 maquina: legion-win11
 so: Windows 11
+nucleos: 24
+ram_gb: 31
 superficie: claude-code
 claude_code: 2.1.226
 setup_sha: 9d2827b
@@ -27,6 +29,7 @@ coste_medido: si
      tocarlos. Una plantilla nueva nace en 2 y no puede elegir el viejo.
      ⚠ No es una puerta trasera: un reporte con fecha posterior al 2026-08-14
      que declare 1 se bloquea igual.
+     La v3 (2026-08-16) anade `nucleos` y `ram_gb`.
 
      Las tres claves nuevas, y por qué:
      · setup_sha — el commit del repo desde el que se corrió `sync-skills` en
@@ -61,7 +64,31 @@ $ git log --oneline -1
 
 $ git status --porcelain | wc -l
 <salida literal>
+
+$ py -c "import os; print(os.cpu_count())"
+<salida literal>          ← va tambien al frontmatter, en `nucleos:`
+
+$ py -c "import psutil; print(round(psutil.virtual_memory().total/2**30))"
+<salida literal>          ← va tambien al frontmatter, en `ram_gb:`
 ```
+
+> **El tamano de la maquina es `[R]` OBLIGATORIO desde la v3**, y no es
+> burocracia: esta seccion se llama «Evidencia de maquina» y hasta hoy pedia la
+> version del harness, el sha de git y el estado del arbol — **ni una sola
+> propiedad de la maquina**. Por ese hueco, el x2,05 que gobierna el techo de
+> frentes se midio en `ProgramadoMaxi2` y **nadie puede decir de cuantos
+> nucleos**; encima se construyo un presupuesto «para 8» que no era de esa
+> maquina ni de esta. Cuatro sprints y ocho ficheros.
+>
+> Si no tienes `psutil`, la RAM en Windows sale de
+> `(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory` y en Linux de
+> `free -g`. Redondea a GB enteros; lo que se necesita es el orden de magnitud.
+
+> ⚠ **Y la regla que cierra el agujero de verdad: TODA CIFRA DE TIEMPO NOMBRA
+> LA SUITE Y EL PROYECTO DE LOS QUE SALE.** «La suite paso de ~330 s a 677 s»
+> no dice de que suite, asi que el numero viajo cuatro sprints hasta acabar
+> gobernando despachos de OTRO repo cuya suite tarda 43 s. Se escribe
+> «la suite de <proyecto> (<n> tests) paso de X a Y».
 
 [R] Skills cargadas: <lista, o «no lo sé»>
 [R] Hooks disparados: <lista, y si alguno bloqueó (exit 2)>
