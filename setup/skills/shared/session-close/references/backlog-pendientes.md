@@ -110,3 +110,26 @@ existe, **recalcula su N**.
 **Avisa, no bloquees** — pero el aviso **escala**: lee y actualiza
 `<!-- umbral avisado: … -->`; de la 2.ª vez en adelante es incumplimiento
 del contrato, con los días.
+
+## Por qué el número se DICE aunque no cruce umbral (sprint 10)
+
+Los umbrales **están** escritos desde el principio; lo que faltaba era decirlos.
+
+Los umbrales de arriba llevaban escritos desde el principio y **el fichero
+creció de 6 a 37 ítems en tres semanas sin que nada avisara**. No falló el
+umbral: falló que nadie miraba el número, porque el paso decía «cuenta» y
+contar en silencio no deja rastro.
+
+> **Cuarta vez el mismo patrón**: un número escrito en un contrato que nadie
+> mide — como el tope de 500 palabras antes del sprint 3, el de 1024 caracteres
+> que bloqueó una subida, y el 450 que no muerde hasta el sprint 9.
+
+Por eso ahora la línea sale **en todos los cierres**, con los dos umbrales al
+lado. No bloquea nada: solo hace que el número exista para quien cierra.
+
+⚠ **Y el reverso, que importa más que el umbral**: un tablero corto **no es el
+objetivo**. Borrar pendientes vivos para bajar el número sería la enfermedad del
+sprint 4 —*«un criterio numérico se cumple destruyendo»*— aplicada a la memoria
+del proyecto. La poda del 2026-08-16 bajó de 38 a **29** aplicando *todos* los
+cortes justificados, y **se quedó en 29** en vez de forzar el 24 que anunciaba
+su propio encabezado: los cinco que faltaban no tenían motivo escrito.

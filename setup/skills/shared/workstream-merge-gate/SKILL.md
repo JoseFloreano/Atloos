@@ -58,11 +58,8 @@ La ley: **el código de salida no es el estado, y el reporte no es el artefacto.
 
 3. **El reloj: una corrida sospechosamente RÁPIDA no es un verde.** Compárala
    contra el suelo conocido; por debajo de ~⅔, cuenta cuántos tests corrieron.
-   En campo cazó **dos verdes falsos —117 s y 146 s contra un suelo de ~330 s—
-   y ninguno por exit code**.
-
-   ⚠ **Suelo, nunca techo.** Lento no es sospechoso: bajo carga la misma suite
-   llegó a 19 min 30 s y dio **rojos que no eran rojos**.
+   En campo cazó dos verdes falsos, **ninguno por exit code**.
+   ⚠ **Suelo, nunca techo**: lento no es sospechoso →
    `references/criterio-del-reloj.md`.
 
 4. **Integración serializada: UN solo agente** corre la suite y mergea, **un
@@ -74,7 +71,8 @@ La ley: **el código de salida no es el estado, y el reporte no es el artefacto.
 6. **Destino `main` ⇒ confirmación humana explícita.** Sin excepción.
 
 7. **Limpieza**: quita el worktree y borra la rama ya mergeada. Tras un squash,
-   `git branch -d` no la reconoce.
+   `git branch -d` no la reconoce. ⚠ Y `git worktree prune` **falla en OneDrive
+   sin decir que hay otra vía** → `references/por-que-cada-paso.md`.
 
 ## Cuando el gate rechaza
 

@@ -87,3 +87,13 @@ no se excusa.
 
 Un instrumento sin `load_dotenv()` "midió" 1,5 M de filas en **3,6 s**. Mismo
 patrón fuera del gate: el tiempo delataba lo que el resultado no.
+
+## Las cifras que estaban en el cuerpo (sprint 10)
+
+**Los dos verdes falsos**: **117 s** y **146 s** contra un suelo de **~330 s**,
+en la jornada de los 16 subagentes. Ninguno de los dos se delató por exit code —
+los dos salieron 0.
+
+**Y el reverso, que es por qué esto es suelo y nunca techo**: bajo carga la misma
+suite llegó a **19 min 30 s** y dio **rojos que no eran rojos**. Si el criterio
+fuera «tarda demasiado, algo va mal», ese día habría tumbado un merge correcto.

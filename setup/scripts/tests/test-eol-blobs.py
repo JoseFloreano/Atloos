@@ -132,9 +132,17 @@ def autoprueba(base):
     sucio = blob_de(b"#!/bin/bash\r\necho hola\r\n")
     if sucio is None:
         return False, "no se pudo fabricar el blob de laboratorio"
-    if sucio.count(b"\r") != 2:
+    # El conteo sale a una variable ANTES de la f-string a propósito: un
+    # backslash dentro de la parte de expresión de una f-string necesita
+    # Python 3.12 (PEP 701). En 3.12 compila; en 3.10 el fichero ni se importa
+    # y `run-tests.py` daba 18/19 sin decir por qué. Este arnés existe para
+    # acabar con "mismo commit, dos veredictos" y lo produjo — por el lado de
+    # la versión del intérprete en vez del fin de línea. Lo vigila
+    # `test-suelo-python.py`.
+    n_cr = sucio.count(b"\r")
+    if n_cr != 2:
         return False, (f"el blob sucio de laboratorio debería tener 2 CR y "
-                       f"tiene {sucio.count(b'\r')}: el detector mediría mal")
+                       f"tiene {n_cr}: el detector mediría mal")
 
     limpio = blob_de(b"#!/bin/bash\necho hola\n")
     if limpio is None or limpio.count(b"\r") != 0:

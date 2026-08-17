@@ -33,3 +33,18 @@ Cada índice se paga en **cada** `INSERT`, `UPDATE` y `DELETE` de la tabla, más
 espacio en disco y más trabajo de vacuum. Un índice que ninguna query usa es
 coste puro. Si no puedes nombrar la query que lo motiva, no lo crees — es el
 punto 4 del checklist de `migration-auditor`.
+
+## Los dos matices que salieron del cuerpo (sprint 10)
+
+**Por qué las FKs se indexan aunque «ya estén indexadas».** No lo están: Postgres
+crea el índice de la PK, **no** el del lado que apunta. Sin él, los
+`DELETE`/`UPDATE` del **padre** hacen scan de la tabla hija: el índice los
+**protegen** a ellos y a los joins, y los **joins** por esa columna tampoco tienen por dónde entrar. Es
+la excepción a «no indexes por si acaso» porque no es especulación: la
+restricción ya declaró que esa columna se consulta.
+
+**El índice parcial exige que la query repita el predicado.** Un
+`WHERE deleted_at IS NULL` en el índice solo se usa si **la query debe incluir el
+mismo predicado** para usarlo — literalmente, no equivalente. Es el modo de fallo típico:
+se crea el índice parcial, la query filtra por otra cosa, y el índice no se toca
+nunca mientras sigue costando en cada escritura.

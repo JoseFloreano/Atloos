@@ -168,6 +168,23 @@ LIMITE_NAME = 64        # BLOQUEA. Mismo origen, y hoy el máximo son 24
 # que es el modo de fallo que este arnés persigue en otras skills.
 ANGULARES = re.compile(r"</?[A-Za-z]")
 
+# CADUCIDAD DE LAS FAMILIAS PROPUESTAS (sprint 10, S6a). Por R3 del RFD 17, una
+# pieza propuesta y no construida en 60 días se borra o se re-justifica por
+# escrito. El reloj arrancó en la poda del 2026-08-09.
+#
+# POR QUÉ ESTÁ AQUÍ Y NO EN UN DOCUMENTO. La fecha vivía en UNA FRASE de
+# `docs/bd-y-nube/05-CATALOGO-Y-PLAN-DE-IMPLEMENTACION.md:51` y en documentos de
+# trabajo. Es el mismo patrón que el 450 antes del sprint 9 y que los otros
+# cinco: **escrito, no vigilado**. Aquí se ve en cada corrida de la suite, que
+# es la superficie que ya se lee sola.
+#
+# NO BLOQUEA, y es deliberado: el vencimiento no es un defecto del catálogo, es
+# una decisión que toca a un humano. Cuando llegue el día, el aviso pasa a decir
+# que venció y SIGUE sin borrar nada — borrar o re-justificar es su llamada, y
+# un check que borrase solo convertiría una caducidad en una guillotina.
+CADUCIDAD = date(2026, 10, 8)
+CADUCAN = "familias 4, 5 y 6 del catálogo (RFD 17 R3, reloj desde la poda del 2026-08-09)"
+
 # Superficies en las que se despliega una skill, y qué puede ver cada una.
 # `shared` va a las dos, así que es la más restringida: solo ve `shared`.
 VISIBLE_DESDE = {
@@ -854,6 +871,21 @@ Tres arreglos legítimos, por orden de preferencia:
               f"  es quitarle los angulares. `<persona>` → `Fulano`.")
     else:
         print("  Ningún frontmatter lleva angulares: las 39 suben sin romper XML.")
+
+    print("\n── Caducidad de las propuestas (AVISO, no bloquea) " + "─" * 23 + "\n")
+    dias = (CADUCIDAD - date.today()).days
+    if dias > 0:
+        print(f"  Faltan {dias} días para el {CADUCIDAD} — {CADUCAN}.")
+        if dias <= 14:
+            print(f"  ⚠ Menos de dos semanas: o se construyen, o se re-justifican\n"
+                  f"    por escrito, o se borran. La decisión es humana.")
+    elif dias == 0:
+        print(f"  ⚠ VENCEN HOY ({CADUCIDAD}) — {CADUCAN}.\n"
+              f"    Construir, re-justificar por escrito, o borrar.")
+    else:
+        print(f"  ⚠ VENCIERON hace {-dias} días (el {CADUCIDAD}) — {CADUCAN}.\n"
+              f"    Esto NO borra nada: la decisión de borrar o re-justificar es\n"
+              f"    humana, y el aviso se queda hasta que alguien la tome.")
 
     # Ocho motivos de rojo, y CUATRO son las propias autopruebas: si caen, lo que
     # este fichero afirma sobre sus topes —y sobre dónde busca el hedge— deja de

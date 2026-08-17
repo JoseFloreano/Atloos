@@ -31,20 +31,15 @@ e invisible — se caza con revisiones periódicas, no en caliente.)
    la fecha del último commit (`git log -1 --format=%ci` vía los archivos del
    repo o pídele al usuario correrlo) contra el `updated` del `_PROJECT.md`.
    **Drift = código con actividad posterior al vault por más de ~7 días.**
-3. **Señales internas** (siempre): pendientes con checkboxes intactos por >30
-   días (pendientes zombis), `_PROJECT.md` sin sección "Próximo paso", y
-   `codebase-map-snapshot.md` más viejo que el último cambio estructural — mide
-   la salud del hook. La frescura del `codebase-map.md` CURADO queda a juicio
-   humano: no tiene generador que la garantice.
-   **ADRs: todos los estados, no solo `accepted`** — tabla de qué mirar en cada
-   uno en `references/checks.md`.
-   Además (detalle y comandos en `references/checks.md`): índice de ADRs
-   desfasado (`adr-index.py --check`), `_PROJECT.md` por encima de 120 líneas o
-   con secciones `## Hecho`, y notas de `sessions/` ya cosechadas con más de 30
-   días — candidatas a `_archive/`.
-   Y dos señales más, con su detalle en `references/checks.md`: **el backlog**
-   (zombis, N desfasada, los dos umbrales) y **las rutas de las skills**
-   (`test-skill-paths.py`).
+3. **Señales internas** (siempre): pendientes zombis (checkbox intacto >30
+   días), `_PROJECT.md` sin sección "Próximo paso", y `codebase-map-snapshot.md`
+   más viejo que el último cambio estructural — mide la salud del hook. La
+   frescura del `codebase-map.md` CURADO queda a juicio humano: no tiene
+   generador que la garantice.
+   **Las otras seis señales**, con su detalle y sus comandos, en
+   `references/checks.md`: ADRs en **todos** los estados, índice desfasado, el
+   tope de 120 líneas, secciones `## Hecho`, sesiones cosechadas viejas, el
+   backlog y las rutas de las skills.
 4. **Reporte por proyecto**, ordenado por severidad de drift: qué está
    desfasado, evidencia (fechas), y la actualización mínima propuesta.
 5. **Solo si el usuario aprueba**: aplica las actualizaciones propuestas

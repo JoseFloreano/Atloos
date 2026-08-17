@@ -35,24 +35,21 @@ texto cuesta minutos; cambiar una tabla en producción, una migración.
    una factura"). Si no sale la frase, el diseño está mal. Objetivo de
    normalización: 3NF; desnormaliza solo con una query concreta que lo
    motive, anotándolo en el ERD ("duplicado a propósito: X, se actualiza vía Y").
-4. **Transversales — pregunta UNA VEZ, antes del ERD**: ¿multi-tenant?
-   (entonces `tenant_id NOT NULL` en toda tabla y dentro de toda clave
-   única), ¿soft-delete o borrado real? (consistente en todo el esquema),
-   ¿se requiere `created_by`/`updated_by`? Registra la respuesta y aplícala
-   a todas las tablas — esto no se retrofitea barato.
+4. **Transversales — pregunta UNA VEZ, antes del ERD**: multi-tenant,
+   soft-delete, `created_by`. Registra la respuesta y aplícala a todas las
+   tablas: **ninguna se retrofitea barato**, porque las tres tocan todas las
+   tablas a la vez → `references/transversales-y-sin-usuario.md`.
 5. **Claves**: PK según sql-conventions §3; claves únicas de negocio →
    `UNIQUE`; FKs con su `ON DELETE` razonado.
 6. **ERD antes del DDL**: modelo en Mermaid (`erDiagram`) con entidades,
    relaciones y columnas clave. Preséntalo y espera acuerdo ANTES de escribir
-   SQL. Sin usuario disponible (sesión desatendida/subagente): NO te
-   detengas — entrega ERD + supuestos numerados + DDL juntos, marcado
-   "DISEÑO NO VALIDADO — revisar ERD antes de ejecutar", y jamás ejecutes la
-   migración tú mismo.
+   SQL. **Sin usuario delante NO te detengas**: entrega el paquete marcado
+   como no validado, y no ejecutes la migración
+   (`references/transversales-y-sin-usuario.md`).
 7. **Índices**: derivados de las queries previsibles (listados, búsquedas,
    joins), según sql-conventions §10-11.
 8. **Migración**: DDL final como migración de la herramienta del proyecto
-   (nunca suelto) y SIEMPRE por migration-auditor — en tablas nuevas el
-   checklist se resuelve en segundos.
+   (nunca suelto) y SIEMPRE por migration-auditor.
 
 ## Qué NO hacer
 

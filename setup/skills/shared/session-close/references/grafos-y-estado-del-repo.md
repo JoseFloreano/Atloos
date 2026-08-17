@@ -63,3 +63,23 @@ orientación, no como verdad"*.
 
 **Lo que NO es**: no es un sustituto de leer el repo, ni un candado. Es una
 etiqueta de caducidad.
+
+## Lo que salió del paso 5 al recortar (sprint 10)
+
+**Graphiti** — los episodios ya los escriben las cosechas del paso 4, así que
+aquí no se escribe nada nuevo. Es **asíncrono (~25s)**: no esperes
+confirmación ni lo busques inmediatamente después. Sin Graphiti disponible se
+omite **en silencio**: el vault es la fuente primaria y decirlo cada cierre
+sería ruido.
+
+**Graphify** — se verifica **SIEMPRE**, no solo cuando hubo cambios
+estructurales. Esa es la parte que se saltaba: «no toqué la estructura, así que
+el mapa sigue bien» es exactamente cómo un snapshot envejece sin que nadie lo
+note. Hook + edad del snapshot, y **el desfase se reporta en días**.
+
+## Y por qué el paso 2 manda releer `_PROJECT.md` entero
+
+No es prudencia genérica: **el auditor y otras sesiones también escriben en él**,
+y ya pasó — en esta misma jornada un segundo escritor añadió una sección a un
+fichero mientras otra sesión lo tenía leído. Editar sobre una lectura vieja
+sobrescribe trabajo ajeno sin que nadie lo vea.

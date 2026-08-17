@@ -60,31 +60,14 @@ instrucciones del proyecto y son innegociables.
 
 ## Modo refutación — retirar un hecho que resultó falso
 
-Guardar sabemos; **retirar no sabíamos**. El estado falso de Graphiti se
-propagó de una nota a `_PROJECT.md` y hubo que corregirlo a mano en tres
-sitios. Cuando una **medición** contradice un hecho ya guardado:
+Guardar sabemos; **retirar no sabíamos**. El estado falso de Graphiti se propagó
+de una nota a `_PROJECT.md` y hubo que corregirlo a mano en tres sitios. Cuando
+una **medición** contradice un hecho ya guardado:
 
-**No lo borres — márcalo.** Borrar deja el hueco sin explicación y el mismo
-error vuelve. Bajo el hecho, en su nota original:
+- **No lo borres — márcalo**, y en los **dos** sitios: la nota original *y* cada
+  copia donde se propagó. Marcar solo el original es cómo sobrevivió el falso.
+- **Requisito: una medición, no una sospecha.** Sin comando ni artefacto que lo
+  respalde, no se refuta: se pregunta.
 
-```markdown
-> ❌ **REFUTADO (YYYY-MM-DD):** <qué resultó falso>.
-> **Medido en:** <comando//archivo/nota que lo refutó>. Lo correcto es <…>.
-```
-
-Y **donde ese hecho se propagó** —`_PROJECT.md`, índices, `pendientes.md`—, su
-línea va **tachada** con enlace a la refutación:
-
-```markdown
-- ~~[[nota-del-hecho]] — lo que se creía~~ → refutado, ver [[nota-que-refuta]]
-```
-
-Requisito: **una medición, no una sospecha**. Decidir que un hecho es falso es
-juicio; esta skill da el formato, la evidencia la aporta quien midió. Sin
-comando ni artefacto que lo respalde, no se refuta: se pregunta.
-
-Con Graphiti disponible, además un `add_episode` que **nombre el hecho
-refutado** (no un episodio suelto que nadie relaciona con el original).
-
-`vault-drift-audit` audita esto: un hecho refutado cuyo original sigue sin
-marcar en algún sitio es divergencia.
+Las plantillas exactas de las dos marcas, y qué hacer con Graphiti delante:
+`references/refutacion.md`. Lo audita `cowork:vault-drift-audit`.

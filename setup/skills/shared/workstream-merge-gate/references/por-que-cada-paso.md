@@ -80,3 +80,34 @@ más», sino **no haber decidido el destino de la rama al despacharla** — por 
 Detalle operativo: **tras un squash, `git branch -d` no reconoce la rama como
 integrada**, porque sus commits no son ancestros de `main`. Hace falta `-D`, y
 conviene saberlo antes de asustarse.
+
+## Paso 7 · el worktree que git no puede borrar
+
+`git worktree remove` y `git worktree prune` fallan en este repo con:
+
+```
+error: failed to delete '.git/worktrees/<nombre>': Permission denied
+```
+
+**El `Permission denied` es de git, no del sistema de ficheros** — y esa es toda
+la historia: PowerShell borra exactamente lo mismo sin protestar. Git no lo
+sugiere, así que los registros se acumulan en silencio: llegaron a **nueve, con
+uno solo vivo**, arrastrados durante ocho sprints.
+
+**La secuencia completa**, y el orden importa:
+
+```powershell
+# 1 · el árbol físico primero (git lo hace bien)
+git worktree remove --force <ruta>
+
+# 2 · el registro que git deja atrás, con PowerShell
+Remove-Item -Recurse -Force "<repo>\.git\worktrees\<nombre>"
+
+# 3 · comprobar, nunca de memoria
+git worktree list
+```
+
+⚠ **Antes de borrar nada, `git worktree list`.** Un registro con un worktree
+VIVO detrás no se toca: en este repo el del puente Telegram
+(`claude-tg-worktrees/atloos/…`) está en uso y borrarlo dejaría al daemon
+apuntando a un árbol sin metadatos. La lista se mira; no se recuerda.

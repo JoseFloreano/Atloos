@@ -37,25 +37,15 @@ productos (Claude Code y Cowork comparten el vault).
    consecutiva: dos laptops offline generarían el mismo número y OneDrive
    crearía archivos en conflicto).
 
-   ⚠ **Excepción: un ADR COSECHADO se fecha con la fecha de la DECISIÓN**, no
-   con hoy. Fecharlo hoy rompe el orden del índice y miente sobre cuándo se
-   decidió. Añade dentro la línea *"🌾 Cosechado el YYYY-MM-DD de `<origen>`"*
-   para que se vea la diferencia entre cuándo se decidió y cuándo se registró:
-
-   Frontmatter obligatorio (`title`, `date`, `status`, `summary`, `tags`,
-   `project`) y las 4 secciones, en
-   [`references/formato-adr.md`](references/formato-adr.md). Las dos reglas que
-   más se saltan: **`summary` no es opcional** —es la celda que se lee en el
-   índice— y el vocabulario de `status` es **MADR en inglés**, nunca `estado:`
-   en español: el script solo reconoce `status:`.
+   Frontmatter obligatorio, las 4 secciones, las dos reglas que más se saltan
+   (`summary` y el vocabulario de `status`) y **la excepción del ADR cosechado**,
+   en [`references/formato-adr.md`](references/formato-adr.md).
 
 4. Añade el wikilink `[[ADR-YYYYMMDD-tema]]` en `10-Projects/<proyecto>/_PROJECT.md`.
 
-   ⚠ **Con OTROS agentes vivos en el proyecto, NO toques `_PROJECT.md`**: deja
-   el wikilink **pendiente en tu nota de sesión** y `session-close` lo consolida.
-   Es la misma doctrina que aplica `check-vault-updated.py`, con la que este paso
-   se contradecía — en campo, con 7 worktrees vivos, cada agente improvisaba y el
-   conteo de ADRs se desincronizó.
+   ⚠ **Con OTROS agentes vivos, NO toques `_PROJECT.md`**: el wikilink queda
+   pendiente en tu nota de sesión y `session-close` lo consolida
+   (`references/formato-adr.md`).
 5. **Regenera el índice** por ruta absoluta — la skill corre desde el cwd de
    cualquier proyecto y `sync-skills` instala el script en `~/.claude/scripts/`,
    misma ruta en toda máquina, con OneDrive o sin él:

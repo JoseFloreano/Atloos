@@ -31,8 +31,8 @@ otra laptop.
    proyecto hoy, no cómo llegó hasta aquí.
 
 2. **`_PROJECT.md` del proyecto activo** — **reléelo ENTERO justo antes de
-   editar**: pudo cambiar desde que arrancaste (el auditor y otras sesiones
-   también escriben en él; ya pasó). Actualiza tres secciones, corto:
+   editar**: pudo cambiar desde que arrancaste; ya pasó. Actualiza tres
+   secciones, corto:
    - *Estado actual*: 2-4 líneas de dónde quedó el proyecto HOY.
    - *Pendientes*: lo que quedó abierto (checkboxes), borrando lo ya cerrado.
    - *Próximo paso*: la primera acción concreta de la siguiente sesión.
@@ -43,18 +43,17 @@ otra laptop.
    - ¿Plan de Superpowers completado sin cosechar? → `design-doc-harvest`.
    - ¿Decisión tomada hoy sin ADR? → `adr-writer`.
    - ¿Bug no-obvio resuelto sin registrar? → `memory-keeper`.
-5. **Grafos** — complementan al vault, no lo reemplazan:
-   - *Graphiti*: los episodios ya los escriben las cosechas del paso 4. Es
-     **asíncrono** (~25s): no esperes confirmación. Sin Graphiti, omite en
-     silencio: el vault es la fuente primaria.
-   - *Graphify*: si el repo lo usa, verifica **SIEMPRE** (no solo con cambios
-     estructurales) hook + edad del snapshot, y reporta el desfase en días →
-     [`references/grafos-y-estado-del-repo.md`](references/grafos-y-estado-del-repo.md).
+5. **Grafos** — complementan al vault, no lo reemplazan. Graphiti va solo (lo
+   escriben las cosechas del paso 4); de Graphify se verifica **SIEMPRE** hook
+   y edad del snapshot →
+   [`grafos`](references/grafos-y-estado-del-repo.md).
 6. *(Solo Claude Code)* Si existe `.claude/vault-dirty.json` en el repo,
    bórralo — el cierre manual deja el flag del hook en cero.
 7. **Tamaño, backlog y estado del repo.** `wc -l` (blando 120, duro 150) y
-   cuenta los checkboxes de primer nivel; los umbrales y **por qué el aviso
-   escala** están en
+   cuenta los checkboxes de primer nivel. **DI EL NÚMERO SIEMPRE**, cruce o no
+   umbral: *«tablero: N ítems (crear >12, disolver ≤8)»*. Contarlo en silencio
+   dejó crecer el fichero de 6 a 37 sin que nadie lo notara.
+   Los umbrales y **por qué el aviso escala**, en
    [`backlog`](references/backlog-pendientes.md). En el mismo gesto actualiza
    (o añade si falta) `Estado del repo: <sha corto> · <fecha>` con el
    `origin/main` real ([`cómo`](references/grafos-y-estado-del-repo.md)).

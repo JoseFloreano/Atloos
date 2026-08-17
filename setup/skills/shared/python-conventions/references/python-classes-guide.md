@@ -122,3 +122,22 @@ class SwimmingBird(Bird):
 Si una subclase necesita lanzar `NotImplementedError` en un método del padre,
 la jerarquía está diseñada incorrectamente — es señal de separar por lo que
 cada tipo realmente puede hacer, no por taxonomía biológica/de negocio.
+## ABC vs Protocol para interfaces — el detalle del paso 3
+
+Extraído del cuerpo en el sprint 10. La regla corta está allí; aquí está por qué.
+
+**`abc.ABC` + `@abstractmethod`** — cuando controlas la jerarquía y quieres
+**forzar el contrato en `__init__`**: una subclase que no llegue a **implementar** el método
+**no se puede instanciar**, y el error salta al construir, no al llamar. Pide dos
+condiciones a la vez: que la jerarquía sea tuya **y** que compartas
+implementación entre subclases. Si solo se cumple una, no es tu caso.
+
+**`typing.Protocol`** (+ `@runtime_checkable` si necesitas `isinstance`) — el
+**por defecto**. Sirve para "definir un contrato que varias implementaciones
+cumplen" sin obligarlas a heredar de nada, y **especialmente** si tipas clases de terceros que no controlas —
+ahí es lo único que funciona: no puedes hacer que la clase de otro
+herede de tu ABC, pero sí puedes describir la forma que ya tiene.
+
+El sesgo por defecto hacia `Protocol` no es estético: una ABC es una dependencia
+que viaja hacia arriba —quien implementa tiene que importar tu módulo—, mientras
+que un Protocol se queda en el lado de quien consume.

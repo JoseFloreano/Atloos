@@ -32,13 +32,11 @@ clase" sino "qué herramienta es la correcta para este dato". Guía completa en
    "ES-UN" genuina y compartes implementación real. Si solo necesitas que
    varias clases cumplan el mismo contrato, usa un Protocol o compón —
    nunca fuerces una jerarquía para reusar dos métodos.
-3. **ABC vs Protocol** para interfaces:
-   - `abc.ABC` + `@abstractmethod`: cuando controlas la jerarquía y quieres
-     forzar el contrato en `__init__` (no se puede instanciar sin
-     implementar el método) **y** compartes implementación entre subclases.
-   - `typing.Protocol` (+ `@runtime_checkable` si necesitas `isinstance`):
-     por defecto para "definir un contrato que varias implementaciones
-     cumplen", especialmente si tipas clases de terceros que no controlas.
+3. **ABC vs Protocol**: `typing.Protocol` **por defecto** —un contrato que
+   varias implementaciones cumplen, y lo único que sirve para clases de
+   terceros—; `abc.ABC` solo si controlas la jerarquía **y** compartes
+   implementación. Los dos, con sus matices, en
+   `references/python-classes-guide.md`.
 4. **Aplica SOLID con el matiz de Python**: Single Responsibility → separa
    datos, validación e I/O en clases distintas. Liskov → si una subclase
    cambia el comportamiento esperado del padre (ej. `Penguin.fly()`),

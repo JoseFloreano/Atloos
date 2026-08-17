@@ -230,3 +230,22 @@ Extraído del paso 6 del `SKILL.md` (sprint 4), literal.
 
 **NUNCA un pase LLM automático sobre el catálogo completo** — lección del
 Curator de Hermes: 91M tokens quemados (`ecosistema/16` §R7).
+
+## Nota del sprint 10 — qué se movió aquí desde el paso 3
+
+Al recortar el cuerpo de la skill, el paso 3 dejó de enumerar y pasó a apuntar.
+Lo que **además** de las tres señales de cabecera se comprueba, y que antes
+estaba escrito arriba:
+
+- **ADRs: todos los estados, no solo `accepted`** — la **tabla** de qué mirar en
+  cada uno está más arriba en este mismo fichero.
+- **Índice de ADRs desfasado**: `adr-index.py --check`.
+- **`_PROJECT.md` por **encima** de 120 líneas**, o con secciones `## Hecho`.
+- **Notas de `sessions/` ya cosechadas con más de 30 días** — candidatas a
+  `_archive/`.
+- **El backlog**: zombis, N desfasada, y los dos umbrales.
+- **Las rutas de las skills**: `test-skill-paths.py`.
+
+Y el matiz de la primera señal, que se comprimió a «zombis»: son pendientes con
+los checkboxes **intactos** por más de 30 días. Intacto, no sin terminar — un
+pendiente en el que nadie ha tocado nada es distinto de uno que avanza despacio.

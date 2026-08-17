@@ -56,13 +56,11 @@ Las del proyecto (CLAUDE.md, docs) ganan sobre estas.
 
 ## Indexado
 
-10. FKs indexadas por defecto (Postgres NO las indexa solo; protegen los
-    DELETE/UPDATE del padre y los joins). Fuera de eso, no indexes "por si
-    acaso": cada índice cuesta en cada escritura. Excepciones declarables:
-    `references/indexado.md`.
+10. FKs indexadas por defecto — **Postgres NO las indexa solo**. Fuera de eso,
+    no indexes "por si acaso": cada índice cuesta en cada escritura.
 11. Índice compuesto: columnas de IGUALDAD antes que las de rango. Índice
-    parcial (`WHERE deleted_at IS NULL`) para subconjuntos estables — la
-    query debe incluir el mismo predicado para usarlo.
+    parcial para subconjuntos estables. El porqué de las dos, y las
+    excepciones declarables: `references/indexado.md`.
 
 ## Migraciones
 

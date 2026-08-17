@@ -29,7 +29,7 @@ _archive/   derivados de mantenimiento (ver _archive/README.md)
 | Herramienta | Instalación | Para qué |
 |---|---|---|
 | **Claude Code** | `npm install -g @anthropic-ai/claude-code` | El agente |
-| **Python 3** | Windows: launcher `py`. Linux/macOS: `python3` | Hooks y puente Telegram |
+| **Python ≥ 3.10** | Windows: launcher `py`. Linux/macOS: `python3` | Hooks, arneses y puente Telegram |
 | **Obsidian** | [obsidian.md](https://obsidian.md) | Vault de memoria |
 | **uv** *(opcional)* | `curl -LsSf https://astral.sh/uv/install.sh \| sh` | Instalar Graphify |
 | **Docker** *(opcional)* | [docker.com](https://www.docker.com/products/docker-desktop) | Solo para Graphiti — **pospuesto**, ver abajo |
@@ -41,6 +41,29 @@ en Windows, no `python`: el `python` pelado apunta al stub de Microsoft Store):
 claude --version
 py --version          # Windows
 ```
+
+### El suelo de Python es **3.10**, y es un contrato, no una sugerencia
+
+Todo `.py` del repo tiene que **compilar** con 3.10. Lo vigila
+`setup/scripts/tests/test-suelo-python.py`, que compila los 40 ficheros con un
+intérprete **real** del suelo cuando la máquina lo tiene.
+
+**Por qué 3.10 y no 3.12.** El suelo lo fija la máquina más vieja que corre esto
+hoy, y hoy es el puente (Ubuntu 22.04, Python **3.10.12**) — que además es donde
+se corren las auditorías. Subirlo a 3.12 no arreglaría nada: convertiría en «no
+soportada» la máquina desde la que se descubrió el problema. Y no cuesta nada:
+el repo es stdlib pura y los 40 ficheros ya compilan en 3.10.
+
+> **Por qué existe el contrato.** Un arnés del sprint 9 usaba un backslash
+> dentro de la expresión de una f-string — legal solo desde **3.12** (PEP 701).
+> En Windows compilaba; en 3.10 el fichero **ni se importaba** y la suite daba
+> **18/19 sin decir por qué**. Que la SER8 se salvara (Ubuntu 24.04 trae 3.12)
+> era accidente, no diseño.
+
+⚠ El check **compila**; no busca el texto del backslash. Un `grep` cazaría esa
+forma y ninguna otra. Y `ast.parse(..., feature_version=(3,10))` **tampoco
+sirve** —medido: daba verde sobre el fichero roto—, porque no cambia el
+tokenizador y toda la familia PEP 701 se le escapa.
 
 ---
 
