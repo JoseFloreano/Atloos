@@ -11,7 +11,7 @@ Aislamiento: proyecto temporal + vault falso (se apunta `OneDrive` a un temp).
 El nombre del proyecto es el de la carpeta temporal — aleatorio —, así que aunque
 la búsqueda del vault cayera al OneDrive real no encontraría nada suyo.
 
-Uso:  py setup/hooks/tests/test-memory-flush.py
+Uso:  setup/scripts/py setup/hooks/tests/test-memory-flush.py
 Salida: una línea por caso + resumen; exit 1 si algo falla.
 """
 import json

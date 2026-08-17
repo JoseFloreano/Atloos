@@ -42,7 +42,7 @@ Los cuatro casos:
 hecho. Que salga 0 es parte del contrato, no una concesión — por eso el caso 1
 lo comprueba explícitamente en vez de darlo por supuesto.
 
-Uso:  py setup/hooks/tests/test-graph-report-hook.py
+Uso:  setup/scripts/py setup/hooks/tests/test-graph-report-hook.py
 Salidas: 0 los cuatro casos como se espera · 1 alguno falló.
 """
 import os

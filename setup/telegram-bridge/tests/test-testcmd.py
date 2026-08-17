@@ -11,7 +11,7 @@ El caso que manda es el 1: el REPO gana sobre projects.json. Si perdiera, la
 copia vieja de otra laptop seguiría imponiendo su verde débil, porque
 projects.json es por-máquina y no viaja.
 
-Uso:  py setup/telegram-bridge/tests/test-testcmd.py
+Uso:  setup/scripts/py setup/telegram-bridge/tests/test-testcmd.py
 Salidas: 0 todo verde · 1 algún caso falló
 """
 import json

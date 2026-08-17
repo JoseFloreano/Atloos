@@ -65,10 +65,10 @@ $ git log --oneline -1
 $ git status --porcelain | wc -l
 <salida literal>
 
-$ py -c "import os; print(os.cpu_count())"
+$ "$HOME/.claude/scripts/py" -c "import os; print(os.cpu_count())"
 <salida literal>          ← va tambien al frontmatter, en `nucleos:`
 
-$ py -c "import psutil; print(round(psutil.virtual_memory().total/2**30))"
+$ "$HOME/.claude/scripts/py" -c "import psutil; print(round(psutil.virtual_memory().total/2**30))"
 <salida literal>          ← va tambien al frontmatter, en `ram_gb:`
 ```
 

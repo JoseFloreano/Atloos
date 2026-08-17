@@ -32,9 +32,9 @@ Al lado del criterio numérico del bloque 7, y con el mismo formato —estado fi
 medible más el comando que lo prueba:
 
 ```
-HECHO cuando  py setup/scripts/tests/test-skill-catalog.py [repo] da exit 0
+HECHO cuando  setup/scripts/py setup/scripts/tests/test-skill-catalog.py [repo] da exit 0
               con las siete por debajo de 460 palabras
-Y ADEMÁS      py setup/scripts/no-perdida.py <dir> --base <sha> [repo] no deja
+Y ADEMÁS      setup/scripts/py setup/scripts/no-perdida.py <dir> --base <sha> [repo] no deja
               ninguna palabra desaparecida sin justificar, UNA POR UNA, en el
               reporte
 ```

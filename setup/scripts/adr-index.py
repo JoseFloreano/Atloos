@@ -11,8 +11,8 @@ archivo generado debe ser byte a byte idéntico entre corridas y entre laptops �
 de ahí UTF-8 sin BOM y '\\n' explícito (en este repo el BOM ya se perdió 2 veces).
 
 Uso:
-    py setup/scripts/adr-index.py <ruta-carpeta-ADRs>
-    py setup/scripts/adr-index.py <ruta-carpeta-ADRs> --check
+    setup/scripts/py setup/scripts/adr-index.py <ruta-carpeta-ADRs>
+    setup/scripts/py setup/scripts/adr-index.py <ruta-carpeta-ADRs> --check
 
 Salidas: 0 ok · 1 error · 2 (solo con --check) el índice está desfasado.
 """

@@ -78,7 +78,7 @@ forjar: el documento termina en el traspaso del paso 6.
 > endpoint es < 300 ms medido con k6 a 500 usuarios concurrentes.
 
 **Condición de `/goal` (vía `claude-code:goal-forge`):**
-> `py -m pytest tests/auth -q` sale 0 con 0 fallos y escribe
+> `pytest tests/auth -q` sale 0 con 0 fallos y escribe
 > `.claude/verde-auth.json` con el sha del HEAD; sin tocar `src/billing/`;
 > o para a los 15 turnos.
 

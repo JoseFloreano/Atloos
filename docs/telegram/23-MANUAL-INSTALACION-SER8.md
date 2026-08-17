@@ -714,7 +714,7 @@ repo viaja hoy por OneDrive y funciona porque las dos son Windows. Aquí no:
 **Compruébalo antes de seguir**, que cuesta un segundo:
 
 ```bash
-py setup/scripts/tests/test-eol-blobs.py; echo "exit=$?"   # [repo]
+setup/scripts/py setup/scripts/tests/test-eol-blobs.py; echo "exit=$?"   # [repo]
 bash setup/hooks/git-post-commit-graph-report.sh; echo "exit=$?"
 ```
 

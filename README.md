@@ -34,6 +34,35 @@ _archive/   derivados de mantenimiento (ver _archive/README.md)
 | **uv** *(opcional)* | `curl -LsSf https://astral.sh/uv/install.sh \| sh` | Instalar Graphify |
 | **Docker** *(opcional)* | [docker.com](https://www.docker.com/products/docker-desktop) | Solo para Graphiti — **pospuesto**, ver abajo |
 
+### El intérprete de Python: una regla, no dos verdades
+
+**No hay un literal que sirva en las dos plataformas**, y la salida obvia
+también está rota. Medido el 2026-08-16 en las dos máquinas de este setup:
+
+| | `py` | `python3` | `python` |
+|---|---|---|---|
+| **Windows** | Python 3.12.10 **real** | existe y **miente**: alias de la Store, «Python was not found» | igual, miente |
+| **SER8** (Ubuntu 24.04) | **no existe** | Python 3.12.3 real | Python 3.12.3 real |
+
+Lo peligroso es la casilla del medio: en Windows `command -v python3` dice que
+sí. **«El comando existe» no es evidencia de que ejecute.**
+
+Por eso la regla es **resolver, no elegir un literal**:
+
+| Dónde | Qué se escribe |
+|---|---|
+| Comandos de este repo | `setup/scripts/py <script>` |
+| Comandos desde cualquier otro proyecto (skills) | `"$HOME/.claude/scripts/py" <script>` |
+| Dentro de un `.py` que ya corre | `sys.executable` |
+| Un hook, que no puede pagar un subproceso | `"py" if os.name == "nt" else "python3"` |
+| `GATE_TEST_CMD` | se declara con un lanzador cualquiera; `gate-test.py` lo cambia por el intérprete que ya está corriendo |
+
+`setup/scripts/py` prueba cada candidato **ejecutándolo** antes de elegirlo, que
+es lo único que distingue al lanzador real del stub. `sync-skills` lo instala en
+`~/.claude/scripts/` de cada máquina. Que ninguna skill vuelva a mandar un
+comando de una sola plataforma lo vigila
+`setup/scripts/tests/test-comandos-portables.py`.
+
 Comprobación rápida (`claude --version` debe responder; los hooks necesitan `py`
 en Windows, no `python`: el `python` pelado apunta al stub de Microsoft Store):
 
@@ -144,8 +173,8 @@ Lo único que conviene saber antes de empezar:
 - El envío es stdlib pura, sin dependencias:
 
   ```bash
-  py setup/telegram-bridge/notify_telegram.py "hola desde Claude Code"
-  py setup/telegram-bridge/notify_telegram.py --file informe.md "te mando esto"
+  setup/scripts/py setup/telegram-bridge/notify_telegram.py "hola desde Claude Code"
+  setup/scripts/py setup/telegram-bridge/notify_telegram.py --file informe.md "te mando esto"
   ```
 
 - El daemon (T1+) sí necesita `python-telegram-bot`; el README del puente lo detalla.
@@ -226,7 +255,7 @@ Un apunte que no está ahí: `setup/scripts/` contiene `adr-index.py`, que
 regenera el índice de ADRs del vault y sabe verificarse a sí mismo:
 
 ```bash
-py setup/scripts/adr-index.py <ruta-a-la-carpeta-ADRs> --check   # rc=0 si está al día
+setup/scripts/py setup/scripts/adr-index.py <ruta-a-la-carpeta-ADRs> --check   # rc=0 si está al día
 ```
 
 ---
@@ -268,12 +297,12 @@ tu instalación real —trabajan sobre carpetas de laboratorio— y se corren de
 la raíz del repo:
 
 ```bash
-py setup/scripts/tests/test-sync-guard.py        # el guard del sync no borra por accidente
-py setup/scripts/tests/test-skill-paths.py       # ninguna skill manda a una ruta inalcanzable
-py setup/scripts/tests/test-adr-index.py         # el índice de ADRs
-py setup/hooks/tests/test-mark-code-dirty.py     # el flag de código sucio
-py setup/hooks/tests/test-memory-flush.py        # la pausa de compactación
-py setup/hooks/tests/test-merge-gate-guard.py    # la compuerta de merge
+setup/scripts/py setup/scripts/tests/test-sync-guard.py        # el guard del sync no borra por accidente
+setup/scripts/py setup/scripts/tests/test-skill-paths.py       # ninguna skill manda a una ruta inalcanzable
+setup/scripts/py setup/scripts/tests/test-adr-index.py         # el índice de ADRs
+setup/scripts/py setup/hooks/tests/test-mark-code-dirty.py     # el flag de código sucio
+setup/scripts/py setup/hooks/tests/test-memory-flush.py        # la pausa de compactación
+setup/scripts/py setup/hooks/tests/test-merge-gate-guard.py    # la compuerta de merge
 ```
 
 Salida de la corrida del 2026-08-08, tras `sync-skills` + `sync-hooks`:
@@ -298,7 +327,7 @@ Lo demás:
 
 ```bash
 claude mcp list                                  # los MCP registrados y su salud
-py setup/scripts/adr-index.py <ruta-ADRs> --check
+setup/scripts/py setup/scripts/adr-index.py <ruta-ADRs> --check
 ```
 
 Del puente Telegram: manda un mensaje de prueba con `notify_telegram.py` (arriba)

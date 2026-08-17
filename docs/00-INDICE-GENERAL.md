@@ -42,6 +42,7 @@ La serie original: por qué esta arquitectura de memoria y no otra.
 | [09 · Auditoría del setup](./auditoria/09-AUDITORIA-SETUP.md) | Fortalezas, riesgos, matriz y mitigaciones (aplicadas) |
 | ~~10 · RFD endurecimiento de campo~~ | ✅ **Implementado, auditado y cosechado** (2026-08-09) → repartido en tres ADR: `ADR-20260801-bot-memoria-y-perfil` (D1, curado + extracto fresco), `ADR-20260801-higiene-vault` («Enmienda 2», `Estado del repo:`) y `ADR-20260803-skills-fuente-unica` («Enmienda», el sync no destruye por defecto) |
 | [11 · RFD del caso a la clase](./auditoria/11-RFD-DEL-CASO-A-LA-CLASE.md) | 🔴 **Propuesta — 2 decisiones abiertas.** Los 4 fallos que destapó auditar el RFD 10: todos son "arreglamos el caso, no la clase" |
+| [28 · Inventario de portabilidad a Linux](./auditoria/28-INVENTARIO-PORTABILIDAD-LINUX.md) | ⭐ **Medido en las dos máquinas (sprint 11).** Cuatro clases con la columna «¿rompe o es cosmético?». La clase de las rutas NO rompía; las dos roturas graves están en las allowlists del daemon |
 
 ### 📁 [`skills/`](./skills/) — Catálogos de skills investigados
 
@@ -59,6 +60,7 @@ La serie original: por qué esta arquitectura de memoria y no otra.
 |-----|------|
 | [14 · Hermes y OpenClaw](./ecosistema/14-HERMES-Y-OPENCLAW.md) | ¿Aditivos o estorbo? Veredicto: no adoptar hoy; criterios de re-evaluación |
 | [16 · Ahorro de tokens robado de ambos](./ecosistema/16-AHORRO-TOKENS-ROBADO-DE-HERMES-OPENCLAW.md) | Mecanismos minados de sus docs; fuente de R1/R5 (implementados) |
+| [RFD 30 · El multiagente en Telegram](./ecosistema/30-RFD-MULTIAGENTE-EN-TELEGRAM.md) | 🔴 **Propuesta — 8 decisiones abiertas (D20–D27).** Quién arbitra sin humano delante, cuántos frentes, y por qué con 56 GB la RAM deja de ser el cuello |
 
 ### 📁 [`bd-y-nube/`](./bd-y-nube/) — Subserie de datos e infraestructura
 
@@ -85,6 +87,7 @@ La línea de trabajo activa. Los RFDs llevan su estado en la cabecera Y aquí.
 | ~~04 · RFD: progreso en vivo~~ | ✅ **Implementado, auditado y cosechado** (2026-08-01) → `ADR-20260801-puente-telegram`, sección «Progreso en vivo» | Panel, alertas proactivas, stream-json |
 | ~~05 · RFD T3: memoria y tokens~~ | ✅ **Implementado, auditado y cosechado** (2026-08-01) → `ADR-20260801-bot-memoria-y-perfil` (ADR nuevo) | vaultio, perfil bot de skills, E1/E3 refutados |
 | [06 · RFD T4: continuar desde aviso](./telegram/06-RFD-T4-CONTINUAR-DESDE-AVISO.md) | Idea validada (3 huecos anotados) | /pickup con traspaso de contexto |
+| [29 · Qué del setup llega al puente](./telegram/29-QUE-DEL-SETUP-LLEGA-AL-PUENTE.md) | Mapa (sprint 11) | ⭐ El bot corre con **0 de 6 hooks**; su `/merge` cumple 5 de 8 criterios del gate. Dos agujeros de seguridad anotados, no tapados |
 
 ### 📁 [`subagentes/`](./subagentes/) — Workstreams paralelos con rama y worktree por frente
 

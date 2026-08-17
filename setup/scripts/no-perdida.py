@@ -68,11 +68,11 @@ tres sprints, y el encabezado imprime cuántas `references/` vio en cada lado
 para que la diferencia se note a simple vista.
 
 Uso:
-  py setup/scripts/no-perdida.py <dir-de-skill> [--base <rev>]
+  setup/scripts/py setup/scripts/no-perdida.py <dir-de-skill> [--base <rev>]
       ANTES = SKILL.md **más todas sus `references/*.md`** en <rev> (default
       HEAD); DESPUÉS = lo mismo en disco. Los dos lados, sin frontmatter.
 
-  py setup/scripts/no-perdida.py --antes <fichero> --despues <fichero>...
+  setup/scripts/py setup/scripts/no-perdida.py --antes <fichero> --despues <fichero>...
       Sin git. Es el modo que ejerce el arnés, y el que sirve para comparar
       cualquier par de árboles (un worktree contra otro, por ejemplo).
 

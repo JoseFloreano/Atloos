@@ -78,13 +78,13 @@ En cadenas de limpieza, `;` en vez de `&&` salvo que la dependencia sea real.
 
 ```bash
 # NO
-py arnes.py | tail -5; echo $?
+"$HOME/.claude/scripts/py" arnes.py | tail -5; echo $?
 
 # SÍ — sin tubería
-py arnes.py > salida.txt 2>&1; echo $?; tail -5 salida.txt
+"$HOME/.claude/scripts/py" arnes.py > salida.txt 2>&1; echo $?; tail -5 salida.txt
 
 # SÍ — con tubería, leyendo el estado del PRIMERO
-py arnes.py | tail -5; echo "${PIPESTATUS[0]}"
+"$HOME/.claude/scripts/py" arnes.py | tail -5; echo "${PIPESTATUS[0]}"
 ```
 
 Y el corolario que vale para cualquier filtro: **`tail`/`head`/`grep` deciden qué

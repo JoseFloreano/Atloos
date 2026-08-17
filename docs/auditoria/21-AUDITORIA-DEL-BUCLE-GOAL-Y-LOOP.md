@@ -14,7 +14,7 @@
 > hooks los da por buenos; **yo leí el código, no vi el verde**. Por la ley 1 de
 > la casa, eso me pone del lado del reporte y no del artefacto: donde digo
 > "el arnés cubre X" léase "el arnés *declara* cubrir X". El primero que corra
-> `py setup/hooks/tests/test-goal-evidence-guard.py` cierra ese hueco.
+> `setup/scripts/py setup/hooks/tests/test-goal-evidence-guard.py` cierra ese hueco.
 
 ---
 

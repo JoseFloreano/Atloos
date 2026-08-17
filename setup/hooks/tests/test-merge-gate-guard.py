@@ -18,7 +18,7 @@ Y los dos casos que la prueba deliberada del 2026-08-07 hizo obligatorios:
     colaron; el destino es EFECTIVO, no el actual)
   · evidencia de OTRA rama                  → BLOQUEA
 
-Uso:  py setup/hooks/tests/test-merge-gate-guard.py
+Uso:  setup/scripts/py setup/hooks/tests/test-merge-gate-guard.py
 Salida: una línea por caso + resumen; exit 1 si algo falla.
 Solo stdlib. No toca el vault, el repo real ni ninguna rama de verdad.
 """

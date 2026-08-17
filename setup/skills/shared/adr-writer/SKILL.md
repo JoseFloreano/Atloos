@@ -51,7 +51,7 @@ productos (Claude Code y Cowork comparten el vault).
    misma ruta en toda máquina, con OneDrive o sin él:
 
    ```bash
-   py "$HOME/.claude/scripts/adr-index.py" "<vault>/10-Projects/<proyecto>/ADRs"
+   "$HOME/.claude/scripts/py" "$HOME/.claude/scripts/adr-index.py" "<vault>/10-Projects/<proyecto>/ADRs"
    ```
 
    **En Cowork no existe esa ruta**: escribe el ADR y **deja anotado que el

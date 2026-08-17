@@ -104,8 +104,8 @@ fuera de este fichero ("el check 3 bajó de 22 a 19" vive en el vault y en dos
 encargos). Renumerar para colocarlo por severidad rompería ese vocabulario
 compartido, que es más caro que el orden.
 
-Uso:  py setup/scripts/tests/test-skill-catalog.py          [repo]
-      py setup/scripts/tests/test-skill-catalog.py --tabla  [repo]
+Uso:  setup/scripts/py setup/scripts/tests/test-skill-catalog.py          [repo]
+      setup/scripts/py setup/scripts/tests/test-skill-catalog.py --tabla  [repo]
 Salidas: 0 sin referencias colgantes y sin skills sobre el tope · 1 hay hallazgos.
 """
 import re

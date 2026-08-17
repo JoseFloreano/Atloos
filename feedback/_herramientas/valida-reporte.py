@@ -3,8 +3,8 @@
 valida-reporte.py — comprueba que un reporte de feedback cumple el contrato.
 
 Uso:
-    py feedback/_herramientas/valida-reporte.py feedback/reportes/<archivo>.md
-    py feedback/_herramientas/valida-reporte.py            # valida todos
+    setup/scripts/py feedback/_herramientas/valida-reporte.py feedback/reportes/<archivo>.md
+    setup/scripts/py feedback/_herramientas/valida-reporte.py            # valida todos
 
 Salida: exit 0 si todo pasa, 1 si hay algún FALLO. Los AVISOS no bloquean.
 

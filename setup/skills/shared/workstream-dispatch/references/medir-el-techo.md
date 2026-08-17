@@ -114,8 +114,8 @@ una, núcleos de la máquina y carga en reposo antes de empezar.
 
 ```bash
 # el instrumento, sin tubería (higiene-de-salida.md)
-py -c "import os,psutil; print(os.cpu_count(), psutil.cpu_percent(interval=1))"
-inicio=$(date +%s); py setup/scripts/run-tests.py > /tmp/f1.txt 2>&1; echo "exit=$?"   # [repo]
+"$HOME/.claude/scripts/py" -c "import os,psutil; print(os.cpu_count(), psutil.cpu_percent(interval=1))"
+inicio=$(date +%s); setup/scripts/py setup/scripts/run-tests.py > /tmp/f1.txt 2>&1; echo "exit=$?"   # [repo]
 echo "wall=$(( $(date +%s) - inicio ))s"; tail -1 /tmp/f1.txt
 ```
 

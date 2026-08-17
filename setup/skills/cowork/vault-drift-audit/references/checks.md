@@ -11,7 +11,7 @@ con los comandos de git en su paso 2.
 ## Índice de ADRs desfasado
 
 ```bash
-py "$HOME/.claude/scripts/adr-index.py" "<vault>/10-Projects/<proyecto>/ADRs" --check
+"$HOME/.claude/scripts/py" "$HOME/.claude/scripts/adr-index.py" "<vault>/10-Projects/<proyecto>/ADRs" --check
 ```
 
 `sync-skills` instala el script ahí: misma ruta en toda máquina, con OneDrive o
@@ -162,7 +162,7 @@ nadie la escribe por accidente.
 ## Rutas inalcanzables en las skills
 
 ```bash
-py setup/scripts/tests/test-skill-paths.py   # [repo] · 0 = limpio · 1 = hallazgos
+setup/scripts/py setup/scripts/tests/test-skill-paths.py   # [repo] · 0 = limpio · 1 = hallazgos
 ```
 
 ⚠ **En Cowork no se puede correr** (no hay repo conectado ni intérprete): igual
@@ -185,8 +185,8 @@ enfermedad, otro síntoma, y sobrevivió al grep.
 ## Copias desplegadas que se quedan atrás (H3 de la auditoría del 08-09)
 
 ```bash
-py setup/scripts/tests/test-claude-md-drift.py            # [repo] · 0 = limpio
-py setup/scripts/tests/test-claude-md-drift.py <otro/CLAUDE.md> ...   # [repo] · otros proyectos
+setup/scripts/py setup/scripts/tests/test-claude-md-drift.py            # [repo] · 0 = limpio
+setup/scripts/py setup/scripts/tests/test-claude-md-drift.py <otro/CLAUDE.md> ...   # [repo] · otros proyectos
 ```
 
 ⚠ **En Cowork no se puede correr** (sin repo conectado ni intérprete):

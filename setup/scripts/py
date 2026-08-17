@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# ══════════════════════════════════════════════════════════════
+#  setup/scripts/py — El intérprete de Python, resuelto, no adivinado.
+#
+#  POR QUÉ EXISTE (sprint 11). Las skills de este repo le MANDAN ejecutar
+#  comandos a Claude Code, y hasta ahora los escribían con `py`, que es el
+#  lanzador de Windows. En la SER8 fallan todos con `py: command not found`.
+#
+#  Y POR QUÉ NO VALE PONER `python3` A SECAS, que era la salida obvia. Medido
+#  el 2026-08-16 en las dos máquinas:
+#
+#    Windows  py → Python 3.12.10 REAL
+#             python3 → EXISTE en el PATH y MIENTE: es el alias de la Microsoft
+#             Store, imprime "Python was not found" y no ejecuta nada.
+#    SER8     python3 → Python 3.12.3 REAL · py → no existe.
+#
+#  O sea: en Windows `command -v python3` dice que sí y es FALSO. Por eso este
+#  resolutor no pregunta si el comando EXISTE — lo EJECUTA y exige que responda.
+#  Un check que se conforma con "el comando está en el PATH" es exactamente el
+#  patrón que esta casa persigue: pasa sin comprobar.
+#
+#  Uso:  setup/scripts/py <script.py> [args...]
+#        setup/scripts/py --cual            # imprime el intérprete elegido
+# ══════════════════════════════════════════════════════════════
+set -euo pipefail
+
+# El orden importa: `py` primero porque en Windows es el único real, y en Linux
+# simplemente no está, así que no estorba. `python` va al final porque en
+# Windows suele ser el mismo stub del Store.
+resuelve() {
+  local c
+  for c in py python3 python; do
+    command -v "$c" >/dev/null 2>&1 || continue
+    # La prueba de vida: que ejecute algo e imprima lo que le pedimos. El stub
+    # del Store pasa el `command -v` y cae aquí.
+    if [ "$("$c" -c 'print("ok")' 2>/dev/null || true)" = "ok" ]; then
+      printf '%s' "$c"
+      return 0
+    fi
+  done
+  return 1
+}
+
+if ! PY_CMD="$(resuelve)"; then
+  echo "setup/scripts/py: no encontré un Python que arranque." >&2
+  echo "  Probé: py, python3, python — o no están, o no ejecutan." >&2
+  echo "  Windows: instala Python desde python.org (trae el lanzador 'py')." >&2
+  echo "  Debian/Ubuntu: sudo apt install python3" >&2
+  exit 127
+fi
+
+if [ "${1:-}" = "--cual" ]; then
+  echo "$PY_CMD"
+  exit 0
+fi
+
+exec "$PY_CMD" "$@"

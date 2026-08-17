@@ -24,7 +24,7 @@ copiada a mano no daria esa senal.
 NO comprueba que el allowlist sea seguro — eso es juicio humano. Comprueba que
 no sea incoherente consigo mismo.
 
-Uso:  py setup/telegram-bridge/tests/test-perfil-bot.py               [repo]
+Uso:  setup/scripts/py setup/telegram-bridge/tests/test-perfil-bot.py               [repo]
 Salida: una linea por caso + resumen; exit 1 si algo falla.
 Solo stdlib: no importa python-telegram-bot (el daemon si lo necesita, este no).
 """

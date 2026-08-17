@@ -10,7 +10,7 @@ que la corrida SIGUIENTE borrase 2 skills de `~/.claude/skills` imprimiendo
 laboratorio en un temporal, corre el script apuntando ahí, y verifica el
 FILESYSTEM — no la salida.
 
-Uso:  py setup/scripts/tests/test-sync-guard.py
+Uso:  setup/scripts/py setup/scripts/tests/test-sync-guard.py
 Salidas: 0 todo verde · 1 algún caso falló
 """
 import json

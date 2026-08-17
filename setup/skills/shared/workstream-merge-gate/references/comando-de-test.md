@@ -40,14 +40,25 @@ existe ese intérprete y el gate no puede ni empezar.
 
 Por orden de preferencia:
 
-1. **El intérprete que ya está corriendo.** Un `py setup/scripts/run-tests.py` [repo]
-   —o `python -m pytest`— usa el intérprete del `PATH`, que existe en cualquier
-   árbol. Es la forma que este repo usa, y por eso su gate corre en cualquier
-   worktree.
+1. **El intérprete que ya está corriendo.** Un `pytest -q` o un
+   `<lanzador> setup/scripts/run-tests.py` [repo] usa el intérprete del `PATH`,
+   que existe en cualquier árbol. Es la forma que este repo usa, y por eso su
+   gate corre en cualquier worktree.
+
+   > ⚠ **El lanzador escrito es una semilla, no un requisito** (sprint 11). Este
+   > repo declara `py setup/scripts/run-tests.py` [repo] (Windows: ese lanzador
+   > no existe en Linux) — pero `gate-test.py` cambia el primer token por el que
+   > lo está ejecutando antes de lanzarlo, así que el MISMO comando versionado
+   > corre en Windows y en Linux. Solo se toca el primer token y solo si es un
+   > lanzador conocido (`py`, `python3`, `python`): un `pytest -q` o un
+   > `npm test` pasan intactos. Por eso el literal no se cambió — cambiarlo a
+   > `setup/scripts/py …` habría roto Windows, donde `shell=True` es cmd.exe y
+   > no sabe lanzar un script de bash.
+
 2. **Un script del repo que se aprovisione solo.** Si hace falta un entorno,
-   que lo cree el propio script (`py -m venv .venv && pip install -r req.txt`)
-   antes de correr la suite. Versionado, auditable, y el mismo en los dos
-   árboles.
+   que lo cree el propio script —el `-m venv .venv && pip install -r req.txt`
+   de siempre, con `py` en Windows y `python3` en Linux— antes de correr la
+   suite. Versionado, auditable, y el mismo en los dos árboles.
 3. **Nunca una ruta absoluta ni relativa a algo no versionado.** `.venv/`,
    `node_modules/`, un dataset, una `db/*.sqlite`: si no está en git, no puede
    estar en el comando.

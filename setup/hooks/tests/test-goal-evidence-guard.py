@@ -16,7 +16,7 @@ No es cortesía: dos hooks en el mismo evento pueden enmascararse, y aquí uno l
 hacía — el vecino enmudecía cuando este guard bloqueaba primero. Se arbitró como
 D2·b y E.3 pasó de medir la avería a fijar su ausencia.
 
-Uso:  py setup/hooks/tests/test-goal-evidence-guard.py                [repo]
+Uso:  setup/scripts/py setup/hooks/tests/test-goal-evidence-guard.py                [repo]
 Salida: una línea por caso + resumen; exit 1 si algo falla.
 Solo stdlib. No toca el vault, el repo real ni ninguna rama de verdad.
 """

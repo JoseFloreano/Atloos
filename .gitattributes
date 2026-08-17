@@ -47,6 +47,14 @@
 # y ahí el `\r` vuelve a morder — por el intérprete, no por el lenguaje.
 *.py        text eol=lf
 
+# ⚠ SIN EXTENSIÓN, así que ninguna de las reglas de arriba lo alcanza (sprint
+# 11). `setup/scripts/py` es un script de bash con shebang, y al añadirlo git
+# avisó de que le pondría CRLF: exactamente el `$'\r': command not found` que
+# mató a la SER8 en el sprint 9, otra vez, por la puerta de un fichero que no
+# termina en `.sh`. Las reglas por extensión tienen ese agujero por diseño; un
+# ejecutable nuevo sin extensión se añade AQUÍ o nace roto para Linux.
+setup/scripts/py  text eol=lf
+
 # Configuración que leen herramientas de Linux.
 *.yml       text eol=lf
 *.yaml      text eol=lf

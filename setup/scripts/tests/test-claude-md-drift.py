@@ -49,7 +49,7 @@ Y el arnés se autoprueba (`autoprueba()`): en cada corrida fabrica en memoria u
 CLAUDE.md con la línea vieja y comprueba que lo caza. Un check que solo se corre
 en verde no está verificado.
 
-Uso:  py setup/scripts/tests/test-claude-md-drift.py [otro/CLAUDE.md ...]
+Uso:  setup/scripts/py setup/scripts/tests/test-claude-md-drift.py [otro/CLAUDE.md ...]
       Sin argumentos comprueba el `CLAUDE.md` de este repo MÁS los declarados en
       `projects.json`. Un proyecto declarado que no está en esta máquina sale
       como `[SKIP]` con su ruta —multi-laptop—, nunca en silencio.

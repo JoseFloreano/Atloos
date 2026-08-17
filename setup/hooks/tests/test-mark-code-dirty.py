@@ -11,7 +11,7 @@ no-.md que esté DENTRO de CLAUDE_PROJECT_DIR. Lo de fuera (scratchpad, otro
 repo, otra unidad) no debe sellar nada — ese era el falso positivo que hacía
 saltar el hook Stop con el vault ya al día.
 
-Uso:  py setup/hooks/tests/test-mark-code-dirty.py
+Uso:  setup/scripts/py setup/hooks/tests/test-mark-code-dirty.py
 Salida: una línea por caso + resumen; exit 1 si algo falla.
 
 Sin dependencias externas: solo stdlib. No toca el vault ni el repo real.

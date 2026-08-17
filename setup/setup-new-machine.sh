@@ -240,6 +240,20 @@ else
   warn "sync-skills.sh no encontrado junto a este script."
 fi
 
+# ── 5c. Sincronizar HOOKS (sprint 11) ─────────────────────────────────────
+# Antes del sprint 11 este paso no existía y sync-hooks solo hablaba PowerShell:
+# una máquina Linux salía de aquí con las skills puestas y SIN capa 3 —sin
+# merge-gate-guard, sin goal-evidence-guard, sin check-vault-updated—, que es
+# justo lo que hace falta en un servidor que corre sin nadie delante.
+# Los hooks son OTRO mecanismo que las skills: por eso es su propio script.
+header "Sincronizando hooks"
+if [ -f "${SCRIPT_DIR}/sync-hooks.sh" ]; then
+  bash "${SCRIPT_DIR}/sync-hooks.sh" || warn "sync-hooks falló; córrelo manualmente."
+else
+  warn "sync-hooks.sh no encontrado junto a este script: la máquina queda SIN hooks."
+  WARNINGS+=("CRÍTICO: sin hooks instalados (no hay compuerta de merge)")
+fi
+
 # ── 6. Restaurar backup (fix A3: SOLO via restore-graph, AOF-safe) ────────
 header "Verificando backups existentes"
 STACK_UP=false

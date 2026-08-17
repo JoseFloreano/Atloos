@@ -10,9 +10,9 @@ verbo (`merge` sí, `push` no), luego el entorno (el worktree), luego la
 herramienta, y la vez siguiente será otra frontera mal dibujada por un hook
 nuevo que nadie relacionó con este.
 
-QUÉ AFIRMA, sobre `setup/sync-hooks.ps1` y `setup/hooks/*.py`:
+QUÉ AFIRMA, sobre `setup/hooks/hooks-map.json` y `setup/hooks/*.py`:
 
-  1. Todo hook `.py` de la fuente está REGISTRADO en `$HookMap`. Uno que no lo
+  1. Todo hook `.py` de la fuente está REGISTRADO en el mapa. Uno que no lo
      esté no se cablea: existe en el repo y no corre en ninguna parte.
   2. Todo hook de `PreToolUse` que INSPECCIONE comandos de shell —lo dice su
      propio código: lee `tool_input` y `command`— lleva en el matcher las DOS
@@ -42,11 +42,10 @@ mira argumentos de un MCP y los de `Stop`/`PreCompact` ni reciben herramienta;
 ensancharles el matcher sería ruido, y este arnés los enumera para dejar dicho
 que se miraron.
 
-Uso:  py setup/hooks/tests/test-hook-matchers.py
+Uso:  setup/scripts/py setup/hooks/tests/test-hook-matchers.py
 Salidas: 0 el barrido está limpio · 1 algún hook queda fuera de su contrato
 """
 import json
-import re
 import shutil
 import subprocess
 import sys
@@ -61,23 +60,25 @@ for _s in (sys.stdout, sys.stderr):
 
 RAIZ = Path(__file__).resolve().parents[2]          # setup/
 HOOKS = RAIZ / "hooks"
-SYNC = RAIZ / "sync-hooks.ps1"
+# La fuente ÚNICA del cableado desde el sprint 11. Antes este arnés leía la
+# lista con un regex sobre `$HookMap` dentro de sync-hooks.ps1 — un acoplamiento
+# a la sintaxis de PowerShell que además ataba el barrido a UNA plataforma. Hoy
+# la lista es dato y la leen los dos envoltorios; este arnés lee el mismo dato.
+SYNC = RAIZ / "hooks" / "hooks-map.json"
 
 # Las herramientas que entregan una línea de shell en `tool_input.command`. Si
 # mañana aparece una tercera, se añade aquí y este arnés señala a quién le falta.
 HERRAMIENTAS_SHELL = ("Bash", "PowerShell")
 
-# Una entrada del $HookMap. El `Matcher` puede ser una cadena o `$null`.
-ENTRADA = re.compile(
-    r'@\{\s*File\s*=\s*"(?P<file>[^"]+)"\s*;\s*'
-    r'Event\s*=\s*"(?P<event>[^"]+)"\s*;\s*'
-    r'Matcher\s*=\s*(?:"(?P<matcher>[^"]*)"|\$null)')
-
 
 def registrados(texto):
-    """[(fichero, evento, matcher|None)] tal y como los cablea sync-hooks.ps1."""
-    return [(m.group("file"), m.group("event"), m.group("matcher"))
-            for m in ENTRADA.finditer(texto)]
+    """[(fichero, evento, matcher|None)] tal y como los cablean los envoltorios.
+
+    `matcher` ausente y `matcher: null` son lo mismo: sin matcher.
+    """
+    datos = json.loads(texto)
+    return [(h["file"], h["event"], h.get("matcher"))
+            for h in (datos.get("hooks") or [])]
 
 
 def codigo(fuente):
@@ -173,13 +174,19 @@ def autoprueba():
     """Mutación: fabrica el defecto del sprint 7 y exige que el barrido lo cace.
 
     Un check verificado solo contra el repo ya arreglado no está verificado —es
-    H7 otra vez—, así que aquí se le da el `$HookMap` viejo y el filtro viejo y
+    H7 otra vez—, así que aquí se le da el mapa viejo y el filtro viejo y
     se comprueba que los señala a los dos, y que la versión buena pasa.
     """
-    viejo = '@{ File = "x.py"; Event = "PreToolUse";  Matcher = "Bash" }'
-    nuevo = '@{ File = "x.py"; Event = "PreToolUse";  Matcher = "Bash|PowerShell" }'
+    viejo = ('{"hooks": [{"file": "x.py", "event": "PreToolUse", '
+             '"matcher": "Bash"}]}')
+    nuevo = ('{"hooks": [{"file": "x.py", "event": "PreToolUse", '
+             '"matcher": "Bash|PowerShell"}]}')
     if len(registrados(viejo)) != 1:
-        return False, "el lector de $HookMap no reconoce una entrada válida"
+        return False, "el lector de hooks-map.json no reconoce una entrada válida"
+    # `matcher` ausente tiene que leerse como "sin matcher", no reventar: es la
+    # forma que usan los hooks de Stop/PreCompact si alguien omite la clave.
+    if registrados('{"hooks": [{"file": "s.py", "event": "Stop"}]}')[0][2] is not None:
+        return False, "un `matcher` ausente no se lee como ausencia de matcher"
     if falta_en_matcher(registrados(viejo)[0][2]) != ["PowerShell"]:
         return False, "el matcher `Bash` a secas NO se señala: el barrido es ciego"
     if falta_en_matcher(registrados(nuevo)[0][2]):
@@ -251,7 +258,7 @@ def main():
     sin_registrar = [n for n in en_disco if n not in registrados_nombres]
     fantasmas = sorted(registrados_nombres - set(en_disco))
 
-    print(f"\n── {len(entradas)} hooks en $HookMap · {len(en_disco)} .py en "
+    print(f"\n── {len(entradas)} hooks en el mapa · {len(en_disco)} .py en "
           f"setup/hooks/ " + "─" * 20 + "\n")
     for fichero, evento, matcher in entradas:
         ruta = HOOKS / fichero
@@ -289,7 +296,7 @@ def main():
         fallos.append("hooks en la fuente que NADIE cablea: "
                       + ", ".join(sin_registrar))
     if fantasmas:
-        fallos.append("entradas de $HookMap sin fichero en la fuente: "
+        fallos.append("entradas del mapa sin fichero en la fuente: "
                       + ", ".join(fantasmas))
 
     print()
@@ -305,7 +312,7 @@ def main():
     print("""
 La regla: un hook de `PreToolUse` que inspecciona comandos de shell tiene que
 cazar las DOS herramientas que los entregan. Y son dos puertas, no una — el
-matcher de `sync-hooks.ps1` decide si se INVOCA, el filtro por `tool_name`
+matcher de `hooks-map.json` decide si se INVOCA, el filtro por `tool_name`
 decide si MIRA. Ensanchar solo la primera deja el agujero abierto con aspecto
 de arreglado.""")
     return 1

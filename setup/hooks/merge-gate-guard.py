@@ -128,6 +128,18 @@ import re
 import subprocess
 import sys
 
+# El lanzador de Python que EXISTE en esta máquina, para los mensajes de remedio
+# (sprint 11). Hasta aquí este hook bloqueaba y a continuación mandaba correr
+# `py "$HOME/.claude/scripts/gate-test.py"` — que en Linux no existe. Medido en
+# la SER8 el 2026-08-16: el gate bloqueaba bien, con exit 2, y acto seguido daba
+# una instrucción imposible de ejecutar en esa máquina. Un bloqueo cuyo remedio
+# no se puede seguir es medio bloqueo, y el remedio es la mitad que importa.
+#
+# No se resuelve EJECUTANDO nada: este hook corre en el camino crítico de CADA
+# comando de shell y no puede pagar un subproceso para averiguarlo. `os.name`
+# basta y es la misma regla que declara el README.
+LANZADOR = "py" if os.name == "nt" else "python3"
+
 # El bloqueo se explica por stderr, y en Windows esa consola es cp1252: sin
 # esto, un mensaje con acentos —todos los de aquí— sale mutilado o revienta al
 # escribirse. Un hook que bloquea y no consigue decir POR QUÉ es medio hook.
@@ -517,7 +529,7 @@ def bloquea_push(motivo, rama):
         "segundo plano sobre un SHA, entró un commit más en la misma rama, y el\n"
         "`--ff-only` se llevó los dos. La evidencia no cubría ese árbol.\n\n"
         "Produce la evidencia sobre lo que vas a empujar y repite el push:\n\n"
-        f"    py \"$HOME/.claude/scripts/gate-test.py\" {rama}\n\n"
+        f"    {LANZADOR} \"$HOME/.claude/scripts/gate-test.py\" {rama}\n\n"
         "Si acabas de integrar una rama, el árbol de la protegida es NUEVO:\n"
         "el verde del frente no vale por sí solo, hay que correr la suite sobre\n"
         "el resultado de la integración.\n"
@@ -663,7 +675,7 @@ def main():
         if destino not in PROTEGIDAS:
             continue                                  # fuera de main no interviene
 
-        helper = "py \"$HOME/.claude/scripts/gate-test.py\" <rama>"
+        helper = f"{LANZADOR} \"$HOME/.claude/scripts/gate-test.py\" <rama>"
         if not fuente:
             bloquea(
                 f"El merge no nombra la rama a integrar, así que no se puede\n"

@@ -40,7 +40,7 @@ Los cinco casos, y qué defecto caza cada uno:
 Se ejercen las funciones REALES importadas del script, no una reimplementación:
 un check verificado contra su propia copia no está verificado, está duplicado.
 
-Uso:  py setup/scripts/tests/test-no-perdida.py
+Uso:  setup/scripts/py setup/scripts/tests/test-no-perdida.py
 Salidas: 0 los cinco casos como se espera · 1 alguno falló.
 """
 import contextlib
@@ -76,7 +76,7 @@ CUERPO = (
     "de la mutación. Habla de despachos, de frentes y de presupuestos.\n\n"
     + PARRAFO +
     "\nY una cola que tampoco cambia nunca, con su tabla y su comando\n"
-    "`py setup/scripts/run-tests.py`, para que la puntuación intervenga.\n")
+    "`setup/scripts/py setup/scripts/run-tests.py`, para que la puntuación intervenga.\n")
 
 
 def escribe(carpeta, nombre, texto):
@@ -201,7 +201,7 @@ def main():
             "Este cuerpo existe para que el comparador tenga algo estable alrededor\n"
             "de la mutación. Habla de despachos, de frentes y de presupuestos.\n\n"
             "\nY una cola que tampoco cambia nunca, con su tabla y su comando\n"
-            "`py setup/scripts/run-tests.py`, para que la puntuación intervenga.\n")
+            "`setup/scripts/py setup/scripts/run-tests.py`, para que la puntuación intervenga.\n")
         codigo, salida = corre(antes, [escribe(tmp, "escondido.md", escondido)])
         ok7 = codigo == 1 and "contradicciones" in salida
         print(f"  [7] el párrafo escondido en la `description` "

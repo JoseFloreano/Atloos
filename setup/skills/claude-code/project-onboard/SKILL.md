@@ -55,7 +55,7 @@ aislamiento activo.
    laptop se repite el alta allí.
 9. **Verifica**: existe `10-Projects/<nombre>/_PROJECT.md`; el `CLAUDE.md` del
    proyecto contiene el snippet y NO queda ningún `<project-name>` sin
-   reemplazar. Y `py setup/scripts/tests/test-claude-md-drift.py <CLAUDE.md>` [repo]
+   reemplazar. Y `setup/scripts/py setup/scripts/tests/test-claude-md-drift.py <CLAUDE.md>` [repo]
    comprueba que el snippet llegó entero y caza la línea vieja de Graphify.
 
 ## Referencias

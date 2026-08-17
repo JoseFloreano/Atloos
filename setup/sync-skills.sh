@@ -153,10 +153,15 @@ ${BLUE}▶ Instalando scripts auxiliares${NC}"
 for cfg in "${CONFIG_DIRS[@]}"; do
   mkdir -p "${cfg}/scripts"
   n=0
-  for f in "${SCRIPTS_SOURCE}"/*.py "${NOTIF}"; do
+  # `py` (sin extension, sprint 11) va aparte del glob *.py a proposito: es el
+  # resolutor de interprete, y las skills lo necesitan en la ruta estable para
+  # poder nombrar un comando que corra en Windows Y en Linux desde CUALQUIER
+  # proyecto, no solo dentro de este repo.
+  for f in "${SCRIPTS_SOURCE}"/*.py "${SCRIPTS_SOURCE}/py" "${NOTIF}"; do
     [ -f "$f" ] || continue
     cp "$f" "${cfg}/scripts/"; n=$((n+1))
   done
+  [ -f "${cfg}/scripts/py" ] && chmod +x "${cfg}/scripts/py"
   ok "${n} scripts → ${cfg}/scripts"
 done
 

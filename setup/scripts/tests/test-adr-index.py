@@ -6,7 +6,7 @@ Lanza el script como subproceso sobre carpetas temporales de ADRs falsos y
 verifica el formato, los fallbacks, la idempotencia y los bytes del archivo
 generado. Solo stdlib. Nunca toca el vault real.
 
-Uso:  py setup/scripts/tests/test-adr-index.py
+Uso:  setup/scripts/py setup/scripts/tests/test-adr-index.py
 """
 import hashlib
 import os

@@ -203,6 +203,12 @@ $scriptFuentes = @()
 $dirScripts = Join-Path $PSScriptRoot "scripts"
 if (Test-Path $dirScripts) {
     $scriptFuentes += Get-ChildItem $dirScripts -Filter "*.py" -File
+    # `py` (sin extension, sprint 11) NO lo coge el filtro *.py y hace falta:
+    # es el resolutor de interprete que permite a las skills nombrar un comando
+    # que corra en Windows Y en Linux desde cualquier proyecto. Sin esta linea
+    # el .sh lo instalaria y el .ps1 no — el desnivel de siempre.
+    $resolutor = Join-Path $dirScripts "py"
+    if (Test-Path $resolutor) { $scriptFuentes += Get-Item $resolutor }
 }
 $notif = Join-Path (Join-Path $PSScriptRoot "telegram-bridge") "notify_telegram.py"
 if (Test-Path $notif) { $scriptFuentes += Get-Item $notif }

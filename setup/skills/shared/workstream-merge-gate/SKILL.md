@@ -47,7 +47,7 @@ La ley: **el código de salida no es el estado, y el reporte no es el artefacto.
    tu palabra no es evidencia:
 
    ```
-   py "$HOME/.claude/scripts/gate-test.py" <rama>
+   "$HOME/.claude/scripts/py" "$HOME/.claude/scripts/gate-test.py" <rama>
    ```
 
    Solo con exit 0 escribe `.claude/gate-verde.json`, que es lo que el hook

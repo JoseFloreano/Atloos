@@ -10,7 +10,7 @@ Descubre por glob en vez de por lista escrita a mano. Una lista sería otro
 contenido con dos puntos de consumo: añades el arnés décimo y nada te obliga a
 registrarlo. No es una medida de seguridad, es mantenimiento.
 
-Uso:  py setup/scripts/run-tests.py
+Uso:  setup/scripts/py setup/scripts/run-tests.py
 Salidas: 0 todos verdes · 1 alguno falló · 2 no encontró ningún arnés
 """
 import glob

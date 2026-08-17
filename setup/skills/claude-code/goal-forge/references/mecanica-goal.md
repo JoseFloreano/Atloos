@@ -69,7 +69,7 @@ funcionalidad de fondo). No la toques creyendo que solo afecta a las metas.
 > el arnés del merge gate pasa y el código queda limpio
 
 **Bien:**
-> `py setup/hooks/tests/test-merge-gate-guard.py` imprime `23/23 casos OK` [repo]
+> `setup/scripts/py setup/hooks/tests/test-merge-gate-guard.py` imprime `23/23 casos OK` [repo]
 > y `.claude/gate-verde.json` registra el sha del HEAD actual; sin tocar
 > `setup/skills/`; o para a los 20 turnos
 
@@ -77,7 +77,7 @@ funcionalidad de fondo). No la toques creyendo que solo afecta a las metas.
 > los tests pasan y la documentación está actualizada
 
 **Bien (la segunda mitad es otra meta, o no es medible y hay que decirlo):**
-> `py -m pytest -q` sale 0 con 0 fallos; o para a los 15 turnos
+> `pytest -q` sale 0 con 0 fallos; o para a los 15 turnos
 
 ## De dónde viene esta disciplina
 

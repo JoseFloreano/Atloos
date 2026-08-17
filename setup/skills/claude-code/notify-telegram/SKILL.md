@@ -48,7 +48,7 @@ el resultado en el móvil.
    *qué se hizo* · *resultado* (✅/❌, números concretos: tests, archivos) ·
    *qué queda pendiente*. Sin markdown decorativo: se envía como texto plano.
 3. **Ejecuta el script** (intérprete `py` en Windows):
-   `py "$HOME/.claude/scripts/notify_telegram.py" "<resumen>"`
+   `"$HOME/.claude/scripts/py" "$HOME/.claude/scripts/notify_telegram.py" "<resumen>"`
    (PowerShell: `py "$env:USERPROFILE\.claude\scripts\notify_telegram.py" "<resumen>"`)
    Si hay un artefacto que el usuario querrá leer entero (informe, log, diff),
    añade `--file <ruta>`. No hace falta trocear: el script manda resumen +

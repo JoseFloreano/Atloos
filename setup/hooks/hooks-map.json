@@ -1,0 +1,67 @@
+{
+  "_comentario": [
+    "FUENTE ÚNICA del cableado de hooks. La leen los DOS envoltorios:",
+    "setup/sync-hooks.ps1 (Windows) y setup/sync-hooks.sh (Linux/macOS).",
+    "Si añades un hook, regístralo AQUÍ o no se cableará en ninguna plataforma.",
+    "",
+    "POR QUÉ ES UN JSON Y NO LA LISTA DUPLICADA EN CADA ENVOLTORIO: hasta el",
+    "sprint 11 la lista vivía SOLO dentro de sync-hooks.ps1, así que en Linux no",
+    "había forma de instalar hooks — la SER8, que es la máquina que corre sin",
+    "vigilancia humana, era la única sin capa 3. Duplicar la lista al escribir",
+    "el .sh habría reproducido la enfermedad del repo (el '=6' contra '=3').",
+    "",
+    "EL ORDEN IMPORTA. El cableado APENDE, así que dos hooks del mismo evento",
+    "corren en el orden de este array. check-vault-updated va ANTES que",
+    "goal-evidence-guard en Stop, y así estaba en el .ps1 desde el sprint 9.",
+    "",
+    "matcher = null significa 'sin matcher' (el evento no recibe herramienta).",
+    "Lo vigilan: setup/hooks/tests/test-hook-matchers.py (contrato de cada",
+    "matcher) y setup/scripts/tests/test-sync-hooks-paridad.py (que los dos",
+    "envoltorios registren lo mismo)."
+  ],
+  "hooks": [
+    {
+      "file": "validate-graphiti-group-id.py",
+      "event": "PreToolUse",
+      "matcher": "mcp__graphiti"
+    },
+    {
+      "file": "mark-code-dirty.py",
+      "event": "PostToolUse",
+      "matcher": "Write|Edit|MultiEdit"
+    },
+    {
+      "file": "check-vault-updated.py",
+      "event": "Stop",
+      "matcher": null
+    },
+    {
+      "file": "memory-flush.py",
+      "event": "PreCompact",
+      "matcher": null
+    },
+    {
+      "file": "merge-gate-guard.py",
+      "event": "PreToolUse",
+      "matcher": "Bash|PowerShell",
+      "_nota": [
+        "`Bash|PowerShell`, no `Bash` a secas (sprint 7). La herramienta",
+        "PowerShell manda el comando en el MISMO `tool_input.command` y en",
+        "Windows va por despliegue progresivo, así que puede encenderse sin",
+        "que nadie lo decida: con el matcher viejo, media sesión de una",
+        "máquina Windows corría sin gate. Arreglar solo este matcher NO basta",
+        "—el hook filtra ADEMÁS por `tool_name`, ver HERRAMIENTAS_SHELL en",
+        "merge-gate-guard.py—; son dos puertas."
+      ]
+    },
+    {
+      "file": "goal-evidence-guard.py",
+      "event": "Stop",
+      "matcher": null,
+      "_nota": [
+        "Segundo hook en Stop, junto a check-vault-updated.py. Los dos corren,",
+        "son independientes, y el orden lo fija este array."
+      ]
+    }
+  ]
+}

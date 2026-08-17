@@ -179,6 +179,38 @@ def comando_en_settings(raiz):
     return str(env.get("GATE_TEST_CMD", "")).strip()
 
 
+# Lanzadores de Python que solo existen en una plataforma. `py` es el de
+# Windows; `python3` no existe en Windows salvo como alias de la Store, que
+# MIENTE (medido: responde "Python was not found" y no ejecuta).
+LANZADORES = ("py", "python3", "python")
+
+
+def con_interprete_de_aqui(cmd):
+    """El comando declarado, con su primer token cambiado por ESTE intérprete.
+
+    POR QUÉ (sprint 11). `GATE_TEST_CMD` está VERSIONADO a propósito —viaja
+    entre máquinas y se ve en el diff— pero su primer token no es portable: el
+    repo declara `py setup/scripts/run-tests.py`, y `py` no existe en Linux. El
+    comando corre con `shell=True`, que en Windows es cmd.exe y no sabe lanzar
+    un script de bash, así que meter ahí el resolutor tampoco vale: arreglaría
+    Linux rompiendo Windows.
+
+    Lo que sí es portable es que el gate use el intérprete que ya lo está
+    ejecutando. En Windows `py` resuelve a ese mismo Python, así que el
+    comportamiento no cambia; en Linux, donde no hay `py`, deja de ser un
+    comando imposible. Solo se toca el PRIMER token y solo si es un lanzador
+    conocido: un `GATE_TEST_CMD` que declare `pytest -q` o `npm test` pasa
+    intacto, que es la mitad del contrato de este fichero.
+    """
+    partes = cmd.split(None, 1)
+    if not partes or partes[0] not in LANZADORES:
+        return cmd
+    interprete = sys.executable or partes[0]
+    if " " in interprete:
+        interprete = f'"{interprete}"'
+    return interprete + (" " + partes[1] if len(partes) > 1 else "")
+
+
 def main():
     args = sys.argv[1:]
     if not args or args[0].startswith("-"):
@@ -226,6 +258,7 @@ def main():
               f"es lo mismo)", file=sys.stderr)
         return NO_CORRIO
 
+    cmd = con_interprete_de_aqui(cmd)
     print(f"[gate-test] {cmd}   (rama {rama} @ {sha[:8]})")
     rc = subprocess.run(cmd, shell=True, cwd=raiz).returncode
     if rc != 0:

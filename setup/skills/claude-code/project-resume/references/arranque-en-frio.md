@@ -25,7 +25,7 @@ El script se invoca por ruta absoluta —`sync-skills` lo instala en
 `~/.claude/scripts/`, misma ruta en toda máquina y sin depender de OneDrive:
 
 ```
-py "$HOME/.claude/scripts/adr-index.py" <ruta ADRs>
+"$HOME/.claude/scripts/py" "$HOME/.claude/scripts/adr-index.py" <ruta ADRs>
 ```
 ```powershell
 py "$env:USERPROFILE\.claude\scripts\adr-index.py" <ruta ADRs>

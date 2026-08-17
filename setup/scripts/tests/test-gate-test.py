@@ -8,7 +8,7 @@ el otro lado): mide de dónde sale el comando.
 
 El truco para saber qué comando corrió: `gate-verde.json` registra el `cmd`.
 
-Uso:  py setup/scripts/tests/test-gate-test.py
+Uso:  setup/scripts/py setup/scripts/tests/test-gate-test.py
 Salidas: 0 todo verde · 1 algún caso falló
 """
 import json

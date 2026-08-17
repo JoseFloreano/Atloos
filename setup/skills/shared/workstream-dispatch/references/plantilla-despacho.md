@@ -128,7 +128,7 @@ nada**, y va en el despacho como tabla cerrada:
 
 ```
 FUERA DE GIT (traer ANTES de la primera corrida):
-  .venv/            ~400 MB   crear: py -m venv .venv && pip install -r req.txt
+  .venv/            ~400 MB   crear: <lanzador> -m venv .venv && pip install -r req.txt
   .env                 2 KB   copiar del checkout principal (NO enlazar — ver abajo)
   data/padron.csv      9,6 MB  copiar de <ruta>
   db/*.sqlite          179 MB  copiar de <ruta>
@@ -267,7 +267,7 @@ Los **2 reservados** son para el coordinador y el sistema. Sale así:
 Se calcula al despachar, con la máquina delante:
 
 ```bash
-py -c "import os; n=os.cpu_count(); f=3; print(f'{n} nucleos, {f} frentes -> -n {max(1,(n-2)//f)}')"
+"$HOME/.claude/scripts/py" -c "import os; n=os.cpu_count(); f=3; print(f'{n} nucleos, {f} frentes -> -n {max(1,(n-2)//f)}')"
 ```
 
 ⚠ **La palanca es `PYTEST_XDIST_AUTO_NUM_WORKERS`, NO `taskset`.** `pytest -n
@@ -421,7 +421,7 @@ Todo despacho dice ya cuándo está hecho. Escríbelo como **estado final medibl
 el comando que lo prueba**, y ese mismo objeto vale como condición de meta si el
 frente va a correr desatendido:
 
-> **HECHO cuando** `py setup/hooks/tests/test-merge-gate-guard.py` [repo] imprime
+> **HECHO cuando** `setup/scripts/py setup/hooks/tests/test-merge-gate-guard.py` [repo] imprime
 > `23/23 casos OK`, sin tocar `sync-hooks.ps1`, **o para a los 20 turnos**.
 
 Tres partes y ninguna sobra:

@@ -44,7 +44,7 @@ out=$(cd "<repo>" && claude -p --max-turns 5 \
   "<instrucción de una o dos frases>. Si no hay nada que reportar responde solo OK.")
 
 [ "$(printf '%s' "$out" | tr -d '[:space:]')" = "OK" ] && exit 0   # se descarta
-printf '%s\n' "$out" | py "$HOME/…/setup/telegram-bridge/notify_telegram.py"
+printf '%s\n' "$out" | "$HOME/.claude/scripts/py" "$HOME/…/setup/telegram-bridge/notify_telegram.py"
 ```
 
 ## Plantilla — scheduled task de Cowork (sin wrapper)
@@ -81,7 +81,7 @@ out=$(claude -p --max-turns 5 --allowedTools "Read,Grep,Glob" \
   "Proyectos con vault desfasado:$stale. Para cada uno, lee su _PROJECT.md y di
    en 1-2 líneas qué sección falta actualizar. Si ninguno lo necesita responde solo OK.")
 [ "$(printf '%s' "$out" | tr -d '[:space:]')" = "OK" ] && exit 0
-printf '%s\n' "$out" | py "$HOME/…/setup/telegram-bridge/notify_telegram.py"
+printf '%s\n' "$out" | "$HOME/.claude/scripts/py" "$HOME/…/setup/telegram-bridge/notify_telegram.py"
 ```
 
 En Cowork, la misma tarea sin wrapper:

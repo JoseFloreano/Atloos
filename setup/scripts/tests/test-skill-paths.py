@@ -16,7 +16,7 @@ rutas HARDCODEADAS (`Mis_Documentos`) — el síntoma. `notify-telegram` tenía 
 misma enfermedad con otro síntoma: una ruta VAGA, no una equivocada. Sobrevivió
 al grep. Esto busca la enfermedad.
 
-Uso:  py setup/scripts/tests/test-skill-paths.py
+Uso:  setup/scripts/py setup/scripts/tests/test-skill-paths.py
 Salidas: 0 sin hallazgos · 1 hay rutas sospechosas
 """
 import re
@@ -118,6 +118,10 @@ def autoprueba():
     RADIO exime, y a RADIO+1 NO exime. El segundo es el que importa, porque es
     el que impide que «ensanchar por si acaso» pase inadvertido.
     """
+    # Fixture de laboratorio, NO un comando que nadie corra: tiene que disparar
+    # el detector para que la ventana se pueda medir por los dos bordes. El
+    # sprint 11 lo reescribió con el resolutor y dejó de dispararlo, así que la
+    # autoprueba se puso roja midiendo una ventana vacía — se queda como estaba.
     comando = "Corre `py setup/scripts/gate-test.py <rama>` antes de integrar."
     relleno = "Texto de relleno que no dice nada."
 

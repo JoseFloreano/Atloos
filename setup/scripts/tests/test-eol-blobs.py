@@ -31,7 +31,7 @@ la REGLA, preguntándole a git en vez de leyendo el `.gitattributes` como texto:
     Sin él, alguien podría limpiar los blobs a mano y dejar el repo sin la
     regla que impide que vuelvan a ensuciarse — verde, y desprotegido.
 
-Uso:  py setup/scripts/tests/test-eol-blobs.py          [repo]
+Uso:  setup/scripts/py setup/scripts/tests/test-eol-blobs.py          [repo]
 Salidas: 0 limpio y protegido · 1 hay blobs sucios o la regla no rige.
 """
 import subprocess

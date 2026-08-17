@@ -30,7 +30,7 @@ cierra la meta. Una condición mal forjada no es un detalle de estilo: es la ley
    Dos condiciones unidas por "y" son dos metas; parte el trabajo.
 2. **El comando que lo prueba, nombrado DENTRO de la condición.** No *"el arnés
    pasa"*, sino: [repo]
-   *"`py setup/hooks/tests/test-merge-gate-guard.py` imprime `23/23 casos OK`"*. [repo]
+   *"`setup/scripts/py setup/hooks/tests/test-merge-gate-guard.py` imprime `23/23 casos OK`"*. [repo]
 3. **Las restricciones que no deben cambiar** por el camino: qué no se toca,
    qué no se mergea, qué sigue verde.
 4. **Cláusula de corte, obligatoria**: `o para a los 20 turnos`. Sin fondo, un

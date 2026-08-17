@@ -28,27 +28,33 @@ function Write-Warn { param($m) Write-Host "  [WARN] $m" -ForegroundColor Yellow
 function Write-Info { param($m) Write-Host "  [INFO] $m" -ForegroundColor Cyan }
 
 # ── Mapeo hook → evento de Claude Code ────────────────────────────────────
-# Si añades un hook nuevo, regístralo aquí o no se cableará.
-$HookMap = @(
-    @{ File = "validate-graphiti-group-id.py"; Event = "PreToolUse";  Matcher = "mcp__graphiti" }
-    @{ File = "mark-code-dirty.py";            Event = "PostToolUse"; Matcher = "Write|Edit|MultiEdit" }
-    @{ File = "check-vault-updated.py";        Event = "Stop";        Matcher = $null }
-    @{ File = "memory-flush.py";               Event = "PreCompact";  Matcher = $null }
-    # `Bash|PowerShell`, no `Bash` a secas (sprint 7). La herramienta PowerShell
-    # manda el comando en el MISMO `tool_input.command` y en Windows va por
-    # despliegue progresivo, asi que puede encenderse sin que nadie lo decida:
-    # con el matcher viejo, media sesion de una maquina Windows corria sin gate.
-    # Arreglar solo esta linea no basta —el hook filtra ADEMAS por `tool_name`,
-    # ver HERRAMIENTAS_SHELL en merge-gate-guard.py—; son dos puertas.
-    @{ File = "merge-gate-guard.py";           Event = "PreToolUse";  Matcher = "Bash|PowerShell" }
-    # Segundo hook en Stop, junto a check-vault-updated.py. Los dos corren, son
-    # independientes y el orden lo fija este array (el cableado APENDE, así que
-    # check-vault-updated va primero). Ver hooks/tests/test-goal-evidence-guard.py.
-    @{ File = "goal-evidence-guard.py";        Event = "Stop";        Matcher = $null }
-)
-
+# La lista NO vive aqui (sprint 11): vive en hooks/hooks-map.json, que leen
+# este script y su gemelo sync-hooks.sh. Si añades un hook, regístralo ALLI.
+#
+# Por que se movio: hasta el sprint 11 la lista solo existia dentro de este
+# .ps1, asi que en Linux no habia forma de instalar hooks y la SER8 —la maquina
+# que corre sin vigilancia humana— era la unica sin capa 3. Escribir el .sh con
+# su propia copia habria repetido la enfermedad de la casa (el '=6' contra
+# '=3'), asi que la lista es dato compartido y los envoltorios la leen.
+# Que los dos registren lo mismo lo vigila test-sync-hooks-paridad.py.
 if (-not $HooksSource) { $HooksSource = Join-Path $PSScriptRoot "hooks" }
 if (-not (Test-Path $HooksSource)) { Write-Error "No existe la carpeta de hooks: $HooksSource"; exit 1 }
+
+$MapPath = Join-Path $HooksSource "hooks-map.json"
+if (-not (Test-Path $MapPath)) { Write-Error "No existe el mapa de hooks: $MapPath"; exit 1 }
+try {
+    $HookMap = @((Get-Content $MapPath -Raw -Encoding UTF8 | ConvertFrom-Json).hooks)
+} catch {
+    Write-Error "hooks-map.json ilegible: $_"; exit 1
+}
+if (-not $HookMap -or $HookMap.Count -eq 0) {
+    # Un mapa vacio cablearia CERO hooks en silencio, que es la misma clase de
+    # fallo que el guard por conjuntos de mas abajo persigue al copiar.
+    Write-Error "hooks-map.json no declara ningun hook: no se cablea nada"; exit 1
+}
+# PowerShell accede a las propiedades sin distinguir mayusculas, asi que
+# $h.File/$h.Event/$h.Matcher siguen sirviendo sobre las claves file/event/matcher
+# del JSON y el resto del script no cambia.
 
 # ── Intérprete de Python ──────────────────────────────────────────────────
 # En Windows 'python' suele apuntar al stub de Microsoft Store: preferimos 'py'.

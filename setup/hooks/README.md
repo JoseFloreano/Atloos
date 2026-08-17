@@ -121,8 +121,23 @@ cualquier hook — no hay sync automático como el de las skills.
 ## Pruebas
 
 Arneses de contrato en `tests/` (solo stdlib; usan proyecto temporal + vault
-falso, nunca tocan el vault real). `sync-hooks.ps1` no los copia: solo instala
-los `.py` de la raíz de `hooks/`.
+falso, nunca tocan el vault real). `sync-hooks` no los copia —ni el `.ps1` ni el
+`.sh`—: solo instala los `.py` de la raíz de `hooks/`.
+
+Portable, y es la forma preferida (el resolutor elige `py` en Windows y
+`python3` en Linux **ejecutándolos**, no mirando el `PATH` — ver README raíz):
+
+```bash
+setup/scripts/py setup/hooks/tests/test-mark-code-dirty.py       # 15 casos
+setup/scripts/py setup/hooks/tests/test-check-vault-updated.py   # 28 casos (el re-armado D2)
+setup/scripts/py setup/hooks/tests/test-memory-flush.py          # 11 casos
+setup/scripts/py setup/hooks/tests/test-merge-gate-guard.py      # 23 casos (repos git reales)
+setup/scripts/py setup/hooks/tests/test-goal-evidence-guard.py   # 28 casos (incluye el canario)
+```
+
+O de una, los 22 arneses del repo: `setup/scripts/py setup/scripts/run-tests.py`.
+
+En PowerShell, donde `py` es el lanzador real y los separadores van al revés:
 
 ```powershell
 py setup\hooks\tests\test-mark-code-dirty.py       # 15 casos

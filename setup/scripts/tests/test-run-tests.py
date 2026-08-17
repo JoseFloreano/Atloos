@@ -9,7 +9,7 @@ NUNCA apunta el runner a la raíz real del repo. Si lo hiciera, el runner se
 descubriría a sí mismo corriéndose a sí mismo, en bucle: este archivo casa con
 su propio glob (`setup/**/tests/test-*.py`).
 
-Uso:  py setup/scripts/tests/test-run-tests.py
+Uso:  setup/scripts/py setup/scripts/tests/test-run-tests.py
 Salidas: 0 todo verde · 1 algún caso falló
 """
 import os

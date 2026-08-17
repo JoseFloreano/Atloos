@@ -33,7 +33,7 @@ vía habría pasado sin comprobar, que es el defecto que persigue.
 `ast.parse`, que caza menos — **nunca se da por verde en silencio**, porque un
 check que no puede comprobar y calla es peor que no tenerlo.
 
-Uso:  py setup/scripts/tests/test-suelo-python.py          [repo]
+Uso:  setup/scripts/py setup/scripts/tests/test-suelo-python.py          [repo]
 Salidas: 0 todo compila con el suelo · 1 alguno no · 2 no se pudo comprobar.
 """
 import ast

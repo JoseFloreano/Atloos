@@ -43,7 +43,7 @@ tampoco discriminaba**: medía el negativo por el lado de arriba («a las 10
 re-arma»), que un hook con `cada=-1` cumple igual porque re-arma siempre.
 Un caso que no puede fallar es peor que no tenerlo: ocupa el sitio del que sí.
 
-Uso:  py setup/hooks/tests/test-check-vault-updated.py
+Uso:  setup/scripts/py setup/hooks/tests/test-check-vault-updated.py
 Salida: una línea por caso + resumen; exit 1 si algo falla.
 Sin dependencias externas: solo stdlib. No toca el vault ni el repo real.
 """

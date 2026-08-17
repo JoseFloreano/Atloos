@@ -34,8 +34,8 @@ git -C . log --oneline -1
 git -C . status --porcelain | wc -l
 
 # v3 · el TAMANO de la maquina, obligatorio desde el 2026-08-16
-py -c "import os; print(os.cpu_count())"
-py -c "import psutil; print(round(psutil.virtual_memory().total/2**30))"
+"$HOME/.claude/scripts/py" -c "import os; print(os.cpu_count())"
+"$HOME/.claude/scripts/py" -c "import psutil; print(round(psutil.virtual_memory().total/2**30))"
 ```
 
 > **Los dos ultimos van al frontmatter** (`nucleos:` y `ram_gb:`) **y tienen que
@@ -186,7 +186,7 @@ Repasa el borrador y **quita**:
 Corre el validador y **no guardes hasta que salga en verde**:
 
 ```bash
-py feedback/_herramientas/valida-reporte.py feedback/reportes/<tu-archivo>.md
+setup/scripts/py feedback/_herramientas/valida-reporte.py feedback/reportes/<tu-archivo>.md
 ```
 
 ### Paso 5 · Enséñaselo antes de dar nada por hecho

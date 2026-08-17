@@ -160,7 +160,7 @@ puedes dar. **No la maquilles.**
 Luego:
 
 ```bash
-py feedback/_herramientas/valida-reporte.py feedback/reportes/<tu-archivo>.md
+setup/scripts/py feedback/_herramientas/valida-reporte.py feedback/reportes/<tu-archivo>.md
 ```
 
 El validador **bloquea** lo que puede costar caro (una clave reutilizable por un

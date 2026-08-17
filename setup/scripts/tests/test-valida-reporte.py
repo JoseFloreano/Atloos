@@ -36,7 +36,7 @@ decorativo, que es el defecto que este repo lleva tres sprints cazando. Por eso
 esa guía va entre `>` en `_PLANTILLA.md`, y por eso esto es un caso y no un
 comentario.
 
-Uso:  py setup/scripts/tests/test-valida-reporte.py
+Uso:  setup/scripts/py setup/scripts/tests/test-valida-reporte.py
 Salidas: 0 los seis casos como se espera · 1 alguno falló.
 """
 import importlib.util
