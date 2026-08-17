@@ -241,18 +241,39 @@ def main():
 
     dirs = config_dirs(a.config_dir or None)
     if not dirs:
-        warn("no se encontró ningún config dir (~/.claude); nada que hacer")
-        return 0
+        # ⚠ Máquina virgen: Claude Code no ha arrancado nunca aquí, así que
+        # `~/.claude` todavía no existe. Antes se avisaba y se salía **0**, y
+        # `setup-new-machine.sh` —que llama con `|| warn`— daba el paso por
+        # bueno y dejaba la máquina SIN capa 3 (auditoría 31, H2). En una
+        # máquina sin vigilancia humana un aviso que nadie lee y un exit 0 son
+        # la misma cosa: se CREA el directorio. Y si no se puede, se sale != 0.
+        nuevo = Path.home() / ".claude"
+        try:
+            nuevo.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            err(f"no hay config dir y no se pudo crear {nuevo}: {e}")
+            return 1
+        info(f"config dir creado: {nuevo} (Claude Code no había arrancado aquí)")
+        dirs = [nuevo]
 
     info(f"Interprete para los hooks: {python_cmd}")
+    copiados = 0
     for cfg in dirs:
         print(f"\n> {cfg}")
         destino = cfg / "hooks"
-        _, bien = copia_hooks(fuente, destino, a.prune)
+        n, bien = copia_hooks(fuente, destino, a.prune)
         if not bien:
             return 1
+        copiados += n
         if not a.no_wire:
             cablea(cfg, destino, entradas, python_cmd)
+
+    # La misma ley por la tercera puerta: `cablea` salta los hooks que no
+    # están en la fuente, así que una fuente sin `.py` cableaba NADA y salía 0
+    # diciendo "settings.json ya estaba al día". Cero hooks no es éxito.
+    if not copiados:
+        err("no se instaló ningún hook: la máquina queda SIN capa 3")
+        return 1
 
     print("\nListo. Los hooks aplican en sesiones NUEVAS de Claude Code.")
     return 0

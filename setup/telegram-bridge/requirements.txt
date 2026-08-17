@@ -1,0 +1,19 @@
+# Dependencias del puente Telegram.
+#
+# ANCLADAS a la versión que corre HOY en la Legion — medido el 2026-08-17 con
+# `py -m pip show python-telegram-bot`. Un nombre desnudo instalaría en la SER8
+# lo que hubiera ese día, y el "funciona aquí" dejaría de significar nada.
+#
+# ⚠ El mensaje de error del daemon anunciaba `>=21`; lo que está PROBADO es
+# 22.8. Si algún día hay que mover el ancla, se mueve midiendo, no ampliando.
+#
+# Instalar:
+#   Linux    →  bash setup/telegram-bridge/install-deps.sh
+#               (crea un venv fuera del repo: en Ubuntu 24.04 un `pip install`
+#                pelado falla por PEP 668, `externally-managed-environment`)
+#   Windows  →  py -m pip install -r setup/telegram-bridge/requirements.txt
+#
+# `tiktoken` NO va aquí: no es dependencia de arranque. Su único uso
+# (setup/scripts/tests/test-claude-md-drift.py) degrada con motivo declarado si
+# falta, y el arnés test-deps-puente.py lo tiene anotado como opcional.
+python-telegram-bot==22.8

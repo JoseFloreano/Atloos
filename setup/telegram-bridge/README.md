@@ -102,9 +102,31 @@ Long polling saliente: sigue sin haber URL pública ni túnel.
 
 ## Requisitos
 
+Las dependencias están **declaradas y ancladas** en `requirements.txt`
+(`python-telegram-bot==22.8`, la versión medida en la Legion el 2026-08-17). El
+comando NO es el mismo en las dos plataformas:
+
 ```bash
-py -m pip install "python-telegram-bot>=21"
+# Linux (SER8, Ubuntu 24.04)
+bash setup/telegram-bridge/install-deps.sh
 ```
+
+```powershell
+# Windows (Legion)
+py -m pip install -r setup/telegram-bridge/requirements.txt
+```
+
+> ⚠ **En Linux no basta `pip install`, y el `py` de estas páginas no existe
+> allí.** Ubuntu 24.04 rechaza el `pip install` pelado con
+> `externally-managed-environment` (PEP 668), así que `install-deps.sh` crea un
+> **venv fuera del repo** —bajo `$XDG_DATA_HOME` o `~/.local/share`, nunca
+> dentro, porque esto vive en OneDrive— e **importa el módulo para comprobar
+> que quedó instalado**: un `pip` que sale 0 no es evidencia de que el daemon
+> arranque. Al terminar imprime la ruta del intérprete, que es la que necesita
+> el `ExecStart` de la unit de systemd.
+>
+> Si `python3 -m venv` falla, en Debian/Ubuntu falta el paquete:
+> `sudo apt install python3-venv`. El script lo dice y sale ≠ 0.
 
 Más el `.env` de arriba con **una clave nueva**:
 
@@ -131,7 +153,12 @@ para que la memoria del proyecto case. `projects.json` está en `.gitignore`
 ## Arrancar
 
 ```bash
-py tg_daemon.py        # Ctrl+C para parar
+py tg_daemon.py        # Windows · Ctrl+C para parar
+```
+
+```bash
+# Linux: con el intérprete del venv, no con python3 del sistema
+"${XDG_DATA_HOME:-$HOME/.local/share}"/claude-telegram/venv/bin/python tg_daemon.py
 ```
 
 Debe imprimir `Daemon en marcha (long polling)`. Los eventos van a

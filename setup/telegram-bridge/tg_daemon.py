@@ -27,7 +27,9 @@ Arranque:  py tg_daemon.py       (Ctrl+C para parar)
 import asyncio
 import json
 import logging
+import ntpath
 import os
+import posixpath
 import re
 import shutil
 import sys
@@ -41,7 +43,12 @@ try:
     from telegram.ext import (Application, ApplicationBuilder, CallbackQueryHandler,
                               CommandHandler, ContextTypes, MessageHandler, filters)
 except ImportError:
-    sys.exit("Falta python-telegram-bot. Instala:  py -m pip install \"python-telegram-bot>=21\"")
+    # ⚠ El mensaje anterior daba UNA receta y era Windows-only (`py -m pip`,
+    # comando que en Linux no existe) — y en Ubuntu 24.04 el pip pelado falla
+    # además por PEP 668. Auditoría 31, H3b.
+    sys.exit("Falta python-telegram-bot. Instala las dependencias del puente:\n"
+             "  Linux:    bash setup/telegram-bridge/install-deps.sh   (venv, PEP 668)\n"
+             "  Windows:  py -m pip install -r setup/telegram-bridge/requirements.txt")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gitops                                              # noqa: E402
@@ -88,6 +95,26 @@ DENY_TOOLS = ("WebFetch,Bash(git commit:*),Bash(git push:*),Bash(git merge:*),"
               "Bash(git reset:*),Bash(git checkout:*),Bash(rm:*),Bash(curl:*),Bash(wget:*)")
 
 
+def deny_glob(base, sep=os.sep) -> str:
+    """Patrón de denegación absoluto que cubre `base` y todo su árbol.
+
+    ⚠ El separador iba escrito a mano (`f"Read({d}\\\\**)"`). En Windows casaba
+    —así se verificó el 2026-08-01— y en Linux **no casaba con nada**: la
+    denegación no denegaba, en silencio y solo en la máquina de destino
+    (auditoría 31, H1). Aquí lo pone la plataforma, no el autor.
+
+    Se normaliza además con el sabor de esa plataforma porque `repo_path` llega
+    crudo de `projects.json`, donde `C:/Users/...` es una forma legal que
+    `Path(...).is_dir()` acepta: sin normalizar, el patrón mezclaba separadores
+    y la barrera de escritura quedaba abierta también en Windows.
+
+    `sep` se inyecta solo para que el arnés pueda ejercer la plataforma ajena
+    —que es donde vive este bug—; en producción nadie lo pasa.
+    """
+    sabor = ntpath if sep == "\\" else posixpath
+    return f"{sabor.normpath(str(base))}{sep}**"
+
+
 def secret_denies() -> str:
     """Deny de lectura sobre las rutas sensibles conocidas de ESTA máquina.
 
@@ -97,7 +124,8 @@ def secret_denies() -> str:
 
     ⚠ Verificado el 2026-08-01: los patrones **glob NO funcionan**
     (`Read(**/.env)` y `Read(*.env)` dejaron pasar la lectura). Solo bloquean
-    las **rutas absolutas** (`Read(C:\\ruta\\**)`), así que se calculan aquí en
+    las **rutas absolutas** (`Read(<ruta absoluta><sep>**)`, con el separador de
+    la plataforma — lo pone `deny_glob`), así que se calculan aquí en
     vez de escribirse como comodín. Es mitigación de las rutas conocidas, no una
     frontera general: eso sigue siendo un residual documentado.
     """
@@ -108,7 +136,7 @@ def secret_denies() -> str:
     reglas = []
     for d in objetivos:
         try:
-            reglas.append(f"Read({d}\\**)")
+            reglas.append(f"Read({deny_glob(d)})")
         except Exception:
             continue
     return ",".join(dict.fromkeys(reglas))                     # sin duplicados
@@ -1226,7 +1254,7 @@ async def run_claude(prompt: str, cwd: str, session_id, model: str = "",
     if write_mode and repo_path:
         # Segunda barrera explícita sobre el repo del usuario: el worktree vive
         # en %LOCALAPPDATA%, así que esto no estorba al trabajo legítimo.
-        deny += f",Write({repo_path}\\**),Edit({repo_path}\\**)"
+        deny += f",Write({deny_glob(repo_path)}),Edit({deny_glob(repo_path)})"
 
     cmd = [exe, "-p", prompt, "--output-format", "stream-json", "--verbose",
            "--allowedTools", WRITE_TOOLS if write_mode else READ_TOOLS,

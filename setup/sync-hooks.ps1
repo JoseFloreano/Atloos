@@ -66,12 +66,25 @@ if (-not $PythonCmd) {
 Write-Info "Intérprete para los hooks: $PythonCmd"
 
 $sourceFiles = Get-ChildItem $HooksSource -Filter *.py -File
-if (-not $sourceFiles) { Write-Warn "No hay .py en $HooksSource"; exit 0 }
+if (-not $sourceFiles) { Write-Error "No hay .py en ${HooksSource}: la maquina queda SIN capa 3"; exit 1 }
 
 $configDirs = @("$env:USERPROFILE\.claude") + `
     (Get-ChildItem "$env:USERPROFILE" -Directory -Filter ".claude-*" -Force -ErrorAction SilentlyContinue |
      ForEach-Object { $_.FullName })
 
+# ⚠ Maquina virgen: si Claude Code no ha arrancado nunca, ~/.claude no existe y
+# el `continue` de abajo dejaba el bucle sin cuerpo — cero hooks y exit 0, con
+# setup-new-machine dando el paso por bueno (auditoria 31, H2; el gemelo .sh
+# tenia el mismo agujero por el filtro is_dir()). Se crea, o se sale != 0.
+if (-not ($configDirs | Where-Object { Test-Path $_ })) {
+    $nuevo = Join-Path $env:USERPROFILE ".claude"
+    try { New-Item -ItemType Directory -Force -Path $nuevo -ErrorAction Stop | Out-Null }
+    catch { Write-Error "No hay config dir y no se pudo crear ${nuevo}: $_"; exit 1 }
+    Write-Info "Config dir creado: $nuevo (Claude Code no habia arrancado aqui)"
+    $configDirs = @($nuevo)
+}
+
+$instalados = 0
 foreach ($cfg in $configDirs) {
     if (-not (Test-Path $cfg)) { continue }
     Write-Host "`n▶ $cfg" -ForegroundColor Blue
@@ -111,6 +124,7 @@ foreach ($cfg in $configDirs) {
         $dst = Join-Path $target $f.Name
         Copy-Item $f.FullName "$dst.tmp" -Force
         Move-Item "$dst.tmp" $dst -Force
+        $instalados++
     }
     if ($faltantes.Count -eq 0 -or $Prune) {
         @{ syncedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm'); source = $HooksSource
@@ -191,6 +205,14 @@ foreach ($cfg in $configDirs) {
     } else {
         Write-Info "settings.json ya estaba al día"
     }
+}
+
+# La misma ley del gemelo: cero hooks instalados no es exito, diga lo que diga
+# el resto de la salida. El codigo de salida no es el estado — y aqui este
+# script ES quien establece el estado.
+if ($instalados -eq 0) {
+    Write-Error "No se instalo ningun hook: la maquina queda SIN capa 3"
+    exit 1
 }
 
 Write-Host "`nListo. Los hooks aplican en sesiones NUEVAS de Claude Code." -ForegroundColor Green
