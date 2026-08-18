@@ -43,6 +43,7 @@ La serie original: por qué esta arquitectura de memoria y no otra.
 | ~~10 · RFD endurecimiento de campo~~ | ✅ **Implementado, auditado y cosechado** (2026-08-09) → repartido en tres ADR: `ADR-20260801-bot-memoria-y-perfil` (D1, curado + extracto fresco), `ADR-20260801-higiene-vault` («Enmienda 2», `Estado del repo:`) y `ADR-20260803-skills-fuente-unica` («Enmienda», el sync no destruye por defecto) |
 | [11 · RFD del caso a la clase](./auditoria/11-RFD-DEL-CASO-A-LA-CLASE.md) | 🔴 **Propuesta — 2 decisiones abiertas.** Los 4 fallos que destapó auditar el RFD 10: todos son "arreglamos el caso, no la clase" |
 | [28 · Inventario de portabilidad a Linux](./auditoria/28-INVENTARIO-PORTABILIDAD-LINUX.md) | ⭐ **Medido en las dos máquinas (sprint 11).** Cuatro clases con la columna «¿rompe o es cosmético?». La clase de las rutas NO rompía; las dos roturas graves están en las allowlists del daemon |
+| [RFD 36 · El anti-drift y los gates contra el modo concurrente](./auditoria/36-RFD-ANTI-DRIFT-Y-GATES-CONCURRENTES.md) | 🔴 **Propuesta — 5 decisiones abiertas (D28–D32).** El predicado del anti-drift no se puede satisfacer con frentes vivos (medido: 36 s), `gate-test.py` firma un sha y mide el árbol de trabajo, y la evidencia de verde tiene **una sola ranura** — lo que le falta a la P1 del RFD 25 |
 
 ### 📁 [`skills/`](./skills/) — Catálogos de skills investigados
 
