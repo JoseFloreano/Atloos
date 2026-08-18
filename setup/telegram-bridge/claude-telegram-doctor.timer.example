@@ -1,9 +1,18 @@
 # ══════════════════════════════════════════════════════════════════════════
 #  claude-telegram-doctor.{service,timer} — el latido diario del `doctor`.
 #
-#  ⚠ NO PROBADO (2026-08-18). Su hermano, el aviso de fallo, SI se ejercio en la
-#     SER8; este no se ha instalado. No te fies de el hasta correr
-#     `latido-doctor.sh --siempre` y ver llegar el mensaje.
+#  ✅ PROBADO EN CAMPO: floreano-server, 2026-08-18, POR LOS DOS LADOS — y salio
+#     mejor de lo previsto. No hizo falta el flag `--siempre`: la MISMA orden, en
+#     la MISMA maquina, con lo unico distinto siendo la divergencia:
+#
+#       con divergencia (faltaba el CLAUDE.md) -> "Enviado: mensaje + adjunto
+#                                                  doctor-floreano-server-...txt"
+#       sin divergencia (CLAUDE.md generado)   -> "sin divergencias, no se avisa"
+#                                                  exit 0, y NADA al movil
+#
+#     Eso es una mutacion de dos lados hecha en campo: no prueba que el script
+#     sepa decir las dos frases, prueba que la frase DEPENDE del estado. El timer
+#     quedo instalado, primer disparo 2026-08-19 00:01:51 CST.
 #
 #  Cubre lo que el `OnFailure` NO ve, que es casi todo lo que mata despacio a una
 #  maquina headless: el disco llenandose, el journal sin techo, un `CLAUDE.md`

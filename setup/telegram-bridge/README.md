@@ -273,7 +273,7 @@ Y la prueba que de verdad importa: **manda un mensaje al bot desde el móvil**.
 | Pieza | Estado |
 |---|---|
 | Aviso de fallo (`OnFailure`) | ✅ **PROBADO** en `floreano-server` el 2026-08-18: `SIGKILL` al daemon → `Result=signal` → la unit de aviso arrancó → **el 🔴 llegó al móvil** |
-| Latido diario (`.timer`) | ⚠ **NO probado**: escrito y sin instalar. No te fíes hasta ejercerlo |
+| Latido diario (`.timer`) | ✅ **PROBADO** el 2026-08-18, por los dos lados: **habló** con una divergencia real (faltaba el `CLAUDE.md`) y **calló** al desaparecer ella. Instalado; primer disparo 19-08 00:01 |
 
 ⚠ El de fallo se ejerció en **tres tramos separados**, y hacían falta los tres:
 el **canal** (`aviso-fallo.sh --prueba`), el **cableado** (el check 6 del
