@@ -108,6 +108,50 @@ def main():
         rc, out, err = run(r)
         check("5. el resumen dice 2/3", "2/3" in out, f"out={out[:300]!r}")
 
+    # --- Caso 6: medido y NO medido no pueden ser del mismo color ---
+    #
+    # POR QUÉ (sprint 15, S1). 6 de los 29 arneses tienen una salida por
+    # `[SKIP]`, `[EXENTO]` o `Modo: PARCIAL`, y el runner pintaba «29/29 en
+    # verde» igual. `test-claude-md-drift.py` llevaba meses saliendo por `[SKIP]`
+    # antes de su bucle —`projects.json` está gitignorado— y el día que se corrió
+    # de verdad reventó: nunca había medido nada y nadie lo sabía.
+    #
+    # La mutación va en los DOS sentidos. Solo el primero probaría «el resumen
+    # sabe decir la palabra», no «el resumen depende de lo que pasó».
+    with tempfile.TemporaryDirectory(prefix="runtests-") as tmp:
+        raiz = repo(tmp)
+        arnes(raiz, "setup/a/tests/test-mudo.py", 0, "todo comprobado")
+        arnes(raiz, "setup/b/tests/test-salta.py", 0,
+              "  [SKIP] no hay PowerShell: la paridad no se pudo ejercer")
+        rc, out, _ = run(raiz)
+
+        check("6. un arnés que se salta algo NO se cuenta como medido",
+              rc == 0 and "SIN MEDIR" in out.upper(),
+              f"rc={rc} out={out[:400]!r}")
+        check("6b. y el resumen NOMBRA cuál",
+              "test-salta.py" in out and "test-mudo.py" not in out.split("SIN MEDIR")[-1],
+              f"out={out[:400]!r}")
+        check("6c. el skip NO bloquea (sigue siendo exit 0)", rc == 0, f"rc={rc}")
+
+        # El otro sentido: sin marcas, el resumen no puede hablar de skips.
+        os.remove(os.path.join(raiz, "setup/b/tests/test-salta.py"))
+        arnes(raiz, "setup/b/tests/test-salta.py", 0, "todo comprobado tambien")
+        rc2, out2, _ = run(raiz)
+        check("6d. MUTACIÓN INVERSA: sin marcas, el resumen no habla de skips",
+              rc2 == 0 and "SIN MEDIR" not in out2.upper(),
+              f"el resumen dice que hay algo sin medir cuando no lo hay: "
+              f"out={out2[:400]!r}")
+
+        # Y las otras dos marcas de la casa, que se rompen por separado.
+        for marca, etiqueta in (("  [EXENTO] floreano-server, hasta 2026-11-17", "EXENTO"),
+                                ("  Modo: PARCIAL — sin PowerShell", "Modo: PARCIAL"),
+                                ("  [MODO] PARCIAL (sin tokenizador)", "[MODO] PARCIAL")):
+            os.remove(os.path.join(raiz, "setup/b/tests/test-salta.py"))
+            arnes(raiz, "setup/b/tests/test-salta.py", 0, marca)
+            rc3, out3, _ = run(raiz)
+            check(f"6e. la marca «{etiqueta}» también cuenta como no medido",
+                  "SIN MEDIR" in out3.upper(), f"out={out3[:300]!r}")
+
     fallos = [n for n, ok, _ in results if not ok]
     print(f"\n{len(results) - len(fallos)}/{len(results)} casos OK")
     if fallos:

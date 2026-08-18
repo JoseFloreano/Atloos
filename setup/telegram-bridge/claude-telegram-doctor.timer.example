@@ -1,0 +1,55 @@
+# ══════════════════════════════════════════════════════════════════════════
+#  claude-telegram-doctor.{service,timer} — el latido diario del `doctor`.
+#
+#  ⚠ NO PROBADO (2026-08-18). Su hermano, el aviso de fallo, SI se ejercio en la
+#     SER8; este no se ha instalado. No te fies de el hasta correr
+#     `latido-doctor.sh --siempre` y ver llegar el mensaje.
+#
+#  Cubre lo que el `OnFailure` NO ve, que es casi todo lo que mata despacio a una
+#  maquina headless: el disco llenandose, el journal sin techo, un `CLAUDE.md`
+#  que se quedo atras, y la exencion del suelo que caduca sin que nadie mire.
+#
+#  **Calla cuando todo esta bien**, y eso es el diseno: un aviso diario que
+#  siempre dice «todo bien» se deja de leer en una semana. La logica vive en
+#  `latido-doctor.sh`, que cuelga el envio del exit code del doctor.
+#
+#  INSTALACION — copia CADA bloque a su fichero, sustituyendo <REPO>:
+#      ~/.config/systemd/user/claude-telegram-doctor.service
+#      ~/.config/systemd/user/claude-telegram-doctor.timer
+#  y luego:
+#      systemctl --user daemon-reload
+#      systemctl --user enable --now claude-telegram-doctor.timer
+#      systemctl --user list-timers claude-telegram-doctor
+#
+#  Para verlo YA, sin esperar al dia siguiente:
+#      setup/telegram-bridge/latido-doctor.sh --siempre   # fuerza el envio
+#      systemctl --user start claude-telegram-doctor.service
+#      journalctl --user -u claude-telegram-doctor -n 30 --no-pager
+# ══════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────── claude-telegram-doctor.service ───────────────
+[Unit]
+Description=Latido diario del doctor (avisa SOLO si hay divergencia)
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=<REPO>
+ExecStart=<REPO>/setup/telegram-bridge/latido-doctor.sh
+StandardOutput=journal
+StandardError=journal
+
+# ─────────────────────────── claude-telegram-doctor.timer ─────────────────
+# [Unit]
+# Description=Corre el doctor una vez al dia
+#
+# [Timer]
+# OnCalendar=daily
+# # Sin esto, una maquina apagada a la hora del timer se salta el dia entero, y
+# # el latido se pierde justo cuando mas informacion daria.
+# Persistent=true
+# # Diez minutos de dispersion: no hace falta la hora en punto.
+# RandomizedDelaySec=600
+#
+# [Install]
+# WantedBy=timers.target

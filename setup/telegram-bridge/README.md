@@ -265,6 +265,101 @@ journalctl --user -u claude-telegram --since "-10 min" | head
 Y la prueba que de verdad importa: **manda un mensaje al bot desde el móvil**.
 `is-active` dice que el proceso vive, no que el puente responda.
 
+### Quién avisa cuando la máquina que nadie mira se rompe
+
+**Estado de las dos piezas, y no son iguales** — «probado» aquí significa
+*ejercido en la máquina*, no *escrito con cuidado*:
+
+| Pieza | Estado |
+|---|---|
+| Aviso de fallo (`OnFailure`) | ✅ **PROBADO** en `floreano-server` el 2026-08-18: `SIGKILL` al daemon → `Result=signal` → la unit de aviso arrancó → **el 🔴 llegó al móvil** |
+| Latido diario (`.timer`) | ⚠ **NO probado**: escrito y sin instalar. No te fíes hasta ejercerlo |
+
+⚠ El de fallo se ejerció en **tres tramos separados**, y hacían falta los tres:
+el **canal** (`aviso-fallo.sh --prueba`), el **cableado** (el check 6 del
+`doctor`) y la **entrega** (el mensaje en el móvil). Los dos primeros pueden
+salir bien con el tercero roto — el journal dice que el proceso corrió, no que
+Telegram lo entregara.
+
+`Restart=on-failure` mantiene el servicio arriba **y por eso esconde el fallo**:
+desde fuera, un daemon que muere y renace cada 30 s es indistinguible de uno
+sano. Dos redes, y cubren cosas distintas:
+
+| Pieza | Cubre | Cuándo habla |
+|---|---|---|
+| `claude-telegram-aviso@.service.example` | el servicio entra en `failed` | al instante, vía `OnFailure=` nativo |
+| `claude-telegram-doctor.timer.example` | disco lleno, journal sin techo, `CLAUDE.md` atrasado, exención por caducar | una vez al día, **y solo si hay algo que decir** |
+
+**El latido calla cuando todo está bien, a propósito.** Un aviso diario que
+siempre dice «todo bien» se deja de leer en una semana — la misma enfermedad que
+la suite que nunca está verde.
+
+**Sin secretos en el mensaje**: el aviso manda el nombre de la unidad y las
+últimas líneas del *journal* (que el daemon ya escribe sin tokens). No manda
+`systemctl show`, que imprimiría `Environment=`.
+
+#### Instalar
+
+La lógica vive en **`aviso-fallo.sh`** y **`latido-doctor.sh`**, no dentro de las
+units: un `ExecStart` con el mensaje incrustado mezcla tres formas de escapar
+(`%%` de systemd, `$$` del shell, la continuación `\`) y no se puede probar
+hasta que falla — justo cuando el aviso hace falta. Los scripts se comprueban
+con `bash -n` y se corren a mano.
+
+```bash
+cd <tu-clon-del-repo>
+mkdir -p ~/.config/systemd/user ~/.config/systemd/user/claude-telegram.service.d
+
+sed "s|<REPO>|$(git rev-parse --show-toplevel)|" \
+  setup/telegram-bridge/claude-telegram-aviso@.service.example \
+  > ~/.config/systemd/user/claude-telegram-aviso@.service
+
+printf '[Unit]\nOnFailure=claude-telegram-aviso@%%n.service\n' \
+  > ~/.config/systemd/user/claude-telegram.service.d/aviso.conf
+
+systemctl --user daemon-reload
+```
+
+**Antes de provocar nada, prueba el canal solo** — así, si luego no llega el
+aviso, ya sabes que el problema es el disparador y no el envío:
+
+```bash
+setup/telegram-bridge/aviso-fallo.sh --prueba     # debe llegar al móvil
+```
+
+#### Provocar el fallo a propósito — el paso que lo convierte en probado
+
+```bash
+# 1 · comprueba que el disparador está cableado
+setup/scripts/py setup/scripts/doctor.py        # su check 6 debe decir OnFailure=…
+
+# 2 · provoca un fallo REAL (no un `stop`, que es una parada limpia y NO dispara)
+systemctl --user --signal=SIGKILL kill claude-telegram
+# repite hasta agotar StartLimitBurst, o fuerza el estado failed:
+systemctl --user show claude-telegram -p ActiveState -p Result   # Result=exit-code / failed
+
+# 3 · ESPERA a que la unit de aviso TERMINE antes de mirar el journal.
+#     Si lo miras en el mismo bloque solo verás "Starting…", que dice que el
+#     disparador saltó — NO que el mensaje saliera. Medido el 2026-08-18.
+until ! systemctl --user is-active --quiet 'claude-telegram-aviso@*'; do sleep 1; done
+
+# 4 · las DOS evidencias, y hacen falta las dos:
+#     (a) el journal con la terminación
+journalctl --user -u 'claude-telegram-aviso@*' -n 30 --no-pager
+#         esperado: "Finished …" o "Deactivated successfully".
+#         Un "Failed with result 'exit-code'" es el aviso que NO se mandó.
+#     (b) el mensaje 🔴 en el móvil. Sin esto no está probado: el journal dice
+#         que el proceso corrió, no que Telegram lo entregara.
+
+# 4 · déjalo como estaba
+systemctl --user reset-failed claude-telegram
+systemctl --user start claude-telegram
+```
+
+⚠ **`systemctl --user stop` NO sirve como prueba**: una parada limpia no entra
+en `failed` y `OnFailure=` no se dispara. Probarlo con `stop` daría un falso
+«no funciona» — o peor, si algún día se dispara con `stop`, un falso «funciona».
+
 ### Dónde va cada cosa en Linux, y por qué esas rutas
 
 Ninguna es preferencia: **es donde el código ya mira**, así que respetarlas
