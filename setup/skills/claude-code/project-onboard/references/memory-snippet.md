@@ -3,14 +3,20 @@
      COPIA SINCRONIZADA de setup/memory-instructions.md — si editas una,
      actualiza la otra (mismo contenido, dos puntos de consumo).
 
-     PRESUPUESTO: 913 tokens MEDIDOS (tiktoken/o200k, 2026-08-16; 3 314
-     caracteres, 3,63 char/token). Antes decia "~300 tokens (H4)" y era un
+     PRESUPUESTO: 935 tokens MEDIDOS (tiktoken/o200k, 2026-08-17; 3370
+     caracteres, 3.60 char/token). Antes decia "~300 tokens (H4)" y era un
      numero que nadie habia medido: el real es x3,04 mayor. Se sube el numero
      al real en vez de recortar —cada regla de aqui es la defensa contra la
      alucinacion cruzada entre proyectos— y el tope queda en 950 tokens
      MEDIDOS, el mismo margen que la `description` de una skill tiene contra
      su 1024. Lo mide y BLOQUEA `test-claude-md-drift.py`, que ya leia este
      fichero.
+
+     ⚠ ESTOS DOS NUMEROS LOS VERIFICA `test-skill-catalog.py` (check 6) y
+     BLOQUEAN si mienten. Se escribieron a mano una vez y el fichero siguio
+     creciendo: llegaron a estar +30 tokens y +81 caracteres por debajo de lo
+     real. No los ajustes a ojo — corre el arnes y copia la linea que imprime.
+
      El sello de version cuesta 23 tokens; su primera redaccion costaba 51 y
      dejaba 9 de margen, asi que se recorto — el margen es la funcion, no el
      adorno.
@@ -29,10 +35,11 @@
    Other projects' folders are OFF-LIMITS unless the user explicitly asks.
 4. Memory from another project seems relevant → say so and ask; never import silently.
 5. Stored fact contradicts current code/user → trust the present, update the memory.
-6. **Multi-agent** (2+ sesiones en este proyecto a la vez): escribe SOLO en tu
-   nota `10-Projects/<project-name>/sessions/YYYY-MM-DD-<tu-tarea>.md` (avance
-   y pendientes ahí); NO edites `_PROJECT.md` a mitad de trabajo — solo
-   `session-close` lo consolida (un archivo = un escritor).
+6. Tu avance y tus pendientes van SIEMPRE a tu nota
+   `10-Projects/<project-name>/sessions/YYYY-MM-DD-<tu-tarea>.md`. NUNCA edites
+   `_PROJECT.md` a mitad de trabajo: lo consolida `session-close` (un archivo,
+   un escritor). Sin condicion, a proposito: si hay otra sesion viva no lo
+   puedes observar.
 7. Si `Edit` falla con "File has been modified since read": re-lee y reintenta
    UNA vez; si falla de nuevo hay otro escritor activo — PARA y avisa. NUNCA
    crees un archivo copia/variante (`X 2.md`, `-v2`, `(copia)`).
@@ -41,7 +48,7 @@ At session start: `search_facts("recent decisions and known issues", group_ids=[
 
 **Graphify — antes de la PRIMERA búsqueda de la sesión (`Grep`/`Glob`/`grep`/`rg`, por lo que sea) corre `graphify query "<lo que ibas a buscar>"`.** «La primera» es un contador, no una categoría: no clasifiques nada. Si el repo no lo tiene instalado, o sin grafo, el CLI falla — dilo una vez y sigue. Su salida es la LISTA DE CANDIDATOS: confírmala con `Read` y da por hecho que le faltan sitios (5 de 9 en campo, los 2 decisivos fuera). Si `graphify claude install` dejó aquí su línea, bórrala.
 
-After completing each coding task, BEFORE reporting it done: update Pendientes/Estado — en `_PROJECT.md` (2-5 líneas) si trabajas solo, o en TU nota de sesión si hay multi-agente (regla 6). El hook Stop acepta ambas. Cierre completo → "cerramos" (`session-close`).
+After completing each coding task, BEFORE reporting it done: update Pendientes/Estado en TU nota de sesión (regla 6) — el hook Stop la acepta. Cierre completo → "cerramos" (`session-close`), que es quien toca `_PROJECT.md`.
 
 When saving decisions/bugs/conventions → `memory-keeper` skill. Architecture decisions → `adr-writer` skill.
 
@@ -51,4 +58,4 @@ When saving decisions/bugs/conventions → `memory-keeper` skill. Architecture d
 
 If the `graphiti-memory` MCP is unavailable, skip Graphiti silently — the vault is the primary record.
 
-`snippet v5 · 2026-08-17` — si tu copia dice otra, va atrás.
+`snippet v6 · 2026-08-17` — si tu copia dice otra, va atrás.

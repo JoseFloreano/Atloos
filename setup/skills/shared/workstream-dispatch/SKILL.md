@@ -24,8 +24,7 @@ desfase casi nunca vino del modelo, vino del traspaso.**
 
 ## Quién gobierna qué cuando SDD también está cargada
 
-Decir *"capa delgada sobre SDD"* no bastó: el agente mezcló las dos y ninguna
-avisó del conflicto.
+Decir *"capa delgada sobre SDD"* no bastó → `references/gobierno-vs-sdd.md`.
 
 | Materia | Manda |
 |---|---|
@@ -33,8 +32,6 @@ avisó del conflicto.
 | Los 8 bloques, ownership, escalación | esta skill |
 | Los límites numéricos (3 frentes) | esta skill |
 | Un número en el que discrepen | **el más restrictivo** |
-
-`references/gobierno-vs-sdd.md`.
 
 ## Cuándo usar
 
@@ -52,6 +49,8 @@ avisó del conflicto.
 
 ## Pasos
 
+0. **Cruza el plan contra el vault ANTES del primer brief** →
+   `references/cruce-plan-vault.md`. Costó un frente entero.
 1. **Presenta la partición al usuario** antes del primer despacho de 2+ frentes
    y espera su OK: es la decisión de mayor apalancamiento y la única barata.
 2. **Genera el estado del mundo** con comandos (bloque 2): **manifiesto de lo
@@ -59,9 +58,9 @@ avisó del conflicto.
 3. **Arma el despacho con los 8 bloques** → `references/plantilla-despacho.md`,
    con **modelo y núcleos por frente** (bloque 5) e higiene →
    `references/higiene-de-shell.md`, `references/higiene-de-salida.md`. El
-   criterio de salida (bloque 7) **es** la
-   condición de meta si el frente corre desatendido: fórjala con
-   `claude-code:goal-forge`. El destino de la rama (bloque 8) se decide **aquí**.
+   criterio de salida (bloque 7) **es** la condición de meta si el frente corre
+   desatendido: fórjala con `claude-code:goal-forge`. La rama (bloque 8) se
+   decide **aquí**.
 4. **Al recibir `NEEDS_CONTEXT`**, actúa de juez →
    `references/protocolo-escalacion.md`, y registra la resolución **antes** de
    re-despachar.
@@ -79,6 +78,6 @@ avisó del conflicto.
 - **No implementes tú lo que despachaste.** Tu contexto queda limpio para juzgar.
 - **No paralelices implementadores dentro del mismo frente** (lo prohíbe SDD y
   lo confirmó el C compiler de 16 agentes).
-- **3 frentes por defecto — dato con fecha, no dogma**: una medición
-  autorreportada (2026-08-10, ×2,05 con 5) **de la suite de otra máquina**, cuyo
-  tamaño no consta. Se sube **midiendo** → `references/medir-el-techo.md`.
+- **3 frentes por defecto — dato con fecha, no dogma**: medición autorreportada
+  (2026-08-10, ×2,05 con 5) de otra máquina, tamaño desconocido. Se sube
+  **midiendo** → `references/medir-el-techo.md`.

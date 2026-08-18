@@ -637,6 +637,156 @@ def mide_saturacion():
     return sorted(filas, key=lambda f: -f[1])
 
 
+# ── El snippet de memoria, medido contra lo que ÉL declara ────────────────
+#
+# POR QUE (sprint 14, S2b). `memory-snippet.md` lleva en su cabecera su propio
+# tamaño: «PRESUPUESTO: 913 tokens MEDIDOS (…; 3 314 caracteres…)». Ese numero
+# se escribio una vez y el fichero siguio creciendo: al medirlo eran 943 y
+# 3 395 — **+30 tokens y +81 caracteres de mentira**, en el unico fichero que
+# viaja al CLAUDE.md de CADA proyecto. Es la octava vez que un numero escrito a
+# mano se queda atras en este repo.
+#
+# La cura no es corregirlo a mano —eso es la novena—: es que el numero declarado
+# tenga que coincidir con el medido, y que pasarse del techo BLOQUEE. Asi el
+# unico modo de dejarlo mal es poner un numero falso a proposito.
+SNIPPET_MD = (RAIZ / "skills" / "claude-code" / "project-onboard" /
+              "references" / "memory-snippet.md")
+SNIPPET_TECHO = 950     # BLOQUEA. Mismo techo que vigila test-claude-md-drift.py
+DECLARACION = re.compile(
+    r"PRESUPUESTO:\s*([\d\s.,]+?)\s*tokens\s+MEDIDOS.*?;\s*([\d\s.,]+?)\s*caracteres",
+    re.S | re.I)
+
+
+def _num(s):
+    """'3 314' / '3.314' / '3,314' -> 3314. El separador de miles varia."""
+    return int(re.sub(r"[^\d]", "", s))
+
+
+def cuerpo_snippet(texto):
+    """Igual que en test-claude-md-drift.py: sin los comentarios HTML.
+
+    Tiene que ser LA MISMA definicion, o los dos arneses mediran cosas distintas
+    y el que bloquea no sera el que mide.
+    """
+    return re.sub(r"(?s)<!--.*?-->", "", texto).strip()
+
+
+def mide_snippet(texto=None):
+    """(hallazgos, medido, modo) del snippet contra su declaracion y el techo.
+
+    `modo` es COMPLETO o PARCIAL. **Sin tiktoken NO se bloquea la suite**: se
+    comprueban los CARACTERES —que no necesitan tokenizador— y se DICE que la
+    mitad de tokens no se pudo ejercer. Es el patron `Modo: PARCIAL` de
+    `test-sync-hooks-paridad.py`, y aqui era obligatorio por una razon concreta
+    (auditoria del sprint 14, H1): `test-claude-md-drift.py` mide ESTE MISMO
+    numero y ante la falta de tiktoken degrada con `[SKIP]` sin tumbar nada.
+    Dos arneses que miden lo mismo no pueden discrepar en si su ausencia es
+    fatal — eso es «mismo commit, dos veredictos» dentro de la propia suite, y
+    dejaba a la SER8 con un segundo rojo permanente.
+
+    Lo que NO se hace es estimar: sin tokenizador el numero no se inventa a
+    `caracteres/3,5`. Se dice que falta.
+    """
+    hall = []
+    if texto is None:
+        if not SNIPPET_MD.is_file():
+            return [f"no existe {SNIPPET_MD.name}: el snippet es el fichero que "
+                    f"viaja a cada proyecto y no se puede no medir"], None, "PARCIAL"
+        texto = SNIPPET_MD.read_text(encoding="utf-8")
+
+    enc, modo = None, "COMPLETO"
+    try:
+        import tiktoken
+        enc = tiktoken.get_encoding("o200k_base")
+    except Exception as exc:
+        modo = f"PARCIAL (sin tokenizador: {type(exc).__name__})"
+
+    cuerpo_ = cuerpo_snippet(texto)
+    car = len(cuerpo_)
+    tok = len(enc.encode(cuerpo_)) if enc else None
+
+    if tok is not None and tok > SNIPPET_TECHO:
+        hall.append(f"el snippet mide {tok} tokens y el techo es {SNIPPET_TECHO}: "
+                    f"entra en el CLAUDE.md de CADA proyecto, asi que pasarse "
+                    f"aqui se paga en todos")
+
+    m = DECLARACION.search(texto)
+    if not m:
+        hall.append("la cabecera del snippet no declara su PRESUPUESTO en la "
+                    "forma 'N tokens MEDIDOS (...; M caracteres)': sin "
+                    "declaracion no hay nada que contrastar")
+        return hall, (tok, car), modo
+
+    d_tok, d_car = _num(m.group(1)), _num(m.group(2))
+    # Los CARACTERES se comprueban SIEMPRE: no necesitan tokenizador y son la
+    # cobertura que sobrevive en modo PARCIAL.
+    if d_car != car:
+        hall.append(f"la cabecera DECLARA {d_car} caracteres y el cuerpo mide {car}")
+    if tok is not None and d_tok != tok:
+        hall.append(f"la cabecera DECLARA {d_tok} tokens y el cuerpo mide {tok}")
+    if hall and tok is not None:
+        hall.append(f"escribe exactamente -> PRESUPUESTO: {tok} tokens MEDIDOS "
+                    f"(tiktoken/o200k, <fecha>; {car} caracteres, "
+                    f"{car / tok:.2f} char/token)")
+    return hall, (tok, car), modo
+
+
+def autoprueba_snippet():
+    """Mutacion: un snippet cuya cabecera miente TIENE que dar rojo.
+
+    Y el otro lado: uno que dice la verdad tiene que pasar. Sin ese segundo
+    caso, 'siempre rojo' aprobaria la mutacion sin comprobar nada.
+
+    Sin tiktoken NO devuelve FALLIDA: ejerce la mutacion de CARACTERES —que no
+    necesita tokenizador— y DECLARA en el motivo las dos que no pudo ejercer.
+    Un arnes que calla lo que no probo es el defecto que esta casa persigue; uno
+    que se pone rojo por una dependencia ausente es el que nadie vuelve a leer.
+    """
+    enc = None
+    try:
+        import tiktoken
+        enc = tiktoken.get_encoding("o200k_base")
+    except Exception:
+        pass
+
+    texto_util = "Regla de laboratorio: una linea corta y nada mas.\n"
+    car = len(texto_util.strip())
+    tok = len(enc.encode(texto_util.strip())) if enc else 999
+
+    veraz = (f"<!--\n  PRESUPUESTO: {tok} tokens MEDIDOS (tiktoken/o200k, "
+             f"2026-01-01; {car} caracteres, 1.00 char/token)\n-->\n"
+             + texto_util)
+    if enc and mide_snippet(veraz)[0]:
+        return False, ("una cabecera VERAZ da hallazgo: el check no distingue "
+                       "verdad de mentira y su rojo no significaria nada")
+
+    # LA MUTACION QUE SE EJERCE SIEMPRE: +81 caracteres es el desvio real que
+    # tenia la cabecera en campo, y se caza sin tokenizador.
+    miente_car = veraz.replace(f"{car} caracteres", f"{car + 81} caracteres")
+    if not any("caracteres" in h for h in mide_snippet(miente_car)[0]):
+        return False, ("declarar 81 caracteres de mas NO da hallazgo: es el "
+                       "desvio real de campo y pasaria igual")
+
+    if not enc:
+        return True, ("sin tiktoken solo se ejercio la mutacion de CARACTERES; "
+                      "la de tokens (+30) y la del techo NO se pudieron ejercer")
+
+    mentiroso = veraz.replace(f"PRESUPUESTO: {tok} tokens",
+                              f"PRESUPUESTO: {tok + 30} tokens")
+    if not mide_snippet(mentiroso)[0]:
+        return False, ("una cabecera que declara 30 tokens de mas NO da "
+                       "hallazgo: es exactamente el defecto de campo (+30) y "
+                       "pasaria igual")
+
+    # Y el techo, que es el otro motivo de rojo y se rompe distinto.
+    gordo = ("<!--\n  PRESUPUESTO: 1 tokens MEDIDOS (tiktoken/o200k, "
+             "2026-01-01; 1 caracteres, 1.00 char/token)\n-->\n"
+             + "palabra " * 2000)
+    if not any("techo" in h for h in mide_snippet(gordo)[0]):
+        return False, "pasarse del techo de 950 no produce el hallazgo del techo"
+    return True, ""
+
+
 def autoprueba_tope():
     """Mutación: fabrica el defecto y exige que el tope lo cace.
 
@@ -872,6 +1022,31 @@ Tres arreglos legítimos, por orden de preferencia:
     else:
         print("  Ningún frontmatter lleva angulares: las 39 suben sin romper XML.")
 
+    print("\n── Check 6 · el snippet de memoria, medido (BLOQUEA) " + "─" * 22 + "\n")
+    ok_snip, motivo_snip = autoprueba_snippet()
+    print(f"  [AUTOPRUEBA] {'OK' if ok_snip else 'FALLIDA'} — una cabecera que "
+          f"miente da rojo, una veraz pasa,\n               y pasarse del techo "
+          f"da su propio hallazgo"
+          # El motivo se imprime TAMBIÉN en OK: en modo PARCIAL dice cuáles de
+          # las tres mutaciones no se ejercieron. Un [OK] que afirma cobertura
+          # que no se ejerció es el defecto que este arnés persigue en otros.
+          + (f"\n               ⚠ {motivo_snip}" if motivo_snip else ""))
+    snip_hall, medido, modo = mide_snippet()
+    print(f"  [MODO] {modo}")
+    if medido and medido[0] is not None:
+        print(f"  [MEDIDO] snippet: {medido[0]}/{SNIPPET_TECHO} tokens, "
+              f"{medido[1]} caracteres ({SNIPPET_TECHO - medido[0]} de margen)")
+    elif medido:
+        print(f"  [MEDIDO] snippet: {medido[1]} caracteres. **Los tokens no se "
+              f"midieron** y no se estiman:\n           falta `tiktoken`. "
+              f"Instálalo con `pip install tiktoken` para la cobertura entera.")
+    for h in snip_hall:
+        print(f"  [FALLA] {h}")
+    if not snip_hall:
+        print("  La cabecera del snippet dice la verdad" +
+              (" y cabe en su techo." if modo == "COMPLETO"
+               else " en lo que se pudo medir."))
+
     print("\n── Caducidad de las propuestas (AVISO, no bloquea) " + "─" * 23 + "\n")
     dias = (CADUCIDAD - date.today()).days
     if dias > 0:
@@ -892,8 +1067,9 @@ Tres arreglos legítimos, por orden de preferencia:
     # estar respaldado, y un check no verificado en verde es exactamente el
     # agujero de H7.
     return 1 if (hallazgos or excedidas or pasadas or sin_campo or angulares
+                 or snip_hall
                  or not ok_tope or not ok_desc or not ok_ventana
-                 or not ok_ang) else 0
+                 or not ok_ang or not ok_snip) else 0
 
 
 if __name__ == "__main__":

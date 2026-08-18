@@ -62,6 +62,39 @@ Prueba barata al escribir un disparador: **táchale todos los adjetivos.** Si si
 ellos dispara demasiado, el problema no es el disparador, es que la herramienta
 cuesta demasiado para dispararse siempre; arregla el coste, no la frontera.
 
+### La ley del disparador (sprint 14)
+
+> **Un disparador se ancla en un evento del HARNESS —arranque de sesión, uso de
+> una herramienta, aparición de un fichero—, nunca en una autoevaluación del
+> agente y nunca en algo que el agente no puede observar.**
+
+Son **tres** grados, y se arreglan distinto:
+
+| Grado | Ancla | Qué pasa | Cura |
+|---|---|---|---|
+| ✅ Sano | Evento del harness | Dispara siempre | — |
+| ⚠ Autoevaluación | «si es complejo», «de exploración» | Dispara **a veces**, y menos de lo que crees | Quítale el adjetivo hasta que quede un contador |
+| ❌ Inobservable | «si hay 2+ sesiones a la vez» | **No dispara nunca** | Reanclar a algo visible, o **quitar la condición** |
+
+**El inobservable es el peor y no lo parece.** Una autoevaluación falla y deja
+rastro raro; un inobservable **se lee como una regla cubierta** y el contrato
+aparenta protección que nunca existió. El agente no puede ver otras sesiones:
+no es que le cueste juzgarlo, es que ese dato no está en su mundo.
+
+**Y la salida barata, cuando la condición no se puede evaluar: quitar la
+condición.** Si una de las dos ramas es segura en TODOS los casos, esa rama es
+la regla, sin `si`. Es lo que se hizo con la regla 6 del `CLAUDE.md`
+(2026-08-17): decía *«si hay 2+ sesiones, escribe solo en tu nota de sesión»*, y
+ahora dice *«escribe siempre en tu nota de sesión»*. La rama segura no costaba
+nada —el hook `Stop` ya aceptaba las dos vías y `session-close` ya consolidaba—,
+así que la condición solo servía para no cumplirse. De paso el snippet **bajó 8
+tokens**: la regla inerte también se pagaba en cada proyecto.
+
+Lo que **sí** queda observable, como red y no como disparador: `git worktree
+list` enseña árboles que tú no creaste, y `Edit` fallando con *«File has been
+modified since read»* es la colisión de verdad — la regla 7, que es la versión
+comprobable de lo que la 6 intentaba adivinar.
+
 ### Barrido de la clase — dónde más se pide autoclasificarse
 
 Revisadas las 29 `description:` de `setup/skills/` más las órdenes del
@@ -71,14 +104,43 @@ Revisadas las 29 `description:` de `setup/skills/` más las órdenes del
 |---|---|---|
 | `CLAUDE.md` · graphify | «tu primer `grep` **de exploración**» | **En clase — corregido** a «la primera búsqueda» |
 | `skill-forge` · description | «or **al detectar un gap que merece** skill propia» | **En clase.** Exige juzgar que hay hueco *y* que merece skill. Nada lo cuenta |
-| `CLAUDE.md` · regla 6 | «**Multi-agent** (2+ sesiones a la vez)» | **Peor que un juicio: un INOBSERVABLE.** El agente no puede ver otras sesiones. Anclarlo a algo contable (notas de hoy en `sessions/`, `git worktree list`) |
+| `CLAUDE.md` · regla 6 | «**Multi-agent** (2+ sesiones a la vez)» | **Era un INOBSERVABLE — CERRADO (2026-08-17)** quitando la condición: la rama segura pasa a ser la regla. Ver «La ley del disparador» |
 | `adr-writer` · description | «(y en Graphiti **si está disponible**)» | Falso positivo: disponibilidad se comprueba, no se juzga |
 | `requirements-designer` · description | «**Si aplican las dos**, brainstorming primero» | Falso positivo: regla de precedencia entre skills, no disparador |
 | `session-close` · description | «el hook … **al detectar** código sin registrar» | Falso positivo, y es el buen ejemplo: quien detecta es `mark-code-dirty`, que **cuenta ediciones** |
 
-Los dos «en clase» que quedan abiertos —`skill-forge` y la regla 6— no se
-tocaron aquí: cambiar una `description:` mueve cuándo carga una skill, y eso se
-mide, no se improvisa (§ «La prueba, que es barata», más abajo).
+De los dos «en clase», la **regla 6 quedó cerrada** (2026-08-17). Sigue abierto
+`skill-forge`: cambiar una `description:` mueve cuándo carga la skill, y eso se
+**mide** —§ «La prueba, que es barata»—, no se improvisa.
+
+#### Pendiente medido · el recambio de `skill-forge`, listo para ejecutar
+
+**Cambio propuesto**, en su `description:`:
+
+```
+-  ..., or al detectar un gap que merece skill propia.
++  ..., or cuando una instrucción se repite a mano por TERCERA vez en el repo.
+```
+
+«Al detectar un gap que **merece**» pide dos juicios encadenados (hay hueco · y
+vale una skill). «La tercera vez» es un **contador**, y además nombra la
+evidencia: si no puedes señalar las tres, no hay skill que crear.
+
+**Las 5 frases, en sesión NUEVA y desde fuera del repo.** Las 3 primeras deben
+cargar `skill-forge`; las 2 últimas **no** (son las vecinas más cercanas):
+
+| # | Frase | Esperado |
+|---|---|---|
+| 1 | «la skill no dispara, arréglala» *(la petición real que falló, literal)* | **carga** |
+| 2 | «llevo tres sprints copiando esta misma instrucción a mano» | **carga** |
+| 3 | «crea una skill para esto» | **carga** |
+| 4 | «documenta esta decisión de arquitectura» | NO (es `adr-writer`) |
+| 5 | «guarda esto para que no se olvide» | NO (es `memory-keeper`) |
+
+Se corre **antes y después** del cambio y se anotan las dos tablas. Si la 1 no
+carga después, el cambio no sirve por bien escrito que esté. **Hasta que exista
+esa medición, la `description` no se toca** — cambiarla a ciegas es apostar
+cuándo carga una de las 39.
 
 ## Caso 2 · `requirements-designer` — la descripción que no cubría la petición real
 

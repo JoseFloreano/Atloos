@@ -32,7 +32,15 @@ _archive/   derivados de mantenimiento (ver _archive/README.md)
 | **Python ≥ 3.10** | Windows: launcher `py`. Linux/macOS: `python3` | Hooks, arneses y puente Telegram |
 | **Obsidian** | [obsidian.md](https://obsidian.md) | Vault de memoria |
 | **uv** *(opcional)* | `curl -LsSf https://astral.sh/uv/install.sh \| sh` | Instalar Graphify |
+| **tiktoken** *(opcional)* | `pip install tiktoken` | Mide el presupuesto del snippet de memoria. **Sin él la suite NO se pone roja**: los dos arneses que lo usan degradan a `PARCIAL`/`[SKIP]` y dicen qué no midieron |
 | **Docker** *(opcional)* | [docker.com](https://www.docker.com/products/docker-desktop) | Solo para Graphiti — **pospuesto**, ver abajo |
+
+> **Por qué `tiktoken` es opcional y no un requisito.** Es el tokenizador de
+> **OpenAI** usado como proxy del de Claude: buena aproximación, pero convertir
+> el proxy de otro proveedor en requisito duro de todas las máquinas es mucho
+> peso para una cifra aproximada — y dejaría a la SER8 con un rojo permanente
+> por una dependencia que no necesita para funcionar. Quien lo tenga instalado
+> obtiene la comprobación entera; quien no, la mitad de caracteres, declarada.
 
 ### El intérprete de Python: una regla, no dos verdades
 

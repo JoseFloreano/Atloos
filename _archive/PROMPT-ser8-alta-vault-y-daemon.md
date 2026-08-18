@@ -107,29 +107,70 @@ PASO 5 · El daemon a mano, ANTES de systemd
   no responde, no pases al paso 6: una unit que arranca algo roto solo esconde
   el fallo.
 
-PASO 6 · systemd, unit de USUARIO
-  ~/.config/systemd/user/claude-tg.service + `loginctl enable-linger <usuario>`
-  para que sobreviva sin sesión abierta. Usuario normal, NUNCA root: todo lo que
-  necesita vive en $HOME y el bot ejecuta Claude Code con escritura en T2.
-  La unit tiene que cumplir:
+PASO 6 · systemd, unit de USUARIO — la plantilla YA ESTÁ VERSIONADA
+  NO la escribas a mano. Desde el sprint 13 existe:
+      setup/telegram-bridge/claude-telegram.service.example
+  Cópiala y ajusta las tres rutas marcadas con <>:
+      mkdir -p ~/.config/systemd/user
+      cp setup/telegram-bridge/claude-telegram.service.example \
+         ~/.config/systemd/user/claude-telegram.service
+  El nombre del servicio es `claude-telegram`, no `claude-tg`: es el que usa el
+  README y el que vas a teclear en cada `journalctl`.
+
+  Usuario normal, NUNCA root: todo lo que necesita vive en $HOME y el bot
+  ejecuta Claude Code con escritura en T2. Y `loginctl enable-linger <usuario>`
+  o el servicio muere al cerrar la sesión SSH.
+
+  Comprueba que la copia cumple (la plantilla ya lo trae, verifícalo igual):
     - ExecStart con la ruta ABSOLUTA del python del venv (no `python3`)
     - WorkingDirectory = setup/telegram-bridge (el daemon escribe logs/ ahí)
-    - EnvironmentFile = ~/.config/claude-telegram/.env
     - Restart=on-failure con RestartSec (no Restart=always ciego)
     - NADA de CLAUDE_CONFIG_DIR: apuntar a un perfil propio deja al bot SIN los
       6 hooks (auditoría 31, H4). El ahorro de tokens no paga la capa 3.
+
+PASO 6b · Ajusta la memoria de la unit ANTES de habilitarla
+  La plantilla trae MemoryHigh=3G / MemoryMax=4G. Ese es el valor conservador
+  para una máquina de 24 GB y ESTA TIENE 56. Compruébalo tú:
+
+      free -g            # total visible, no el de la caja
+
+  El cgroup NO es solo el daemon: cada invocación lanza un `claude` hijo que
+  vive dentro, así que el techo cubre daemon + agentes concurrentes.
+
+  Fila que aplica (tabla de docs/telegram/23-MANUAL-INSTALACION-SER8.md:847-858):
+      56 GB  ->  MemoryMax=16G   MemoryHigh=12G
+
+  ⚠ Si lo dejas en 4G el fallo NO se ve como error: el agente muere por OOM,
+    systemd lo reinicia a los 30 s (Restart=on-failure) y desde Telegram parece
+    que "el bot se olvidó de lo que estaba haciendo". Diagnosticar eso después
+    cuesta una tarde.
+
+  Ahora sí, habilita y comprueba:
+      systemctl --user daemon-reload
+      systemctl --user enable --now claude-telegram
+      systemctl --user show claude-telegram -p MemoryMax -p MemoryHigh -p MemorySwapMax
+      # MemoryMax=17179869184  MemoryHigh=12884901888  MemorySwapMax=0
+
   Verifica de verdad: `systemd-analyze --user verify`, `systemctl --user status`,
-  `journalctl --user -u claude-tg -n 50`, y si puedes reinicia la máquina y
-  vuelve a probar el bot. Escribe un arnés para lo que sea comprobable en
-  estático (que el ExecStart apunte al venv y no al python del sistema, que no
-  aparezca CLAUDE_CONFIG_DIR) y déjalo en setup/scripts/tests/.
+  `journalctl --user -u claude-telegram -n 50`, y **reinicia la máquina** y
+  vuelve a probar el bot desde el móvil — `is-active` dice que el proceso vive,
+  no que el puente responda. Escribe un arnés para lo comprobable en estático
+  (ExecStart al venv y no al python del sistema, ausencia de CLAUDE_CONFIG_DIR,
+  MemoryMax coherente con la RAM) y déjalo en setup/scripts/tests/.
 
 PASO 7 · Suite y registro
   setup/scripts/py setup/scripts/run-tests.py
-  Esperado: 25 arneses. El único rojo aceptable hoy es test-suelo-python.py, que
-  exige un 3.10 REAL y aquí hay 3.12. NO lo silencies ni le pongas un skip: hay
-  una decisión abierta del humano con tres salidas (instalar 3.10, exención
-  declarada con fecha, o subir el suelo a 3.12). Anota el número exacto.
+  Esperado: **28 arneses, TODOS en verde**. Aquí no hay rojo aceptable — si algo
+  sale rojo, es un hallazgo, no folclore de la máquina. Anota el número exacto.
+
+  Dos cosas que verás y NO son fallos, para que no las persigas:
+    - test-suelo-python.py dirá `[EXENTO]`: `floreano-server` tiene exención
+      DECLARADA con fecha hasta el 2026-11-17 en suelo-exenciones.json
+      (ADR-20260817). Sale verde diciendo qué no comprueba. Ojo el 11-17: ese
+      día caduca y se pone ROJO a propósito.
+    - test-skill-catalog.py dirá `[MODO] PARCIAL` si no está `tiktoken`, medirá
+      solo los caracteres del snippet y NO tumbará la suite. Si lo quieres
+      entero: `pip install tiktoken` dentro del venv.
   Cierra con tu nota de sesión en el vault: qué quedó operativo, qué NO, el
   número de la suite y las rutas reales que usaste. Si tocas código del repo va
   en rama —main es protegida y su merge lo gobierna workstream-merge-gate—.

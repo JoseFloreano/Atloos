@@ -9,7 +9,8 @@ fallo de la regla W2 (dos piezas que se solapan sin árbitro declarado):
 > Las dos definen el ciclo de despacho **con vocabularios distintos**, y el
 > agente usó **una mezcla sin que ninguna gobernara**: **no despachó revisores
 > por tarea** —lo pide SDD— y **usó 5 frentes** contra el máximo de 3 —lo pide
-> esta—. **Ninguna de las dos advirtió del conflicto.**
+> esta—. **Ninguna de las dos advirtió del conflicto**: el agente mezcló las dos y
+> ninguna avisó.
 
 Lo caro no fue elegir mal: fue que nadie supiera que había una elección. Una
 skill que dice ser "delgada" sobre otra está describiendo su *intención de

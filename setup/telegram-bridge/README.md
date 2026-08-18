@@ -208,9 +208,9 @@ Los de **escritura** (`/write`, `/diff`, `/commit`, `/test`, `/push`, `/merge`,
 
 ## Dejarlo corriendo en Windows
 
-Por ahora, **una ventana de terminal** abierta con `py tg_daemon.py` es
-suficiente y lo más fácil de depurar (el polling muere al cerrarla o apagar el
-equipo — asumido para v1).
+Por ahora, **una ventana de terminal** abierta con `py tg_daemon.py` (Windows;
+en Linux es la unit de systemd de más abajo) es suficiente y lo más fácil de
+depurar — el polling muere al cerrarla o apagar el equipo, asumido para v1.
 
 Si prefieres que arranque solo al iniciar sesión, Task Scheduler básico:
 
