@@ -56,6 +56,21 @@ if [ -z "$PY" ]; then
 fi
 echo "  [INFO] interprete base: $("$PY" -c 'import sys; print(sys.executable, sys.version.split()[0])')"
 
+# La guarda mira que el venv SIRVA, no que exista. Medido en la SER8 el
+# 2026-08-17: cuando falta `python3-venv`, `python3 -m venv` deja el directorio
+# a medias —los symlinks de bin/python puestos, ensurepip caido, sin pip ni
+# pyvenv.cfg util— y sale != 0. Con `[ -x bin/python ]` a secas eso pasa por
+# "venv ya existe", y TODA corrida posterior muere abajo en `-m pip` con
+# `No module named pip`, que no nombra la causa ni la cura. El script dejaba de
+# ser idempotente justo despues del fallo que el propio script diagnostica.
+if [ -x "${VENV}/bin/python" ] && ! "${VENV}/bin/python" -m pip --version >/dev/null 2>&1; then
+  # Se borra solo si de verdad parece un venv, no lo que apunte $CLAUDE_TG_VENV.
+  if [ -f "${VENV}/pyvenv.cfg" ] || [ -x "${VENV}/bin/python" ]; then
+    echo "  [INFO] el venv de ${VENV} existe pero no tiene pip (creacion a medias): lo rehago"
+    rm -rf "${VENV}"
+  fi
+fi
+
 if [ ! -x "${VENV}/bin/python" ]; then
   echo "  [INFO] creando venv en ${VENV}"
   # `python3 -m venv` puede faltar en Debian/Ubuntu: viene en python3-venv.

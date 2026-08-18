@@ -66,6 +66,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 for _s in (sys.stdout, sys.stderr):
@@ -264,7 +265,17 @@ def objetivos_declarados(registro=None):
         return [], []
     rutas, ausentes = [], []
     for nombre, cfg in sorted(datos.items()):
-        base = (cfg or {}).get("path")
+        # Las dos formas las dicta el CONSUMIDOR, no este arnés: `tg_daemon.py`
+        # (277-281) salta las claves `_*` y acepta un string suelto como ruta
+        # (el "formato viejo" que documenta `projects.example.json`). Este bucle
+        # asumía dict siempre, así que reventaba con un AttributeError sobre
+        # cualquier `projects.json` copiado del ejemplo —que ya trae cuatro
+        # claves `_*`—. Medido en la SER8 el 2026-08-17 dando de alta la máquina:
+        # el arnés jamás se había corrido en un árbol con registro real, porque
+        # `projects.json` está gitignorado y arriba se sale por [SKIP].
+        if nombre.startswith("_"):
+            continue
+        base = cfg if isinstance(cfg, str) else (cfg or {}).get("path")
         if not base:
             hallazgos.append(f"{registro.name}: el proyecto `{nombre}` no "
                              f"declara `path`")
@@ -291,6 +302,49 @@ def autoprueba():
         hallazgos.append(
             "AUTOPRUEBA FALLIDA: un CLAUDE.md con la línea vieja de Graphify no "
             "produjo hallazgo. El check no está verificando lo que dice.")
+        return False
+    return True
+
+
+def autoprueba_formatos():
+    """Las dos formas de `projects.json` se leen sin reventar.
+
+    El caso que motiva esto (SER8, 2026-08-17): `objetivos_declarados()` hacía
+    `cfg.get("path")` sobre TODO valor, así que un `projects.json` copiado del
+    ejemplo —cuatro claves `_*` de comentario, todas strings— tumbaba el arnés
+    con un `AttributeError`, no con un hallazgo. Un arnés que se cae no dice
+    «hay deriva», dice «no se sabe», y eso lo cuenta el gate como rojo.
+
+    Se ejerce escribiendo un registro de verdad en un temporal, porque el
+    defecto vivía justo en el camino que el [SKIP] de arriba no recorre.
+    """
+    antes = len(hallazgos)
+    registro = {
+        "_comentario": "una clave de metadatos, como las del example",
+        "nuevo": {"path": str(REPO / "__no-existe-nuevo__")},
+        "viejo": str(REPO / "__no-existe-viejo__"),      # formato viejo: string
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        ruta = Path(tmp) / "projects.json"
+        ruta.write_text(json.dumps(registro), encoding="utf-8")
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                vivos, ausentes = objetivos_declarados(ruta)
+        except Exception as e:
+            hallazgos.append(
+                f"AUTOPRUEBA FALLIDA: `projects.json` con una clave `_*` y una "
+                f"entrada en formato viejo hace estallar el arnés "
+                f"({type(e).__name__}: {e}). Las dos formas las acepta "
+                f"`tg_daemon.py`, así que el registro es válido y el roto es "
+                f"este check.")
+            return False
+    nombres = sorted(n for n, _ in vivos + ausentes)
+    if nombres != ["nuevo", "viejo"] or len(hallazgos) != antes:
+        del hallazgos[antes:]
+        hallazgos.append(
+            f"AUTOPRUEBA FALLIDA: se esperaban los proyectos ['nuevo', 'viejo'] "
+            f"y ningún hallazgo; salieron {nombres}. O se cuela una clave `_*` "
+            f"como proyecto, o se pierde el formato viejo.")
         return False
     return True
 
@@ -325,6 +379,8 @@ def main():
           f"vieja de Graphify produce hallazgo")
     print(f"  [AUTOPRUEBA] {'OK' if autoprueba_entorno() else 'FALLIDA'} — un "
           f"worktree sin los ficheros gitignorados NO produce hallazgos")
+    print(f"  [AUTOPRUEBA] {'OK' if autoprueba_formatos() else 'FALLIDA'} — las "
+          f"dos formas de projects.json (clave `_*` y formato viejo) se leen")
     check_gemelos()
 
     # El sello y el presupuesto de la FUENTE. Van antes que los destinos porque

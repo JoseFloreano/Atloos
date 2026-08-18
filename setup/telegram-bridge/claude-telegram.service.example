@@ -24,6 +24,21 @@ Description=Puente Telegram - Claude Code (daemon)
 After=network-online.target
 Wants=network-online.target
 
+# ── El limitador de arranques va AQUI, en [Unit], no en [Service] ─────────
+# Generoso a proposito: con el defecto (5 en 10 s) systemd se rinde tras tres
+# reinicios rapidos y deja el servicio MUERTO, que en una maquina 24/7 sin
+# nadie delante es indistinguible de "va bien".
+#
+# ⚠ Y VAN AQUI POR UNA CICATRIZ, no por estetica. Estas dos claves vivieron en
+#   [Service] desde el sprint 13. Medido en la SER8 el 2026-08-17 con systemd
+#   255: `StartLimitIntervalSec` ahi se IGNORA —systemd lo dice en
+#   `systemd-analyze verify`, que nadie corria— y `StartLimitBurst` cuela por
+#   compatibilidad heredada y NO avisa. O sea que la mitad silenciosa se
+#   aplicaba y la ruidosa no: `systemctl show` devolvia Burst=10 con la ventana
+#   por defecto de 10 s. La unit declaraba una politica y obedecia otra.
+StartLimitBurst=10
+StartLimitIntervalSec=600
+
 [Service]
 Type=simple
 
@@ -37,11 +52,8 @@ WorkingDirectory=<RUTA_AL_REPO>/setup/telegram-bridge
 
 Restart=on-failure
 RestartSec=30
-# Generoso a proposito: con el defecto (5 en 10 s) systemd se rinde tras tres
-# reinicios rapidos y deja el servicio MUERTO, que en una maquina 24/7 sin
-# nadie delante es indistinguible de "va bien".
-StartLimitBurst=10
-StartLimitIntervalSec=600
+# El limitador de arranques (StartLimitBurst / StartLimitIntervalSec) que
+# acompana a este Restart esta arriba, en [Unit]: ahi es donde systemd lo lee.
 
 # ── El cinturon de memoria ────────────────────────────────────────────────
 # ⚠ ESTOS NUMEROS NO SON UNIVERSALES: salen de la RAM de la maquina donde
