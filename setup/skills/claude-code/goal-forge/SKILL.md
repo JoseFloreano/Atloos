@@ -61,5 +61,8 @@ cierra la meta. Una condición mal forjada no es un detalle de estilo: es la ley
 
 - **Una meta activa por sesión**; una nueva reemplaza a la anterior.
 - **4.000 caracteres** de condición.
-- **`--resume` reinicia el contador de turnos**: tras un kill, la cláusula de
-  corte deja de acotar. Detalle y ejemplos en `references/mecanica-goal.md`.
+- **`--resume` reinicia el contador de turnos** de `/goal`: tras un kill, la
+  cláusula de corte deja de acotar. **Por eso `turnos` va en el JSON**: el guard
+  lleva su propia cuenta en disco (`turnos_vistos`), que sobrevive al reinicio, y
+  avisa al alcanzar el tope. Sin ese campo no cuenta nada — es opt-in. Detalle y
+  ejemplos en `references/mecanica-goal.md`.

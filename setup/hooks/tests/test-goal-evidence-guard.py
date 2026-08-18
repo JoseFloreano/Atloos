@@ -67,16 +67,21 @@ def head(d):
 
 
 def forja(d, condicion, artefacto, cmd="py -m pytest -q", bloqueos=0, ts=None,
-          session_id=None):
+          session_id=None, turnos=20):
     """Escribe .claude/goal.json — lo que produce la skill `goal-forge`.
 
     `session_id` va aparte porque lo normal es que NO esté: `goal-forge` no
     conoce el id de la sesión, así que la meta nace huérfana y la sella el
     guard en el primer turno que la ve (§G).
+
+    `turnos=None` omite el campo: el contador es OPT-IN y una meta sin tope no
+    puede inventarse uno (§B3).
     """
     meta = {"condicion": condicion, "artefacto": artefacto, "cmd": cmd,
-            "turnos": 20, "bloqueos": bloqueos,
+            "bloqueos": bloqueos,
             "forjada_ts": ts if ts is not None else time.time()}
+    if turnos is not None:
+        meta["turnos"] = turnos
     if session_id is not None:
         meta["session_id"] = session_id
     with open(os.path.join(d, ".claude", "goal.json"), "w", encoding="utf-8") as f:
@@ -260,6 +265,66 @@ def main():
     evidencia(d, "salida.txt")                      # producido durante la meta
     rc, err = corre(d)
     caso("artefacto sin sha POSTERIOR a la meta: pasa", rc, 0, err)
+    shutil.rmtree(d, ignore_errors=True)
+
+    # ── B2 · El fail-open que NO se puede ejercer (H6) ────────────────────
+    # Distinto de los dos fail-open de §A. Allí no había nada que comprobar;
+    # aquí SÍ lo había —el artefacto trae `sha`, o sea prometió el chequeo
+    # fuerte— y no se pudo ejercer porque `git rev-parse HEAD` no responde. El
+    # guard sigue saliendo abierto (regla de la casa) pero tiene que DECIRLO:
+    # un fail-open mudo es indistinguible de un bug, y este degrada justo el
+    # chequeo que da valor al hook.
+    #
+    # Se ejerce en un directorio SIN `git init`, que es lo que de verdad tiene
+    # un repo recién descomprimido o una máquina sin git. Fabricar el timeout
+    # de 10 s costaría diez segundos de suite por un camino idéntico.
+    sin_git = tempfile.mkdtemp(prefix="goal-guard-nogit-")
+    os.makedirs(os.path.join(sin_git, ".claude"), exist_ok=True)
+    forja(sin_git, "el gate deja `.claude/verde.json` con el sha del HEAD",
+          ".claude/verde.json")
+    evidencia(sin_git, ".claude/verde.json", sha="0" * 40)
+    rc, err = corre(sin_git)
+    caso("sha sin git utilizable: sale ABIERTO (no bloquea)", rc, 0, err)
+    afirma("...y lo DICE: el stderr nombra la degradación del chequeo fuerte",
+           "degrad" in err.lower() and "sha" in err.lower())
+    afirma("...y no finge haber comprobado: no dice que la meta esté cerrada",
+           "META NO CERRADA" not in err)
+    shutil.rmtree(sin_git, ignore_errors=True)
+
+    # ── B3 · El contador de turnos, que ya tiene lector (H4) ──────────────
+    # `turnos` se escribía y nadie lo leía. Lo que lo hace útil no es la
+    # simetría: es que `/goal` reinicia SU contador con la sesión, así que tras
+    # un kill + `--resume` la cláusula "o para a los 20 turnos" vuelve a cero
+    # (C3 de la auditoría 19). Este vive en disco y no se entera del reinicio —
+    # y por eso los casos de abajo corren el hook VARIAS veces sobre el mismo
+    # goal.json: cada corrida es un turno, y la acumulación es todo el punto.
+    d = repo_lab()
+    forja(d, "verde con sha del HEAD", ".claude/verde.json", turnos=3)
+    evidencia(d, ".claude/verde.json", sha=head(d))
+    rc, err = corre(d)
+    caso("con tope declarado, el primer turno cuenta y no estorba", rc, 0, err)
+    afirma("...y queda CONTADO EN DISCO (turnos_vistos == 1)",
+           (meta_en_disco(d) or {}).get("turnos_vistos") == 1)
+
+    rc, err = corre(d)
+    afirma("...y el segundo turno ACUMULA sobre el anterior (== 2)",
+           (meta_en_disco(d) or {}).get("turnos_vistos") == 2)
+
+    rc, err = corre(d)                          # 3.º: alcanza el tope
+    caso("al alcanzar el tope sigue saliendo ABIERTO (cortar es de /goal)",
+         rc, 0, err)
+    afirma("...pero lo DICE, y dice que su cuenta sobrevive al reinicio",
+           "tope de 3" in err and "CONTADOS EN DISCO" in err)
+
+    # El reverso, que es lo que impide que esto se vuelva otro campo decorativo
+    # en la otra dirección: sin tope declarado no se inventa un contador.
+    shutil.rmtree(d, ignore_errors=True)
+    d = repo_lab()
+    forja(d, "verde con sha del HEAD", ".claude/verde.json", turnos=None)
+    evidencia(d, ".claude/verde.json", sha=head(d))
+    rc, err = corre(d)
+    afirma("sin `turnos` declarado NO aparece `turnos_vistos` (es opt-in)",
+           "turnos_vistos" not in (meta_en_disco(d) or {}))
     shutil.rmtree(d, ignore_errors=True)
 
     # ── F · El VEREDICTO, no solo la existencia (H1) ──────────────────────

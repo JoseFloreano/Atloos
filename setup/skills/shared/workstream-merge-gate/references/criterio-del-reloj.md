@@ -26,9 +26,25 @@ intentaron.
 
 ## Cómo se usa
 
-1. **Ten el suelo escrito.** Es el mínimo histórico de una corrida completa y
-   sana en esa máquina, no un promedio. Si no lo tienes, la primera corrida
-   verificada lo establece — y se anota.
+1. **Ten el suelo escrito, y con fecha.** Es el mínimo histórico de una corrida
+   completa y sana **en esa máquina y con esa suite**, no un promedio. Si no lo
+   tienes, la primera corrida verificada lo establece — y se anota.
+
+   > ⚠ **Un suelo caduca cuando la suite crece, y el viejo desafina en la
+   > dirección peligrosa.** El ⅔ de un suelo obsoleto es un umbral *más bajo*
+   > que el correcto, así que acepta como buenas corridas que hoy son verdes
+   > falsos. **Reanota el suelo cada vez que el conteo de tests cambie de forma
+   > apreciable**, junto al número de tests que lo produjo — sin el conteo, el
+   > segundo no dice nada.
+   >
+   > | Repo | Suelo | Tests | Fecha |
+   > |---|---:|---:|---|
+   > | recomendador-cobranza | **551 s** | 4 985 | 2026-08-17 · **vigente** |
+   > | recomendador-cobranza | ~330 s | — | 2026-08-10 · **jubilado** |
+   >
+   > El ~330 s que aparece más abajo es el de la jornada del 08-10 y **se queda
+   > ahí**: es la evidencia de aquel día, no el umbral de hoy. Aplicar el ⅔ con
+   > él daría ~220 s donde el vigente da ~367 s.
 2. **Compara cada verde contra él.** Regla práctica: por debajo de **~⅔ del
    suelo**, el verde no se acepta sin mirar.
 3. **Mirar significa contar.** El número que resuelve la duda no es el tiempo:

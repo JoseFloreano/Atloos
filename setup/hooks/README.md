@@ -236,9 +236,18 @@ encendida, mínimo 1 hora, no ve ficheros locales) o **tareas de escritorio**
 - **Máximo 50 tareas por sesión.** `Esc` lo para.
   **`CLAUDE_CODE_DISABLE_CRON=1` lo apaga todo.**
 
-**Dependencias de versión**, que conviene comprobar en `setup-new-machine`:
-`/goal` pide **v2.1.139+**; el `stop: true` de `ScheduleWakeup`, **v2.1.202+**;
-el filtro de skills auto-invocables en disparos programados, **v2.1.196+**.
+**Dependencias de versión**: `/goal` pide **v2.1.139+**; el `stop: true` de
+`ScheduleWakeup`, **v2.1.202+**; el filtro de skills auto-invocables en disparos
+programados, **v2.1.196+**.
+
+**Y desde el 2026-08-18 las comprueban los dos bootstrap** (sección 1 de
+`setup-new-machine.sh` y `.ps1`), contra la mayor de las tres. Antes esto decía
+*"conviene comprobar en `setup-new-machine`"* y ninguno de los dos las
+mencionaba — H7 de la auditoría 21. Importa porque el fallo era **silencioso**:
+en una laptop con Claude Code viejo `/goal` sencillamente no existe, y nada lo
+decía. El chequeo **avisa y nunca aborta**: una máquina puede querer el resto
+del setup sin el bucle, y un bootstrap que muere comparando versiones sería peor
+que el hueco que cierra.
 
 ## Graphify: cuatro cosas que conviene saber antes (RFD 10 C8)
 

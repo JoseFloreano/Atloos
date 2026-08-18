@@ -57,6 +57,32 @@ de código (~72%) [R].
 
 ---
 
+## 1b · La enfermedad CONTRARIA: el test que no puede pasar
+
+§1 caza el test que **no puede fallar**. Pide también el simétrico, porque el
+mismo instrumento apunta en las dos direcciones y **solo se usaba en una**:
+
+> **"Revierte al comportamiento CORRECTO y enséñame que el test sale VERDE.
+> Si sigue rojo sobre código bueno, el test es el defecto."**
+
+El 2026-08-14, pedirlo explícitamente destapó **dos tests que salían rojos en
+falso**. No los habría encontrado nadie: un rojo no despierta sospecha, se
+atribuye al código y se "arregla" tocando lo que estaba bien.
+
+**Por qué cuesta lo mismo que un verde falso, y no menos.** Un verde falso deja
+pasar un defecto una vez. Un rojo falso enseña a desconfiar de la compuerta, y
+una compuerta de la que se desconfía se desactiva —está escrito para el reloj en
+`criterio-del-reloj.md`: *"Un gate que grita en falso se desactiva, y entonces
+no queda gate"*—. El daño del primero es un bug; el del segundo es quedarse sin
+el instrumento.
+
+Los dos defectos van al veredicto con la misma severidad y con su `file:line`.
+Un test demasiado estricto **no** es "mejor pasarse de cauto": es un test que no
+mide lo que dice medir, igual que el que se autosatisface con el nombre del
+`def`.
+
+---
+
 > **Esto aplica igual a un DISEÑO, no solo a código.** Auditar un diseño
 > aprobado antes de escribir el spec es el mismo patrón —contexto limpio, no
 > confiar en el reporte— una fase antes. Ahí la "mutación" es atacar la

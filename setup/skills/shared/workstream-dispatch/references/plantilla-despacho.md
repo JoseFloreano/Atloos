@@ -40,9 +40,38 @@ Lo que el brief **no puede saber** y hay que inyectar (doc 05 §1.3 y §3.2):
 - **Ramas vivas y qué ficheros toca cada una** — otro frente puede estar en los
   tuyos.
 - **Base real de la rama** (`git merge-base`), no la que asumió el plan.
+
+  > **Por qué es obligatorio y no una formalidad, que es lo que faltaba escrito.**
+  > Un worktree de agente **no nace en el HEAD de tu sesión: nace en `main`.**
+  > No es un descuido de nadie, es lo que hace la herramienta —
+  > `telegram-bridge/gitops.py:204-205` resuelve `default_branch(repo)` y se lo
+  > pasa a `git worktree add`, y el `isolation: 'worktree'` del despacho hace lo
+  > propio. Así que el agente abre los ojos en un árbol que puede estar muchos
+  > commits por detrás de lo que tú acabas de escribir, **y todo lo que ve es
+  > coherente**: la suite pasa, el fichero existe, el código compila. Nada le
+  > dice que está mirando un repo viejo.
+  >
+  > De ahí que el hash vaya en el brief y no en la cabeza del coordinador: es el
+  > único dato con el que el agente puede **descubrir** el desfase en vez de
+  > sufrirlo. Sin él, un frente que "no encuentra" tu función recién escrita
+  > diagnostica un bug donde hay un `git worktree add main`.
+
 - **DOS baselines de la suite**, no uno: el del **checkout principal** y el de un
   **worktree recién creado**. No son el mismo número, y esa diferencia ES el
   inventario que falta.
+
+  > **¿Y quién audita el baseline DEL COORDINADOR?** Nadie lo hacía, y ese es el
+  > agujero: el coordinador declara el baseline en el brief, así que su número
+  > entra como verdad en todos los frentes a la vez. En campo el suyo traía **97
+  > skips donde la suite completa salta 83**, y lo destapó **un subagente
+  > comparando su corrida con la declarada** — no el coordinador revisando la
+  > suya. Quien mide no puede ser el único que verifica su medida.
+  >
+  > De ahí la regla práctica: **el brief pide al frente que reporte su conteo
+  > aunque coincida.** Un frente que dice "83 skips, como el brief" cuesta una
+  > línea; el que calla deja al coordinador creyendo que su número se confirmó
+  > cuando nadie lo miró. Y una discrepancia entre los dos **no es ruido: es el
+  > inventario apareciendo**.
 - **Artefactos fuera de git**: `.env`, datasets, carpetas de datos — **ruta y
   cómo obtenerlos**, no solo su nombre.
 - **Flags opt-in que mueven la suite**, con su estado actual.
@@ -445,6 +474,23 @@ REPORTE: <path del reporte largo>
 RESUMEN: 2-3 líneas
 CONCERNS: lo que no cuadra, si lo hay
 ```
+
+> ⚠ **`REPORTE:` hoy no se puede cumplir tal como está escrito, y está medido.**
+> El harness bloqueó **5 de 5** los intentos de subagentes de escribir su
+> `report.md` con `Write`. O sea que la regla *"el reporte largo va a fichero"*
+> pide algo que el permiso no concede — y **no es un fallo de los agentes**.
+>
+> Lo que lo hace un problema de diseño y no una molestia: **el rodeo está
+> siempre a una línea** (`Bash` escribe el mismo fichero que `Write` no puede) y
+> **no hay ninguna regla escrita que ese rodeo desobedezca**. Es la misma
+> asimetría `Write`-de-fichero-nuevo contra `Bash` que apareció en el reporte
+> del 2026-08-17. Una compuerta que se salta legalmente no es una compuerta: es
+> fricción que enseña a rodearla, y lo que se aprende rodeando no se desaprende.
+>
+> **La decisión está abierta y es de las dos que hay: o cambia la regla —el
+> reporte vuelve entero al coordinador y se paga el contexto— o cambia el
+> permiso.** Hasta que se tome, di en el despacho con qué herramienta esperas
+> que se escriba, para que el frente no gaste una vuelta descubriéndolo.
 
 **Abortar es una salida legítima, y dilo en el despacho:**
 

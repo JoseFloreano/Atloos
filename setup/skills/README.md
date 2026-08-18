@@ -72,22 +72,28 @@ worktree aislado*. Queda fuera si:
 | design-doc-harvest | shared | ✗ | Cosecha al vault |
 | memory-keeper | shared | ✗ | Escribe en el vault |
 | migration-auditor | shared | ✓ | Revisión de migraciones |
+| ml-problem-framing | shared | ✓ | Decide si el problema es de ML; puro razonamiento |
+| ml-tabular-workflow | shared | ✓ | Desarrollo; el orden de trabajo no depende de la laptop |
 | model-benchmark | shared | ✗ | Necesita web; `WebFetch` denegado en el bot |
 | pipeline-designer | shared | ✓ | Desarrollo |
 | python-api-design | shared | ✓ | Desarrollo |
 | python-conventions | shared | ✓ | Desarrollo |
+| requirements-designer | shared | ✗ | Entrevista larga con el usuario; mal encaje en móvil (mismo motivo que `deploy-planner`) |
 | schema-designer | shared | ✓ | Desarrollo |
 | session-close | shared | ✗ | Ritual de vault |
 | skill-forge | shared | ✗ | Mantiene el setup; requiere sync manual |
 | sql-conventions | shared | ✓ | Desarrollo |
+| web-design-guidelines | shared | ✓ | Revisión, solo lectura |
 | web-security-review | shared | ✓ | Revisión, solo lectura |
 | workstream-dispatch | shared | ✗ | Coordina subagentes en la laptop; el bot es un solo agente en su worktree |
 | workstream-merge-gate | shared | ✗ | El merge del bot lo gobierna el daemon, no una skill |
 | api-evolution | claude-code | ✓ | Desarrollo |
+| deck-or-brief | claude-code | ✗ | Entrega un HTML autocontenido para `Artifact`; el puente entrega texto y adjuntos |
 | dependency-audit | claude-code | ✗ | `npm audit`/`pip-audit` no están en la lista blanca |
 | flaky-test-hunter | claude-code | ✓ | Los comandos de test sí están permitidos |
 | gdb-sanitizers-runbook | claude-code | ✗ | Toolchain C++ fuera de la lista blanca |
 | git-bisect-assist | claude-code | ✗ | Requiere git ops que el agente no puede ejecutar |
+| goal-forge | claude-code | ✗ | El `goal-evidence-guard` sale 0 con `CLAUDE_TG_BOT=1`: forjar metas aquí sería hacerlo **sin guard**, el peor de los dos mundos (auditoría 21, H5) |
 | notify-telegram | claude-code | ✗ | El bot **es** Telegram |
 | project-onboard | claude-code | ✗ | Crea carpetas del vault |
 | project-resume | claude-code | ✗ | Lee el vault; lo sustituye la inyección del daemon (C1b) |
@@ -103,6 +109,20 @@ que el registro de secretos del `setup/README.md`). La lista se revisa en el
 `vault-drift-audit` quincenal, junto con la poda de skills sin uso. Si una fila
 falta, el perfil bot la excluye por defecto — mejor perder una skill que colar
 ruido en cada invocación.
+
+⚠ **Y esa regla se incumplió seis veces seguidas.** La auditoría 21 (H5) reportó
+**dos** filas ausentes el 2026-08-14; al reconstruir la tabla contra el disco el
+2026-08-18 faltaban **seis**: `goal-forge`, `requirements-designer`,
+`ml-problem-framing`, `ml-tabular-workflow`, `web-design-guidelines` y
+`deck-or-brief`. Las cuatro nuevas entraron **después** de que la auditoría
+señalara el hueco. Nadie las excluyó: se excluyeron solas, por omisión.
+
+Nada lo medía, y por eso pasó — el mismo patrón que el tope de 500 palabras
+antes de tener check. **Desde el 2026-08-18 sí lo mide alguien**:
+`setup/scripts/tests/test-registro-skills.py` compara esta tabla contra el disco
+en cada corrida de la suite y **bloquea** ante una skill sin fila, una fila
+fantasma, una categoría que no cuadra o una columna `Bot` sin decidir. Añadir la
+fila dejó de ser una cortesía.
 
 ## Añadir una skill nueva (el flujo completo)
 
