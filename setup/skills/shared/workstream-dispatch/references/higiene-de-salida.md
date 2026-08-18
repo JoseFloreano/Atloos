@@ -14,6 +14,38 @@ commits, **0,0 %**; un `Read` de un `.py`, **0,0 %** (`router:excluded:tool`, el
 código está protegido por diseño). Lo único que las reduce es no pedirlas
 enteras.
 
+## Lo que cuesta, en dinero — y por qué la regla se queda corta
+
+**Procedencia: sesión del 2026-08-17, `/cost` literal, 1 132 turnos**
+(descompuesto en `docs/ecosistema/32-ANALISIS-COSTE-Y-HIGIENE.md`). El **73 %**
+de aquella factura —$226,72 de $310,91— fue **cache read**: releer el contexto.
+El *output*, el 13 %. Se releyeron **241 k tokens en cada uno de los 1 132
+turnos**.
+
+| Basura metida en el contexto | Coste en aquella sesión |
+|---|---:|
+| 1 k tokens | **$0,57** |
+| 10 k tokens | **$5,66** |
+| 50 k tokens | **$28,30** |
+
+Es la primera vez que este repo puede ponerle **precio** a una fila de abajo:
+un `git log --stat` de los medidos (222 314 bytes) son ~55 k tokens ⇒ del orden
+de **$30 por descuido**.
+
+**El gasto real es `bytes × llamadas × turnos restantes`, y las ocho filas solo
+tienen término para el primer factor.** Las dos reglas que faltan:
+
+- **Si vas a hacer más de un puñado de búsquedas, hazlas DENTRO de un
+  subagente.** Un subagente devuelve solo su mensaje final: sus búsquedas
+  **nunca entran en el contexto del coordinador**. Medido en campo: **170
+  llamadas de `Grep`/`grep`/`rg` en una sola sesión**, todas en el contexto del
+  coordinador. Aunque cada una fuera impecable (1-2 k tokens), son 170-340 k
+  releídos más de mil veces — **la higiene por comando no puede con eso**.
+- **La higiene vale al principio.** Lo que entra en el turno 50 de 1 132 se
+  relee 1 082 veces; lo mismo en el turno 1 000, solo 132: **8 veces más caro
+  por entrar pronto** (para llegar a 20× hay que comparar el turno 50 con el
+  1 080, no con el 1 000).
+
 ## Las ocho filas
 
 Las cifras son **de este repo, medidas** (2026-08-15, 138 commits, `b9a9d98`),

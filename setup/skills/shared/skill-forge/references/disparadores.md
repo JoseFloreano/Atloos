@@ -26,11 +26,59 @@ El corolario, que es la parte accionable:
 > pregunta no se dispara nunca.**
 
 *«Cuando sea una pregunta sobre el código»* obliga al agente a clasificar su
-propia intención antes de actuar, y esa clasificación no ocurre. *«Antes de tu
-primer `grep` de exploración en una sesión»* nombra un **momento reconocible
-desde fuera**: o has hecho `grep` o no. La sustitución viaja en
-`memory-snippet.md` y el arnés `test-claude-md-drift.py` caza la línea vieja por
-su nombre.
+propia intención antes de actuar, y esa clasificación no ocurre. La sustitución
+viaja en `memory-snippet.md` y el arnés `test-claude-md-drift.py` caza la línea
+vieja por su nombre.
+
+### ❌ REFUTADO (2026-08-17): el arreglo de este caso también fallaba
+
+Esta misma sección afirmaba que *«antes de tu primer `grep` de exploración en
+una sesión»* nombraba «un momento reconocible desde fuera: o has hecho `grep` o
+no». **Falso, y medido**: con el grafo fresco y el hook corriendo —las dos
+hipótesis de infraestructura descartadas por la máquina— el resultado fue
+**0 invocaciones de `graphify query` en 532 minutos**, contra **170 llamadas de
+búsqueda** en la misma sesión.
+
+La palabra que lo rompía era **«de exploración»**:
+
+> *«El disparador se ancla en "tu primer `grep` de exploración", cuya frontera
+> tengo que juzgar yo. Un agente que no sabe dónde está algo no se dice "voy a
+> explorar": se dice **"voy a confirmar"**.»* — el agente, 2026-08-17
+
+Un adjetivo de una sola palabra devolvió el disparador a la clase que este caso
+existía para cerrar. **La cuarta vez que un disparador bien escrito no dispara.**
+
+### La regla, ahora en su forma dura
+
+> **Ancla en algo que se CUENTA, no en algo que se CLASIFICA.**
+
+«La primera búsqueda de la sesión» es un **contador**: no admite adjetivo, no
+tiene frontera que juzgar, y el agente sabe si va por la primera o por la
+décima. «La primera búsqueda *de exploración*» es una **categoría**, y toda
+categoría se evalúa desde dentro — que es donde el agente siempre tiene una
+historia para no estar en ella.
+
+Prueba barata al escribir un disparador: **táchale todos los adjetivos.** Si sin
+ellos dispara demasiado, el problema no es el disparador, es que la herramienta
+cuesta demasiado para dispararse siempre; arregla el coste, no la frontera.
+
+### Barrido de la clase — dónde más se pide autoclasificarse
+
+Revisadas las 29 `description:` de `setup/skills/` más las órdenes del
+`CLAUDE.md` del proyecto (2026-08-17):
+
+| Sitio | Disparador | Veredicto |
+|---|---|---|
+| `CLAUDE.md` · graphify | «tu primer `grep` **de exploración**» | **En clase — corregido** a «la primera búsqueda» |
+| `skill-forge` · description | «or **al detectar un gap que merece** skill propia» | **En clase.** Exige juzgar que hay hueco *y* que merece skill. Nada lo cuenta |
+| `CLAUDE.md` · regla 6 | «**Multi-agent** (2+ sesiones a la vez)» | **Peor que un juicio: un INOBSERVABLE.** El agente no puede ver otras sesiones. Anclarlo a algo contable (notas de hoy en `sessions/`, `git worktree list`) |
+| `adr-writer` · description | «(y en Graphiti **si está disponible**)» | Falso positivo: disponibilidad se comprueba, no se juzga |
+| `requirements-designer` · description | «**Si aplican las dos**, brainstorming primero» | Falso positivo: regla de precedencia entre skills, no disparador |
+| `session-close` · description | «el hook … **al detectar** código sin registrar» | Falso positivo, y es el buen ejemplo: quien detecta es `mark-code-dirty`, que **cuenta ediciones** |
+
+Los dos «en clase» que quedan abiertos —`skill-forge` y la regla 6— no se
+tocaron aquí: cambiar una `description:` mueve cuándo carga una skill, y eso se
+mide, no se improvisa (§ «La prueba, que es barata», más abajo).
 
 ## Caso 2 · `requirements-designer` — la descripción que no cubría la petición real
 

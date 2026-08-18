@@ -223,7 +223,47 @@ Register-ScheduledTask -TaskName "TelegramDaemon" -Action $a -Trigger $t
 ```
 
 Para pararlo: `Stop-ScheduledTask -TaskName TelegramDaemon` (o cierra la ventana).
-El arranque 24/7 con `systemd` llega cuando exista la mini PC — no lo montes aquí.
+
+### Arranque 24/7 con systemd (Linux)
+
+La plantilla está versionada: **`claude-telegram.service.example`**, unit de
+**usuario**. Ajusta las tres rutas marcadas con `<>` y los dos valores de
+memoria — que **salen de la RAM de la máquina**, con la fórmula al lado en el
+propio fichero.
+
+```bash
+mkdir -p ~/.config/systemd/user
+cp setup/telegram-bridge/claude-telegram.service.example \
+   ~/.config/systemd/user/claude-telegram.service
+$EDITOR ~/.config/systemd/user/claude-telegram.service   # las tres rutas <>
+
+systemctl --user daemon-reload
+systemctl --user enable --now claude-telegram
+systemctl --user status claude-telegram
+journalctl --user -u claude-telegram -f
+```
+
+⚠ **`enable-linger` o el servicio muere al cerrar la sesión SSH.** Es la orden
+que más se olvida, y su síntoma —«funcionaba y dejó de funcionar cuando colgué»—
+no se parece a su causa:
+
+```bash
+sudo loginctl enable-linger "$USER"
+loginctl show-user "$USER" --property=Linger   # debe decir Linger=yes
+```
+
+**Cómo se comprueba que sobrevive a un reinicio** — y esto se comprueba
+reiniciando, no leyendo la config:
+
+```bash
+sudo reboot
+# al volver, sin abrir sesión gráfica ni lanzar nada a mano:
+systemctl --user is-active claude-telegram     # active
+journalctl --user -u claude-telegram --since "-10 min" | head
+```
+
+Y la prueba que de verdad importa: **manda un mensaje al bot desde el móvil**.
+`is-active` dice que el proceso vive, no que el puente responda.
 
 ---
 

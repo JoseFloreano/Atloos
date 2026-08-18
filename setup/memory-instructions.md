@@ -41,7 +41,7 @@
 
 At session start: `search_facts("recent decisions and known issues", group_ids=["<project-name>", "dev-global"])`, then read `10-Projects/<project-name>/_PROJECT.md` (y `codebase-map.md` si existe — es el mapa CURADO; el `codebase-map-snapshot.md` que genera el hook es un recorte ~2 KB con la cabecera y el resumen — el volcado completo vive fuera del vault, en `%LOCALAPPDATA%\graphify-snapshots\`).
 
-**Graphify** (solo si este repo lo tiene instalado): antes de tu primer `grep` de exploración en una sesión, corre `graphify query`. Su salida es la LISTA DE CANDIDATOS, no la respuesta: confírmala con `Read` y da por hecho que le faltan sitios (en campo: 5 de 9 sitios, con los 2 decisivos fuera). Si `graphify claude install` dejó aquí su propia línea, bórrala — dice QUÉ, no dice CUÁNDO, y por eso no se dispara.
+**Graphify — antes de la PRIMERA búsqueda de la sesión (`Grep`/`Glob`/`grep`/`rg`, por lo que sea) corre `graphify query "<lo que ibas a buscar>"`.** «La primera» es un contador, no una categoría: no clasifiques nada. Si el repo no lo tiene instalado, o sin grafo, el CLI falla — dilo una vez y sigue. Su salida es la LISTA DE CANDIDATOS: confírmala con `Read` y da por hecho que le faltan sitios (5 de 9 en campo, los 2 decisivos fuera). Si `graphify claude install` dejó aquí su línea, bórrala.
 
 After completing each coding task, BEFORE reporting it done: update Pendientes/Estado — en `_PROJECT.md` (2-5 líneas) si trabajas solo, o en TU nota de sesión si hay multi-agente (regla 6). El hook Stop acepta ambas. Cierre completo → "cerramos" (`session-close`).
 
@@ -53,4 +53,4 @@ When saving decisions/bugs/conventions → `memory-keeper` skill. Architecture d
 
 If the `graphiti-memory` MCP is unavailable, skip Graphiti silently — the vault is the primary record.
 
-`snippet v4 · 2026-08-16` — si tu copia dice otra, va atrás.
+`snippet v5 · 2026-08-17` — si tu copia dice otra, va atrás.

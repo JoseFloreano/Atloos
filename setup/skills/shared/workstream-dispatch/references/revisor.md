@@ -5,6 +5,34 @@ más fácil se degrada si se despacha mal.
 
 ---
 
+## 0 · Antes de revisar nada: el brief sin `MODELO:` se RECHAZA
+
+**Criterio de salida, no costumbre.** Si el brief que despachó ese frente no
+trae la línea `MODELO:`, el revisor **devuelve el brief y no revisa**. Un brief
+incompleto no se arregla revisando lo que produjo.
+
+Por qué es del revisor y no del coordinador: el coordinador es justo quien
+acaba de olvidarlo. En la sesión del 2026-08-17 el tier caro se llevó **el
+100 %** de los despachos y el barato **no se usó ni una vez**, con frentes que
+eran transcripción — y no por desacuerdo con la doctrina, que ya estaba
+escrita, sino porque `MODELO:` **hay que acordarse de ponerlo y nada lo echaba
+de menos**. Esto es lo que lo echa de menos.
+
+Los tres defectos que rechaza, y solo estos tres:
+
+1. **No hay línea `MODELO:`.** Ausente ≠ «usa el defecto»: es un hueco.
+2. **`MODELO: caro` sin `CATEGORIA:` ni `PORQUE:`.** El caro se justifica; si
+   no, la justificación es «me salió así».
+3. **`MODELO: barato` con `PORQUE:`.** Señal de que se copió la línea de otro
+   frente sin leerla — el barato es el defecto y no lleva justificación.
+
+La tabla de defectos por tipo de frente está en `plantilla-despacho.md` §5. Y
+su atajo sirve también aquí: **si el brief nombra el comando que comprueba el
+resultado, el frente es barato**; si no lo nombra, lo que falta no es el tier,
+es el criterio de terminado.
+
+---
+
 ## 1 · Mutar, no opinar
 
 **No** pidas "revisa si el test es bueno". Pide:

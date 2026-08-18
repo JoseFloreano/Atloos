@@ -1,0 +1,85 @@
+# ══════════════════════════════════════════════════════════════════════════
+#  claude-telegram.service — unit de USUARIO para el daemon del puente.
+#
+#  Copiar a  ~/.config/systemd/user/claude-telegram.service  y AJUSTAR las tres
+#  rutas marcadas con <>. El procedimiento completo (enable-linger incluido)
+#  esta en setup/telegram-bridge/README.md, seccion "Arranque 24/7 con systemd".
+#
+#  POR QUE UNIT DE USUARIO Y NO DE SISTEMA. El daemon necesita la sesion de
+#  Claude Code del usuario: `~/.claude/.credentials.json`, el perfil del bot en
+#  `~/.claude-tg`, el `.env` en `~/.config/claude-telegram/` y las claves de git.
+#  Una unit de sistema corre como root o exige `User=` mas un entorno cosido a
+#  mano, y cada pieza que cosas ahi es una que se olvida al reinstalar. El precio
+#  es `enable-linger`, UNA orden, sin la cual el servicio muere al cerrar sesion.
+#
+#  POR QUE EL INTERPRETE DEL VENV Y NO `python3`. En Ubuntu 24.04 un `pip
+#  install` pelado falla por PEP 668, asi que `python-telegram-bot` vive en el
+#  venv que crea install-deps.sh. Con `python3` del sistema el arranque muere en
+#  el import, y systemd lo reintenta en bucle sin que el mensaje llegue a nadie.
+# ══════════════════════════════════════════════════════════════════════════
+
+[Unit]
+Description=Puente Telegram - Claude Code (daemon)
+# El puente hace long polling contra api.telegram.org: sin red arranca y falla.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# ── Las tres rutas que hay que ajustar ────────────────────────────────────
+# 1) El interprete del venv. Ruta por defecto de install-deps.sh; si usaste
+#    CLAUDE_TG_VENV o tienes XDG_DATA_HOME puesto, pon la que te imprimio.
+#    Comprueba antes:  ls -l %h/.local/share/claude-telegram/venv/bin/python
+# 2) y 3) La carpeta del puente dentro de TU clon del repo.
+ExecStart=%h/.local/share/claude-telegram/venv/bin/python <RUTA_AL_REPO>/setup/telegram-bridge/tg_daemon.py
+WorkingDirectory=<RUTA_AL_REPO>/setup/telegram-bridge
+
+Restart=on-failure
+RestartSec=30
+# Generoso a proposito: con el defecto (5 en 10 s) systemd se rinde tras tres
+# reinicios rapidos y deja el servicio MUERTO, que en una maquina 24/7 sin
+# nadie delante es indistinguible de "va bien".
+StartLimitBurst=10
+StartLimitIntervalSec=600
+
+# ── El cinturon de memoria ────────────────────────────────────────────────
+# ⚠ ESTOS NUMEROS NO SON UNIVERSALES: salen de la RAM de la maquina donde
+#   instalas. Con T = GB totales, reservando ~8 GB para sistema + Docker +
+#   coordinador (la formula vive en docs/telegram/23-MANUAL-INSTALACION-SER8.md
+#   §8.3, y de ahi sale, no de aqui):
+#
+#       MemoryMax  ≈ (T − 8) / frentes_previstos
+#       MemoryHigh ≈ MemoryMax × 0,75
+#
+#   | RAM instalada        | 3 frentes                  | 5 frentes                  |
+#   |----------------------|----------------------------|----------------------------|
+#   | 24 GB (la de compra) | MemoryMax=5G · High=3G     | MemoryMax=3G · High=2G     |
+#   | 56 GB                | MemoryMax=16G · High=12G   | MemoryMax=9G · High=7G     |
+#
+#   Los 4G/3G de abajo son el valor CONSERVADOR para arrancar con 24 GB.
+#   Subelos con el RSS medido en la mano, no antes: el procedimiento esta en
+#   workstream-dispatch/references/medir-el-techo.md.
+#
+# ⚠ Y OJO CON QUE ESTE CGROUP NO ES SOLO EL DAEMON. Cada invocacion lanza un
+#   `claude` hijo, que vive en el cgroup del servicio: este techo cubre el
+#   daemon MAS todos los agentes concurrentes, no solo el proceso de Python.
+#   Por eso el numero se saca de la tabla de frentes y no del RSS del daemon,
+#   que es minusculo y daria una falsa sensacion de holgura.
+MemoryHigh=3G
+MemoryMax=4G
+
+# MemorySwapMax=0 es lo que hace que MemoryMax signifique algo. Sin esto, al
+# llegar al techo el proceso NO muere: se va a swap, y una maquina headless
+# con un agente en swap no esta lenta, esta inutilizable — y sigue "arriba",
+# asi que ninguna alarma salta. Preferimos que muera y systemd lo reinicie.
+MemorySwapMax=0
+OOMPolicy=kill
+
+# El log va al journal: `journalctl --user -u claude-telegram -f`.
+# El daemon ya se cuida de no escribir tokens ni contenidos en sus logs.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

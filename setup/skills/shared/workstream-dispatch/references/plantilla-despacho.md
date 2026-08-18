@@ -244,6 +244,45 @@ MODELO: caro   CATEGORIA: <mecánico|con juicio>   PORQUE: <una línea>
 NUCLEOS: <n>                            ← workers de test de ESTE frente
 ```
 
+### El defecto por TIPO de frente, para no decidirlo ocho veces
+
+**Por qué existe esta tabla.** Escrito arriba está que el barato es el defecto,
+y aun así en la sesión del 2026-08-17 **el tier caro se llevó el 100 % de los
+despachos y el barato no se usó ni una vez** — con varios frentes que eran
+transcripción o arreglos mecánicos. La causa no fue desacuerdo: es que `MODELO:`
+**hay que acordarse de ponerlo en cada llamada, y nada lo pide ni lo echa de
+menos**. Una doctrina que depende de la memoria no es un defecto, es una
+aspiración. Esto la convierte en una consulta.
+
+| Tipo de frente | Tier | Por qué |
+|---|---|---|
+| Transcripción, extracción, reformateo | **barato** | La salida se compara con la entrada |
+| Renombrado, mover ficheros, barrido mecánico | **barato** | Un `grep` posterior dice si quedó completo |
+| Aplicar un patrón ya decidido en N sitios | **barato** | El patrón lo fijó otro; esto es ejecutarlo |
+| Escribir un arnés para un contrato ya escrito | **barato** | Su mutación dice si sirve |
+| Implementar con plan cerrado y suite verde | **barato** | La suite es el verificador |
+| Diseño, o elegir entre enfoques | **caro** | No hay con qué comparar la salida |
+| Revisión adversarial | **caro** | Su trabajo es ver lo que el otro no vio |
+| Arbitraje entre dos frentes que discrepan | **caro** | Decide, y de la decisión cuelga el resto |
+| Diagnóstico de un fallo que nadie entiende | **caro** | Si supieras la forma, sería mecánico |
+
+**El corte NO es «fácil contra difícil», y confundirlo es lo que hace que todo
+acabe en caro** — cualquier tarea parece difícil vista de cerca. El corte es
+**si una respuesta equivocada se delata sola**:
+
+- Arriba, equivocarse **hace ruido**: no compila, el arnés se pone rojo, el
+  `grep` encuentra los sitios que faltan. Barato + verificador gana a caro sin
+  verificador, y además deja evidencia.
+- Abajo, una respuesta equivocada **se parece exactamente a una correcta** y
+  sobrevive hasta producción. Ahí el tier es la única defensa.
+
+Corolario práctico: **si al escribir el brief puedes nombrar el comando que
+comprueba el resultado, el frente es barato.** Si no puedes, no es que sea caro
+— es que el brief aún no está terminado.
+
+⚠ **`MODELO:` ausente no es «usa el defecto»: es un brief incompleto.** Ver el
+criterio de salida en `revisor.md` §0.
+
 ### El presupuesto de núcleos, y la palanca correcta
 
 Un frente no compite solo por contexto: compite por CPU con los otros. El
