@@ -5,11 +5,12 @@ notify_telegram.py — Vía 1 (fase T0) del puente Telegram: SOLO ENVIAR.
 POST saliente a la Bot API. Sin servidor, sin daemon, sin bot escuchando,
 sin URL pública (ver docs/telegram/00-DISENO-TELEGRAM-BRIDGE.md §1).
 
-Uso:
-    py notify_telegram.py "mensaje"
-    py notify_telegram.py "resumen" --file ruta/al/informe.md
-    echo "mensaje" | py notify_telegram.py
-    py notify_telegram.py "titulo" < informe.txt        # (arg = texto, stdin ignorado)
+Uso (desde la raíz del repo; `py` a secas no existe en Linux):
+    setup/scripts/py setup/telegram-bridge/notify_telegram.py "mensaje"
+    setup/scripts/py setup/telegram-bridge/notify_telegram.py "resumen" --file informe.md
+    echo "mensaje" | setup/scripts/py setup/telegram-bridge/notify_telegram.py
+    setup/scripts/py setup/telegram-bridge/notify_telegram.py "titulo" < informe.txt
+                                            # (arg = texto, stdin ignorado)
 
 Credenciales (NUNCA hardcodeadas, NUNCA en OneDrive/skills — anti-patrón S5):
     TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID como variables de entorno,

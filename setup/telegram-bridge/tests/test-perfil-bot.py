@@ -108,6 +108,25 @@ def main():
           f"el bot no puede correr los tests de su propio repo, que es como la "
           f"auditoria 21 acabo sin poder ver un verde")
 
+    # 3b. La forma PORTABLE, que es la que el agente teclea en Linux.
+    #
+    # El caso 3 mide el comando DECLARADO (`py …`), que es el que corre el
+    # daemon por /test. Pero cuando el agente decide correr la suite el mismo,
+    # teclea lo que las skills le mandan desde el sprint 11: `setup/scripts/py
+    # …`, el resolutor. En la SER8 ese es el UNICO que funciona —`py` no
+    # existe— y no casaba con ninguna entrada: el bot se quedaba esperando un
+    # permiso que nadie iba a conceder, porque al otro lado no hay humano.
+    portable = "setup/scripts/py setup/scripts/run-tests.py"
+    check("3b. el perfil de ESCRITURA permite la forma portable "
+          "(`setup/scripts/py …`, la unica que corre en Linux)",
+          permitido(portable, write),
+          f"'{portable}' no casa con ninguna entrada de WRITE_TOOLS: en la SER8 "
+          f"el bot no puede correr la suite de su propia casa, y sin verde "
+          f"/merge queda bloqueado por diseno")
+    check("3c. y el modo LECTURA sigue sin permitirla",
+          not permitido(portable, read),
+          "el resolutor no puede ser la puerta trasera del modo lectura")
+
     # Y la mitad de abajo: el modo lectura NO lo permite. Sin esto, "permitir"
     # podria haberse implementado abriendo el perfil entero.
     check("4. el perfil de LECTURA no lo permite (el modo lectura sigue cerrado)",

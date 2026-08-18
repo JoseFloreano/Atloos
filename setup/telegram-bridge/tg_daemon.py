@@ -22,7 +22,11 @@ procesar nada · lista blanca de herramientas (`--permission-mode dontAsk`) ·
 JAMÁS `--dangerously-skip-permissions` · un vuelo por chat · sin tokens ni
 contenidos en los logs.
 
-Arranque:  py tg_daemon.py       (Ctrl+C para parar)
+Arranque (Ctrl+C para parar):
+  Windows:  py tg_daemon.py
+  Linux:    "${XDG_DATA_HOME:-$HOME/.local/share}"/claude-telegram/venv/bin/python tg_daemon.py
+            (el intérprete del venv que deja install-deps.sh, no python3 del
+             sistema: python-telegram-bot no está fuera del venv por PEP 668)
 """
 import asyncio
 import json
@@ -55,6 +59,7 @@ import gitops                                              # noqa: E402
 from progress import ProgressTracker                       # noqa: E402
 import vaultio                                             # noqa: E402
 import testcmd                                              # noqa: E402
+import botprofile                                          # noqa: E402
 from notify_telegram import deliver_text, load_env_file, _env_candidates  # noqa: E402
 
 BASE = Path(__file__).resolve().parent
@@ -76,7 +81,11 @@ READ_TOOLS = "Read,Grep,Glob"
 WRITE_TOOLS = (
     "Read,Grep,Glob,Edit,Write,"
     "Bash(npm test:*),Bash(npm run test:*),Bash(npm run lint:*),Bash(npm run build:*),"
-    "Bash(pytest:*),Bash(py -m pytest:*),Bash(python -m pytest:*),Bash(ruff:*),"
+    "Bash(pytest:*),Bash(py -m pytest:*),Bash(python -m pytest:*),"
+    # `python3` y no solo `python`: en Debian/Ubuntu el ejecutable se llama así
+    # y `python` a secas puede no existir. Sin esta entrada el bot en la SER8
+    # tenía permitido el nombre que allí NO se usa (auditoría 31 §9, ítem 7).
+    "Bash(python3 -m pytest:*),Bash(ruff:*),"
     "Bash(eslint:*),Bash(flutter test:*),Bash(flutter analyze:*),"
     # El runner declarado en `.claude/settings.json` de ESTE repo. Sin esta
     # entrada el bot no podia correr los arneses de su propia casa: las de
@@ -88,6 +97,12 @@ WRITE_TOOLS = (
     # ejecutar cualquier cosa. Lo vigila tests/test-perfil-bot.py, que resuelve
     # la declaración con el mismo código que /test.
     "Bash(py setup/scripts/run-tests.py:*),"
+    # Y su forma PORTABLE, que es la que el agente teclea desde el sprint 11:
+    # las skills ya no dicen `py`, dicen `setup/scripts/py` —el resolutor—
+    # porque `py` no existe en Linux. Sin esta entrada el bot en la SER8 pedía
+    # un permiso que nadie iba a conceder: al otro lado del móvil no hay humano
+    # que apruebe un prompt, así que la invocación simplemente se cuelga.
+    "Bash(setup/scripts/py setup/scripts/run-tests.py:*),"
     "Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git add:*)"
 )
 # Segunda barrera explícita: publicar/integrar nunca pasa por el agente.
@@ -175,19 +190,17 @@ BOT_PROFILE_DIR = ""    # perfil de skills del bot (C2); vacío = config normal
 
 
 def bot_profile_dir() -> str:
-    """Directorio de config con SOLO las skills del perfil bot.
+    """Directorio de config con SOLO las skills del perfil bot, o "".
 
-    Requiere `.credentials.json` (un CLAUDE_CONFIG_DIR nuevo no hereda la
-    autenticación). Si falta algo, se devuelve "" y el daemon usa la config
-    normal: perder el ahorro es preferible a que no arranquen las invocaciones.
+    La decisión vive en `botprofile.py` —stdlib pura— para que su arnés no
+    necesite python-telegram-bot, igual que `testcmd.py`. Aquí solo se registra
+    el motivo, que ahora SIEMPRE existe: el perfil se niega si no tiene los
+    hooks cableados (auditoría 31, H4), y una negativa muda es como esto pasó
+    16 días encendido apagando la capa 3.
     """
-    base = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "claude-tg-profile"
-    if not (base / "skills").is_dir():
-        return ""
-    if not (base / ".credentials.json").is_file():
-        log.warning("perfil bot sin .credentials.json: se usa la config normal")
-        return ""
-    return str(base)
+    ruta, motivo = botprofile.resolver()
+    (log.info if ruta else log.warning)("%s", motivo)
+    return ruta
 
 # Menú nativo de Telegram: al escribir "/" salen todos con autocompletado.
 # Es la forma de no tener que recordarlos — mejor que un /help que hay que
@@ -826,14 +839,20 @@ async def cmd_test(update, context):
 
     INFLIGHT[chat_id] = now_ts()
     try:
-        await reply(cfg, chat_id, f"🧪 Ejecutando: `{cmd}`")
+        # El argv REAL, con el lanzador resuelto: el repo declara
+        # `py setup/scripts/run-tests.py` y en Linux `py` no existe (auditoría
+        # 31 §9). Se muestra lo que de verdad se va a ejecutar, no lo declarado:
+        # si el usuario ve `py …` desde el móvil y el daemon corre otra cosa,
+        # el día que falle estará depurando un comando que nadie lanzó.
+        argv = testcmd.argv(cmd)
+        await reply(cfg, chat_id, f"🧪 Ejecutando: `{' '.join(argv)}`")
         # CLAUDE_TG_BOT=1: la señal que test-claude-md-drift.py usa para saltar
         # (en voz alta) el chequeo del CLAUDE.md desplegado en este worktree —
         # esa copia es la versión BOT de gitops.bot_claude_md(), no una que se
         # quedó atrás. Antes de este cambio la variable solo llegaba a la
         # invocación de Claude (más abajo, run_claude), nunca a este subproceso.
         env = {**os.environ, "CLAUDE_TG_BOT": "1"}
-        rc, out, err = await gitops.run(cmd.split(), conv["worktree"], timeout=1800, env=env)
+        rc, out, err = await gitops.run(argv, conv["worktree"], timeout=1800, env=env)
         salida = (out + "\n" + err).strip()
         if rc == 0:
             conv["test_ok_sha"] = await gitops.head_sha(conv["worktree"])
@@ -1577,9 +1596,9 @@ def main() -> None:
     global SECRET_DENIES, BOT_PROFILE_DIR
     SECRET_DENIES = secret_denies()
     BOT_PROFILE_DIR = bot_profile_dir()
-    log.info("deny de secretos: %d rutas | perfil bot: %s",
-             len(SECRET_DENIES.split(",")) if SECRET_DENIES else 0,
-             f"{len(list(Path(BOT_PROFILE_DIR, 'skills').iterdir()))} skills" if BOT_PROFILE_DIR else "no (config normal)")
+    # El perfil ya se registró (con su motivo) dentro de bot_profile_dir().
+    log.info("deny de secretos: %d rutas",
+             len(SECRET_DENIES.split(",")) if SECRET_DENIES else 0)
     cfg = load_config()
     projects = load_projects()
     state = load_state()

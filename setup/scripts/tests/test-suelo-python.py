@@ -33,14 +33,33 @@ vía habría pasado sin comprobar, que es el defecto que persigue.
 `ast.parse`, que caza menos — **nunca se da por verde en silencio**, porque un
 check que no puede comprobar y calla es peor que no tenerlo.
 
+## La exención por máquina, y por qué lleva fecha
+
+Una máquina sin intérprete del suelo salía **2**, y `run-tests.py` lo pinta
+rojo. Correcto como aviso y **veneno como régimen**: en la SER8 (Ubuntu 24.04,
+sin 3.10) ese rojo era permanente, y *una suite que nunca está verde deja de
+leerse* — el día que se ponga roja de verdad, nadie lo nota (auditoría 31, H5).
+
+La salida NO es un `skip` genérico, que en dos sprints se vuelve costumbre. Es
+una exención **declarada, por máquina y con fecha**, versionada en
+`suelo-exenciones.json` y visible en el diff. Una máquina exenta sale verde
+**diciendo en grande qué no pudo comprobar**; una máquina sin entrada sigue
+saliendo 2; y una exención **caducada pone el arnés ROJO**, que es lo que
+impide que la excepción se quede a vivir.
+
 Uso:  setup/scripts/py setup/scripts/tests/test-suelo-python.py          [repo]
-Salidas: 0 todo compila con el suelo · 1 alguno no · 2 no se pudo comprobar.
+Salidas: 0 todo compila con el suelo (o exención vigente) · 1 alguno no compila,
+         la autoprueba falló, o hay una exención CADUCADA · 2 no se pudo
+         comprobar y esta máquina no está exenta.
 """
 import ast
+import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 for _s in (sys.stdout, sys.stderr):
@@ -51,14 +70,74 @@ for _s in (sys.stdout, sys.stderr):
 
 # EL SUELO, y la decisión está argumentada en el README.
 #
-# 3.10 y no 3.12 porque el suelo lo fija la máquina MÁS VIEJA que corre esto
-# hoy, y hoy es el puente (Ubuntu 22.04, 3.10.12) — donde además se corren las
-# auditorías. Declarar 3.12 no arreglaría nada: convertiría en "no soportada" la
-# máquina desde la que se descubrió el fallo. Y no cuesta: el repo es stdlib
-# pura y los 39 ficheros ya compilan en 3.10.
+# 3.10 y no 3.12 porque el suelo lo fija el entorno MÁS VIEJO que corre esto
+# hoy, y ese es el entorno desde el que se escriben las auditorías: Python
+# **3.10.12** (medido, `docs/tmp/PROMPT-SPRINT-10.md`), que es donde el fallo de
+# PEP 701 del sprint 9 se descubrió. Subir a 3.12 no arreglaría nada: dejaría
+# "no soportado" justo el sitio donde el fallo se ve. Y no cuesta: el repo es
+# stdlib pura y los 46 ficheros ya compilan en 3.10.
+#
+# ⚠ Ninguna de las DOS máquinas del inventario tiene 3.10 de serie: la Legion es
+# 3.12.10 (y tiene un 3.10 instalado aparte, vía `py -3.10`) y la SER8 es
+# 3.12.3 (`docs/auditoria/28`, medido el 2026-08-16/17). Por eso la SER8 va por
+# exención declarada, no por intérprete real — y por eso esa exención CADUCA:
+# el día que el entorno de auditoría deje de ser 3.10, el suelo sube a 3.12 y
+# esto se simplifica entero. Antes de tocar este número, relee ese párrafo: la
+# versión anterior justificaba el suelo con "el puente, Ubuntu 22.04", una
+# máquina que el inventario NO conoce, y así estuvo hasta el 2026-08-17.
 SUELO = (3, 10)
 
 EXCLUIDOS = ("__pycache__", "_build", ".git", "node_modules")
+
+EXENCIONES = Path(__file__).resolve().parent / "suelo-exenciones.json"
+
+
+def exencion(fichero=None, maquina=None, hoy=None):
+    """(estado, detalle) para ESTA máquina. estado ∈ vigente | caducada | None.
+
+    Se consulta SOLO cuando no hay intérprete del suelo: si lo hay, se compila
+    de verdad y ninguna exención pinta nada.
+
+    Un fichero ilegible NO concede la exención: devolver "no exento" deja el
+    arnés en 2 (no comprobado), mientras que lo contrario convertiría un JSON
+    roto en un verde. Se falla cerrado, que es la regla de esta casa.
+    """
+    nombre = maquina or platform.node() or "(sin nombre)"
+    maquina = nombre.strip().lower()
+    hoy = hoy or date.today()
+    try:
+        with open(fichero or EXENCIONES, "r", encoding="utf-8") as f:
+            datos = json.load(f)
+    except (OSError, ValueError) as exc:
+        return None, f"no se pudo leer {EXENCIONES.name}: {exc}"
+    if not isinstance(datos, dict):
+        return None, f"{EXENCIONES.name} no es un objeto JSON"
+
+    entrada = None
+    for clave, valor in datos.items():
+        if clave.startswith("_") or not isinstance(valor, dict):
+            continue
+        if clave.strip().lower() == maquina:
+            entrada = valor
+            break
+    if entrada is None:
+        return None, f"'{nombre}' no tiene exención declarada"
+
+    motivo = str(entrada.get("motivo", "")).strip()
+    hasta = str(entrada.get("hasta", "")).strip()
+    # Sin fecha NO hay exención: ese es el mecanismo entero. Una exención sin
+    # caducidad es un skip con mejor nombre.
+    try:
+        vence = date.fromisoformat(hasta)
+    except ValueError:
+        return "caducada", (f"la exención de '{nombre}' no declara una "
+                            f"fecha 'hasta' válida (AAAA-MM-DD): sin fecha no vale")
+    if hoy > vence:
+        return "caducada", (f"la exención de '{nombre}' CADUCÓ el {hasta}. "
+                            f"Toca decidir: instalar Python {SUELO[0]}.{SUELO[1]} "
+                            f"aquí, subir el suelo, o renovarla con fecha nueva y "
+                            f"motivo. Lo que no vale es dejarla correr.")
+    return "vigente", f"hasta {hasta} · {motivo}"
 
 
 def ficheros(base):
@@ -165,12 +244,30 @@ def main():
     print(f"Suelo de Python declarado: {v} — se COMPILA, no se busca texto\n")
 
     cmd = interprete_del_suelo()
+    estado_ex, detalle_ex = (None, "")
     if cmd:
         print(f"  [OK] intérprete real del suelo: {' '.join(x for x in cmd if x)}")
     else:
         print(f"  [SKIP] no hay Python {v} en esta máquina: se cae a "
               f"`ast.parse`, que CAZA MENOS —toda la familia PEP 701 se le "
               f"escapa, medido—. No es verde: es 'no se pudo comprobar del todo'")
+        estado_ex, detalle_ex = exencion()
+        if estado_ex == "vigente":
+            print(f"  [EXENTO] '{platform.node()}' tiene exención DECLARADA "
+                  f"({detalle_ex})\n"
+                  f"           El arnés sale verde, y lo que NO comprueba es "
+                  f"esto: la familia\n"
+                  f"           PEP 701 (backslash en f-string, comillas "
+                  f"anidadas). Aquí no se caza.")
+        elif estado_ex == "caducada":
+            print(f"  [CADUCADA] {detalle_ex}")
+        else:
+            print(f"  [SIN EXENCIÓN] {detalle_ex} → esto sale 2, y "
+                  f"`run-tests.py` lo pinta rojo.\n"
+                  f"                 Si esta máquina debe correr sin {v}, "
+                  f"decláralo en\n"
+                  f"                 setup/scripts/tests/{EXENCIONES.name}, "
+                  f"con motivo y fecha.")
 
     tmp = Path(base) / "setup" / "scripts" / "tests"
     ok_auto, motivo = autoprueba(cmd, tmp)
@@ -200,7 +297,16 @@ def main():
 
     if ok_auto is False:
         return 1
-    return 1 if fallos else (2 if not cmd else 0)
+    if fallos:
+        return 1
+    if cmd:
+        return 0
+    # Sin intérprete del suelo manda la exención. Y una CADUCADA es roja a
+    # propósito: si caducar no doliera, la exención sería permanente y
+    # habríamos construido el skip genérico que este mecanismo evita.
+    if estado_ex == "caducada":
+        return 1
+    return 0 if estado_ex == "vigente" else 2
 
 
 if __name__ == "__main__":

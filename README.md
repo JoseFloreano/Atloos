@@ -74,14 +74,39 @@ py --version          # Windows
 ### El suelo de Python es **3.10**, y es un contrato, no una sugerencia
 
 Todo `.py` del repo tiene que **compilar** con 3.10. Lo vigila
-`setup/scripts/tests/test-suelo-python.py`, que compila los 40 ficheros con un
+`setup/scripts/tests/test-suelo-python.py`, que compila los 46 ficheros con un
 intérprete **real** del suelo cuando la máquina lo tiene.
 
-**Por qué 3.10 y no 3.12.** El suelo lo fija la máquina más vieja que corre esto
-hoy, y hoy es el puente (Ubuntu 22.04, Python **3.10.12**) — que además es donde
-se corren las auditorías. Subirlo a 3.12 no arreglaría nada: convertiría en «no
-soportada» la máquina desde la que se descubrió el problema. Y no cuesta nada:
-el repo es stdlib pura y los 40 ficheros ya compilan en 3.10.
+**Por qué 3.10 y no 3.12.** El suelo lo fija el entorno más viejo que corre esto
+hoy, y ese es el entorno desde el que se escriben las auditorías: Python
+**3.10.12** (medido, `docs/tmp/PROMPT-SPRINT-10.md`). Subirlo a 3.12 dejaría «no
+soportado» justo el sitio donde el fallo de PEP 701 se descubrió. Y no cuesta
+nada: el repo es stdlib pura y los 46 ficheros ya compilan en 3.10.
+
+⚠ **Ninguna de las dos máquinas del inventario trae 3.10 de serie**: la Legion
+es 3.12.10 (con un 3.10 instalado aparte, `py -3.10`) y la SER8 es 3.12.3
+(`docs/auditoria/28`). Por eso la SER8 corre con **exención declarada**, no con
+intérprete real — ver abajo. Hasta el 2026-08-17 este párrafo justificaba el
+suelo con «el puente, Ubuntu 22.04», una máquina que el inventario **no
+conoce**: si vuelves a tocar el número, empieza por comprobar qué versión corre
+de verdad en cada sitio.
+
+**La exención, y por qué lleva fecha.** Una máquina sin 3.10 salía `2` («no
+comprobado») y `run-tests.py` la pintaba roja para siempre — en la SER8, un rojo
+permanente, y *una suite que nunca está verde deja de leerse*. La salida no es
+un `skip` genérico sino una exención **por máquina, declarada y con fecha** en
+`setup/scripts/tests/suelo-exenciones.json`, versionada y visible en el diff:
+
+| Situación de la máquina | Resultado |
+|---|---|
+| Tiene un 3.10 real | Verde de verdad: compila los 46 ficheros |
+| Sin 3.10, **con exención vigente** | Verde, **diciendo en grande qué no comprueba** (la familia PEP 701 se le escapa) |
+| Sin 3.10, **con exención caducada** | **Rojo** — toca decidir, no renovar por inercia |
+| Sin 3.10, sin exención | `2`, que la suite pinta rojo |
+
+Lo vigila `test-suelo-exenciones.py`, que ejerce la caducidad: el día que una
+exención venza, la suite se pone roja **también en la máquina de quien la
+declaró**, no solo en la exenta.
 
 > **Por qué existe el contrato.** Un arnés del sprint 9 usaba un backslash
 > dentro de la expresión de una f-string — legal solo desde **3.12** (PEP 701).

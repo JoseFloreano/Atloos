@@ -1,0 +1,11 @@
+{
+  "_contrato": "Exenciones del suelo de Python, POR MAQUINA y CON FECHA. Solo se consultan cuando la maquina NO tiene un interprete real del suelo; si lo tiene, el arnes compila de verdad y esto no se mira. Una exencion NO es un skip: el arnes sigue corriendo el respaldo `ast.parse` y DICE en voz alta que caza menos. Sin entrada aqui, una maquina sin el interprete del suelo sale 2 = 'no comprobado', que run-tests.py pinta rojo — que es lo correcto.",
+  "_caduca": "'hasta' es OBLIGATORIA y en formato AAAA-MM-DD. Pasada esa fecha la exencion NO vale y el arnes se pone ROJO. Ese es el punto entero: una exencion sin fecha es una costumbre, y en dos sprints nadie recuerda por que la suite nunca esta verde del todo.",
+  "_clave": "La clave es el nombre de maquina (platform.node()), sin distinguir mayusculas. 'Floreano_Legion' es la laptop Windows; 'floreano-server' es la Beelink SER8.",
+
+  "floreano-server": {
+    "motivo": "Ubuntu Server 24.04 trae Python 3.12.3 y no 3.10 (medido, docs/auditoria/28). Instalar 3.10 exigiria el PPA deadsnakes —un repositorio de terceros— en la maquina que corre 24/7 sin vigilancia, y eso es mas superficie de la que ahorra. Se acepta compilar con el respaldo `ast.parse`, sabiendo que la familia PEP 701 se le escapa.",
+    "hasta": "2026-11-17",
+    "revisa": "Cuando el suelo suba a 3.12 esta entrada sobra y hay que borrarla. Si el 2026-11-17 sigue aqui, la decision de fondo (subir el suelo) es la que esta pendiente, no la exencion."
+  }
+}

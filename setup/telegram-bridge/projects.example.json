@@ -1,18 +1,24 @@
 {
   "_comentario": "Copia a projects.json y pon TUS rutas. projects.json esta gitignorado: contiene rutas de tu maquina (anti-patron S5). La clave es lo que escribes en /p <nombre>; usa el mismo nombre que la carpeta del vault (10-Projects/<nombre>) para que la memoria case.",
   "_formato": "Cada proyecto es {path, test}. 'test' es el comando que corre /test DENTRO del worktree; sin el, /test avisa y /merge queda bloqueado (no hay verde posible). Se acepta tambien el formato viejo 'nombre': 'ruta' (sin tests).",
+  "_rutas": "Windows: barra invertida ESCAPADA ('C:\\\\Users\\\\...') o barra normal, las dos valen. Linux: '/home/usuario/...'. Este fichero es por-maquina: la SER8 tiene el suyo, no una copia del de la laptop.",
+  "_test_sin_shell": "El comando corre como argv SIN shell: nada de '&&', '||', '|' ni ';' (si los pones, /test lo dice y no corre). Su primer token, si es 'py', 'python3' o 'python', lo resuelve el daemon al interprete que lo esta ejecutando — por eso 'py -m pytest -q' tambien funciona en Linux, donde 'py' no existe. Cualquier otro ejecutable ('npm', 'flutter', 'pytest') se lanza tal cual y tiene que estar en el PATH.",
 
-  "mi-repo-python": {
+  "mi-repo-python-windows": {
     "path": "C:\\Users\\TU_USUARIO\\ruta\\al\\repo",
     "test": "py -m pytest -q"
   },
+  "mi-repo-python-linux": {
+    "path": "/home/TU_USUARIO/ruta/al/repo",
+    "test": "python3 -m pytest -q"
+  },
   "mi-app-flutter": {
-    "path": "C:\\Users\\TU_USUARIO\\ruta\\a\\la\\app",
+    "path": "/home/TU_USUARIO/ruta/a/la/app",
     "test": "flutter test"
   },
   "mi-proyecto-node": {
     "path": "C:\\Users\\TU_USUARIO\\ruta\\al\\proyecto",
     "test": "npm test"
   },
-  "formato-viejo-sin-tests": "C:\\Users\\TU_USUARIO\\otro\\repo"
+  "formato-viejo-sin-tests": "/home/TU_USUARIO/otro/repo"
 }

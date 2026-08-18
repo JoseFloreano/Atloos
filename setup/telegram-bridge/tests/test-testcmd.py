@@ -141,6 +141,43 @@ def main():
     check("8. worktree None o '' -> no revienta", got_ok,
           "" if got_ok else detalle)
 
+    # --- Caso 9: argv() resuelve el lanzador; el resto pasa intacto ---
+    #
+    # POR QUE (auditoria 31, seccion 9 items 4 y 7). `resolver()` devuelve el
+    # comando DECLARADO, y el daemon lo corria con `cmd.split()`, argv y sin
+    # shell. El repo declara `py setup/scripts/run-tests.py` y en Linux `py` NO
+    # EXISTE: /test moria con FileNotFoundError y, sin verde, /merge quedaba
+    # bloqueado por diseno en la maquina 24/7. Es el mismo arreglo que ya lleva
+    # gate-test.py (`con_interprete_de_aqui`), aqui sobre argv en vez de shell.
+    got = testcmd.argv("py setup/scripts/run-tests.py")
+    check("9a. argv() cambia el lanzador `py` por ESTE interprete",
+          got and got[0] == sys.executable and got[1:] == ["setup/scripts/run-tests.py"],
+          f"got={got!r}")
+
+    got = testcmd.argv("python3 -m pytest -q")
+    check("9b. argv() tambien resuelve `python3` (en Windows es el stub que miente)",
+          got and got[0] == sys.executable and got[1:] == ["-m", "pytest", "-q"],
+          f"got={got!r}")
+
+    # La otra mitad del contrato: un comando que NO empieza por un lanzador de
+    # Python se corre tal cual. Sin esto, `argv` seria un secuestrador.
+    for cmd, esperado in (("pytest -q", ["pytest", "-q"]),
+                          ("npm test", ["npm", "test"]),
+                          ("flutter test", ["flutter", "test"])):
+        got = testcmd.argv(cmd)
+        check(f"9c. argv() NO toca `{cmd}` (no es un lanzador)",
+              got == esperado, f"got={got!r}")
+
+    # El interprete con espacios en la ruta ("C:\\Program Files\\...") debe
+    # quedar en UN elemento del argv. Es justo lo que rompia `cmd.split()`, y
+    # por eso la resolucion vive aqui y no en el string.
+    got = testcmd.argv("py run-tests.py", interprete=r"C:\Program Files\Py\python.exe")
+    check("9d. interprete con espacios queda en UN solo elemento del argv",
+          got == [r"C:\Program Files\Py\python.exe", "run-tests.py"], f"got={got!r}")
+
+    check("9e. argv('') -> [] (sin comando no hay argv que correr)",
+          testcmd.argv("") == [], f"got={testcmd.argv('')!r}")
+
     fallos = [n for n, ok, _ in results if not ok]
     print(f"\n{len(results) - len(fallos)}/{len(results)} casos OK")
     if fallos:

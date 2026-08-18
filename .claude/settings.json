@@ -47,8 +47,6 @@
       "Bash(mkdir -p \"/c/Users/jlflo/.claude/hooks\")",
       "Bash(cp /c/Users/jlflo/OneDrive/Documentos/Mis_Documentos/Proyectos/Coding/Python/Otros/Atloos/setup/hooks/validate-graphiti-group-id.py /c/Users/jlflo/OneDrive/Documentos/Mis_Documentos/Proyectos/Coding/Python/Otros/Atloos/setup/hooks/mark-code-dirty.py /c/Users/jlflo/OneDrive/Documentos/Mis_Documentos/Proyectos/Coding/Python/Otros/Atloos/setup/hooks/check-vault-updated.py /c/Users/jlflo/.claude/hooks/)",
       "Bash(where python.exe)",
-      "Bash(py /tmp/t.py)",
-      "Bash(py \"C:/Users/jlflo/AppData/Local/Temp/claude/c--Users-jlflo-OneDrive-Documentos-Mis-Documentos-Proyectos-Coding-Python-Otros-Atloos/ae1dacdf-97ec-4860-ac59-a0f5e5982d53/scratchpad/merge_hooks.py\")",
       "Bash(py -c \"import json,os; d=json.load\\(open\\(os.path.expanduser\\('~/.claude/settings.json'\\)\\)\\); print\\('permissions.allow items:', len\\(d['permissions']['allow']\\)\\); print\\('model:', d.get\\('model'\\)\\); print\\('hooks events:', list\\(d['hooks'].keys\\(\\)\\)\\); print\\('additionalDirectories:', len\\(d['permissions'].get\\('additionalDirectories',[]\\)\\)\\)\")",
       "Bash(awk '{print $5, $9}')",
       "Bash(py \"/c/Users/jlflo/.claude/hooks/mark-code-dirty.py\")",

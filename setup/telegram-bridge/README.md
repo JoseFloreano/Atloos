@@ -69,18 +69,24 @@ icacls .env          # verificar: solo tu usuario en la lista
 ### 4. Probar
 
 ```bash
-py notify_telegram.py "Prueba desde Claude Code"
+setup/scripts/py setup/telegram-bridge/notify_telegram.py "Prueba desde Claude Code"
 ```
 
 Debe llegar al móvil e imprimir `Enviado: mensaje de N caracteres`.
 
 ```bash
 # Mensaje largo → resumen + adjunto .md automático
-py -c "print('línea de prueba ' * 500)" | py notify_telegram.py
+setup/scripts/py -c "print('línea de prueba ' * 500)" \
+  | setup/scripts/py setup/telegram-bridge/notify_telegram.py
 
 # Adjuntar un archivo concreto
-py notify_telegram.py "Informe listo" --file ../../docs/00-INDICE-GENERAL.md
+setup/scripts/py setup/telegram-bridge/notify_telegram.py "Informe listo" \
+  --file docs/00-INDICE-GENERAL.md
 ```
+
+> Estos ejemplos usan `setup/scripts/py` —el resolutor— y rutas desde la raíz
+> del repo, no `py` y rutas relativas a esta carpeta: `py` no existe en Linux y
+> era el motivo de que estas líneas se copiaran y fallaran en la SER8.
 
 ### 5. Usarlo desde Claude Code
 
@@ -289,8 +295,16 @@ El comando de test sale, en este orden:
 2. **`projects.json`**, como fallback para repos que no declaran nada:
 
    ```json
-   { "mi-repo": { "path": "C:\\ruta\\al\\repo", "test": "py -m pytest -q" } }
+   { "mi-repo": { "path": "C:\\ruta\\al\\repo",   "test": "py -m pytest -q" } }
+   { "mi-repo": { "path": "/home/tu/ruta/repo",   "test": "python3 -m pytest -q" } }
    ```
+
+   > **El primer token se resuelve, no se copia.** Si el comando empieza por
+   > `py`, `python3` o `python`, el daemon lo cambia por el intérprete que ya
+   > lo está ejecutando (`testcmd.argv`), así que `py -m pytest -q` también
+   > corre en Linux. Cualquier otro ejecutable (`npm`, `flutter`, `pytest`) se
+   > lanza tal cual y tiene que estar en el `PATH`. Aquí se corre **argv sin
+   > shell**: `&&`, `||`, `|` y `;` se rechazan con un mensaje, no se ejecutan.
 
 El **repo gana** sobre `projects.json` a propósito: `projects.json` es
 por-máquina y no viaja, así que si ganara él, la copia vieja de otra laptop
@@ -340,7 +354,10 @@ bloqueado** (no hay verde posible). Se acepta el formato viejo de
 
 Las entradas `Bash(...)` de `WRITE_TOOLS` nombran suites genéricas (`pytest`,
 `npm test`, `ruff`, `flutter test`). **Los arneses de esta casa no encajan en
-ninguna**: se corren como `py setup/scripts/run-tests.py`. Sin una entrada para
+ninguna**: se corren como `py setup/scripts/run-tests.py` y, desde el sprint 11,
+como `setup/scripts/py setup/scripts/run-tests.py` — **las dos formas están en
+la lista**, porque la primera es la que declara el repo y la segunda es la que
+el agente teclea en Linux. Sin una entrada para
 eso, el agente del puente tiene prohibido correr los tests de su propio repo —
 y eso no es teórico: una auditoría escrita desde el móvil
 (`docs/auditoria/21-AUDITORIA-DEL-BUCLE-GOAL-Y-LOOP.md`) tuvo que declarar en su
@@ -364,8 +381,18 @@ que repetirlo para él.
 Cuatro piezas, todas del lado del daemon (el agente no gana permisos):
 
 - **Perfil de skills propio**: cada invocación corre con `CLAUDE_CONFIG_DIR`
-  apuntando a `%LOCALAPPDATA%\claude-tg-profile` (subset de ~15 skills) — las
-  ~29 del perfil normal costaban 4-5K tokens fijos por invocación.
+  apuntando a **`~/.claude-tg`** (subset de ~15 skills) — las ~29 del perfil
+  normal costaban 4-5K tokens fijos por invocación.
+
+  > **Ese nombre no es estético: es lo que hace que el perfil tenga hooks.**
+  > `wire-hooks.py` (y `sync-hooks.ps1`) cablean `~/.claude` y `~/.claude-*`.
+  > El nombre viejo, `%LOCALAPPDATA%\claude-tg-profile`, no casaba con ese
+  > glob, así que encender el ahorro de tokens dejaba al bot con **0 de 6
+  > hooks, en silencio** — la configuración recomendada era la desprotegida
+  > (auditoría 31, H4). Desde entonces el daemon **se niega** a usar un perfil
+  > sin hooks cableados: cae a la config normal y lo dice en el log. Si tienes
+  > el nombre viejo, renómbralo y corre
+  > `setup/scripts/py setup/scripts/wire-hooks.py`.
 - **`CLAUDE.md` versión bot**: al crear el worktree se genera una copia SIN las
   órdenes de vault/Graphiti (incumplibles desde el worktree; solo peso muerto).
 - **Briefing inyectado**: la primera invocación de cada conversación lleva un
