@@ -23,8 +23,12 @@ REPO="$(cd "${AQUI}/../.." && pwd)"
 VENV="${CLAUDE_TG_VENV:-${XDG_DATA_HOME:-$HOME/.local/share}/claude-telegram/venv}"
 PY="${VENV}/bin/python"
 
-SALIDA="$(mktemp)"
-trap 'rm -f "$SALIDA"' EXIT
+# El nombre del fichero ES el nombre del adjunto que llega al movil
+# (notify_telegram.py usa `path.name`). Un `tmp.AbC123` en el chat es la
+# friccion que hace que dejes de abrir el aviso, asi que se nombra.
+DIR="$(mktemp -d)"
+SALIDA="${DIR}/doctor-$(hostname)-$(date +%Y%m%d-%H%M).txt"
+trap 'rm -rf "$DIR"' EXIT
 
 # El doctor se corre UNA vez y se guarda su salida. Correrlo otra vez para el
 # mensaje podria dar un veredicto distinto y mandarias el que no fue — es la
