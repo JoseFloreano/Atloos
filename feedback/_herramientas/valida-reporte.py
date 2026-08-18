@@ -45,7 +45,7 @@ for _s in (sys.stdout, sys.stderr):
 # que esto existiera y por tanto **es v1 por omisión** — así los cuatro reportes
 # viejos quedan bien clasificados sin tocarles una línea, que es la propiedad que
 # hace honesto el arreglo: no se reescribe la historia, se fecha.
-FORMATO_ACTUAL = 3
+FORMATO_ACTUAL = 4
 FORMATO_POR_OMISION = 1
 
 # El día en que la v2 entró. Un reporte con fecha POSTERIOR que declare v1 no
@@ -76,9 +76,32 @@ FECHA_V2 = "2026-08-14"
 # produjo no es una medición: es una anécdota que viaja.
 FECHA_V3 = "2026-08-16"
 
+# La v4 entra el 2026-08-19 y anade DOS campos: `contexto_medido` y
+# `turnos_asistente`.
+#
+# POR QUE. La v3 cerro el hueco del TAMANO de la maquina; este cierra el de
+# QUE HABIA DENTRO DEL CONTEXTO. Descompuesto el `/cost` de la sesion del
+# 2026-08-17 (docs/ecosistema/32): el 73 % de la factura fue CACHE READ
+# —$226,72 de $310,91— y el output solo el 13 %. No se paga por lo que el
+# modelo escribe, sino por lo que vuelve a leer: 241 k tokens releidos en
+# cada uno de 1 132 turnos.
+#
+# De ahi que `turnos_asistente` sea obligatorio: es el MULTIPLICADOR. La
+# misma basura metida en el contexto no cuesta 1 k tokens: cuesta 1 k por
+# cada turno que venga despues — medido, $0,57 por cada 1 k y $28,30 por
+# 50 k en esa sesion. Sin el numero de turnos, unos bytes de salida no son
+# un coste: son una anecdota, igual que un tiempo sin la maquina que lo
+# produjo.
+#
+# Y `contexto_medido` sigue el patron de `coste_medido`: NO obliga a medir,
+# obliga a DECIR si se midio. El hueco se detecto asi — el reporte del 08-17
+# traia `/cost` y aun asi no se pudo contestar "ayudo la higiene de logs?"
+# con [R], porque el total no dice de que esta hecho el contexto.
+FECHA_V4 = "2026-08-19"
+
 # El día en que entró cada versión, para que `version_de` no tenga que saberse
 # los nombres. Escrito como tabla y no como cadena de `if` porque la v4 llegará.
-ENTRADA = {2: FECHA_V2, 3: FECHA_V3}
+ENTRADA = {2: FECHA_V2, 3: FECHA_V3, 4: FECHA_V4}
 
 # Claves comunes a todas las versiones.
 CLAVES_V1 = ["tipo", "fecha", "reporter", "maquina", "so", "superficie",
@@ -97,14 +120,21 @@ CLAVES_V2 = ["setup_sha", "skills_existentes_que_no_dispararon", "coste_medido",
 # hace atribuible una cifra de tiempo, es cuánta máquina había debajo.
 CLAVES_V3 = ["nucleos", "ram_gb"]
 
+# Lo que anade la v4: de que estuvo hecho el contexto. `turnos_asistente` es
+# el multiplicador de todo coste de contexto; `contexto_medido` dice si la
+# seccion 2 trae el desglose por herramienta y las salidas grandes con su
+# turno.
+CLAVES_V4 = ["contexto_medido", "turnos_asistente"]
+
 
 def claves_de(version):
     return (CLAVES_V1
             + (CLAVES_V2 if version >= 2 else [])
-            + (CLAVES_V3 if version >= 3 else []))
+            + (CLAVES_V3 if version >= 3 else [])
+            + (CLAVES_V4 if version >= 4 else []))
 
 
-CLAVES = CLAVES_V1 + CLAVES_V2 + CLAVES_V3   # el contrato de hoy
+CLAVES = CLAVES_V1 + CLAVES_V2 + CLAVES_V3 + CLAVES_V4   # el contrato de hoy
 
 # `setup_sha` es el commit del repo desde el que se corrió `sync-skills` en esa
 # máquina. Sin él, la pregunta que decide la conclusión más importante de los
@@ -366,6 +396,17 @@ def valida(ruta):
                 fallos.append(f"`{clave}: {crudo}` tiene que ser mayor que 0")
     if version >= 2 and fm.get("coste_medido") and fm["coste_medido"].lower() not in COSTE:
         fallos.append(f"`coste_medido: {fm['coste_medido']}` no es `si` ni `no`")
+    if version >= 4 and fm.get("contexto_medido") and \
+            fm["contexto_medido"].lower() not in COSTE:
+        fallos.append(f"`contexto_medido: {fm['contexto_medido']}` no es "
+                      f"`si` ni `no`")
+    if version >= 4:
+        _t = (fm.get("turnos_asistente") or "").strip().lower()
+        if _t and _t != "no-disponible" and not _t.isdigit():
+            fallos.append(f"`turnos_asistente: {_t}` no es un numero ni "
+                          f"`no-disponible`. Es el MULTIPLICADOR del coste "
+                          f"de contexto: sin el, unos bytes de salida no "
+                          f"son un coste")
     if version >= 2 and fm.get("coste_medido", "").lower() == "no" and \
             "no se corrió `/cost`" not in texto and "no se corrio `/cost`" not in texto:
         fallos.append("`coste_medido: no` obliga a decirlo en la sección 4a: "

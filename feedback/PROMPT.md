@@ -54,6 +54,15 @@ Y saca del contexto de esta sesión, **sin adivinar**:
 - **Qué skills se cargaron de verdad** en esta sesión, y cuáles no.
 - **Qué hooks se dispararon**, y si alguno bloqueó algo (exit 2).
 - Número aproximado de turnos y duración.
+- **De qué estuvo hecho el contexto** (v4). Recorre el transcript con un
+  script y cuenta: **llamadas por herramienta con bytes de salida acumulados**,
+  **las tres salidas más grandes con el turno en que entraron**, y **el modelo
+  de cada despacho de subagente**. Los turnos de asistente van también al
+  frontmatter, en `turnos_asistente:` — **es el multiplicador**: lo que entra en
+  el contexto se relee en cada llamada posterior, y el 73 % de la factura medida
+  el 2026-08-17 fue *cache read*, no output. Si no puedes recorrer el
+  transcript, **`contexto_medido: no`** y dilo; en blanco no vale.
+
 - **El coste.** Pídele que corra `/cost` y pega el número tal cual. **Si no lo
   corre, pon `coste_medido: no` y dilo en la sección 4 con esas palabras: «no
   se corrió `/cost`».** No es opcional decirlo: en los dos reportes de dos no
@@ -165,7 +174,9 @@ Reglas de contenido:
 - **`formato: 3` en el frontmatter.** Es la versión del contrato que cumple el
   reporte, y un reporte nuevo no puede declarar una anterior: las viejas existen
   solo para que los reportes ya escritos se puedan archivar tal como están. La
-  v2 entró el 2026-08-14; la **v3, el 2026-08-16**, y añade `nucleos` y `ram_gb`.
+  v2 entró el 2026-08-14; la **v3, el 2026-08-16**, y añade `nucleos` y
+  `ram_gb`; la **v4, el 2026-08-19**, y añade `contexto_medido` y
+  `turnos_asistente`.
 - **TODA CIFRA DE TIEMPO NOMBRA LA SUITE Y EL PROYECTO DE LOS QUE SALE.** Un
   tiempo sin suite es un número que viajará: *«la suite pasó de ~330 s a 677 s»*
   no dice de qué suite, y acabó gobernando los despachos de otro repo cuya suite

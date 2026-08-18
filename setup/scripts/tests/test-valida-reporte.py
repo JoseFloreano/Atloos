@@ -144,8 +144,14 @@ CLAVES_V2_EN_FRONT = ("formato: 2\nsetup_sha: fd71659\n"
 # usando `CLAVES_V2_EN_FRONT` porque su fixture está fechada ANTES de la v3, y
 # ahí declarar v2 sigue siendo legítimo: eso es lo que la versión protege.
 CLAVES_V3_EN_FRONT = "nucleos: 8\nram_gb: 16\n"
-CLAVES_ACTUALES_EN_FRONT = (CLAVES_V2_EN_FRONT.replace("formato: 2", "formato: 3")
-                            + CLAVES_V3_EN_FRONT)
+
+# Lo que anadio la v4 (2026-08-19): de que estuvo hecho el CONTEXTO.
+# `turnos_asistente` es el multiplicador —el mismo volcado cuesta una vez
+# o mil segun cuando entre— y `contexto_medido` dice si la seccion 2 trae
+# el desglose. Va aparte por el mismo motivo que el bloque de la v3.
+CLAVES_V4_EN_FRONT = "contexto_medido: si\nturnos_asistente: 1132\n"
+CLAVES_ACTUALES_EN_FRONT = (CLAVES_V2_EN_FRONT.replace("formato: 2", "formato: 4")
+                            + CLAVES_V3_EN_FRONT + CLAVES_V4_EN_FRONT)
 
 
 def escribe(carpeta, nombre, texto):
@@ -232,7 +238,7 @@ def main():
                        .format(seccion4=CUATRO_V1))
         f7, v7 = valida(p7)
         caso(4, "fecha posterior + formato: 1 → se exige el contrato de hoy",
-             v7 == 3 and any("no para escribir" in x for x in f7),
+             v7 == V.FORMATO_ACTUAL and any("no para escribir" in x for x in f7),
              f"version={v7} fallos={f7}")
 
         # …y el reverso: la MISMA fecha con formato: 2 y todo puesto, pasa.
@@ -241,8 +247,37 @@ def main():
                        .replace("tipo: feedback", CLAVES_ACTUALES_EN_FRONT + "tipo: feedback")
                        .format(seccion4=CUATRO_V2))
         f8, v8 = valida(p8)
-        caso(4, "misma fecha con v3 completo pasa", not f8 and v8 == 3,
+        caso(4, "misma fecha con el contrato de HOY completo pasa",
+             not f8 and v8 == V.FORMATO_ACTUAL,
              f"version={v8} fallos={f8}")
+
+        # 4b-bis · la MUTACION de la v4: quitarle `turnos_asistente` a un
+        # reporte por lo demas perfecto tiene que BLOQUEAR. Sin esto, las dos
+        # claves nuevas serian dos lineas que nadie exige — exactamente el
+        # patron que este repo lleva siete veces cometiendo.
+        p8c = escribe(tmp, "2026-08-20-laboratorio-caso8c.md",
+                      V1.replace("fecha: 2026-08-10", "fecha: 2026-08-20")
+                        .replace("tipo: feedback",
+                                 CLAVES_ACTUALES_EN_FRONT.replace(
+                                     "turnos_asistente: 1132\n", "")
+                                 + "tipo: feedback")
+                        .format(seccion4=CUATRO_V2))
+        f8c, _ = valida(p8c)
+        caso(4, "sin `turnos_asistente` BLOQUEA (mutacion de la v4)",
+             any("turnos_asistente" in x for x in f8c), f"fallos={f8c}")
+
+        # …y un `contexto_medido` que no es si/no tambien bloquea: declararlo
+        # mal es peor que no declararlo, porque se lee como declarado.
+        p8d = escribe(tmp, "2026-08-20-laboratorio-caso8d.md",
+                      V1.replace("fecha: 2026-08-10", "fecha: 2026-08-20")
+                        .replace("tipo: feedback",
+                                 CLAVES_ACTUALES_EN_FRONT.replace(
+                                     "contexto_medido: si", "contexto_medido: masomenos")
+                                 + "tipo: feedback")
+                        .format(seccion4=CUATRO_V2))
+        f8d, _ = valida(p8d)
+        caso(4, "`contexto_medido: masomenos` BLOQUEA",
+             any("contexto_medido" in x for x in f8d), f"fallos={f8d}")
 
         # 4c · y la MUTACION de la v3: quitarle `nucleos` a un reporte por lo
         # demas perfecto tiene que bloquear. Sin esto, las dos claves nuevas

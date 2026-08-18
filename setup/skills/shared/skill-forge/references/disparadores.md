@@ -95,6 +95,26 @@ list` enseña árboles que tú no creaste, y `Edit` fallando con *«File has bee
 modified since read»* es la colisión de verdad — la regla 7, que es la versión
 comprobable de lo que la 6 intentaba adivinar.
 
+### Dos parientes del inobservable, encontrados antes (2026-08-01)
+
+Cosechados de un prompt derivado del RFD 09 —**podado el 2026-08-19**, su
+texto sigue en git—. **Los dos son la misma ley vista por otro lado**, y
+llegaron meses antes de que la ley se escribiera:
+
+- **«Una marca (`harvested`) que una auditoría leía y que nadie escribía: la
+  regla no podía dispararse jamás.»** El ancla existía y era observable — pero
+  **nadie producía el dato**. Es el inobservable por el lado del escritor.
+  → **Si defines un estado, define quién lo escribe.**
+- **«Un chequeo colocado después del paso de despedida: un chequeo que nunca
+  corre.»** Aquí el ancla es correcta y el problema es **dónde está puesto**.
+  Un disparador sano en el sitio equivocado no dispara igual.
+  → **Un check después del último paso no es un check.**
+
+> **Y el corolario que unifica los cuatro grados:** un disparador puede fallar
+> por su ancla (autoevaluación), por su dato (inobservable), por su productor
+> (nadie escribe el estado) o por su posición (después del final). **Los cuatro
+> se leen como cobertura**, y por eso hay que buscarlos a propósito.
+
 ### Barrido de la clase — dónde más se pide autoclasificarse
 
 Revisadas las 29 `description:` de `setup/skills/` más las órdenes del

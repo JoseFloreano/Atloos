@@ -1,5 +1,5 @@
 ---
-formato: 3
+formato: 4
 tipo: feedback
 fecha: 2026-08-09
 reporter: alias-o-nombre
@@ -21,6 +21,8 @@ hooks_disparados: [check-vault-updated]
 graphify: usado
 bloqueantes: 0
 coste_medido: si
+contexto_medido: si
+turnos_asistente: 1132
 ---
 
 <!-- `formato:` es la VERSIÓN DEL CONTRATO, y existe para que endurecerlo no
@@ -89,6 +91,36 @@ $ "$HOME/.claude/scripts/py" -c "import psutil; print(round(psutil.virtual_memor
 > no dice de que suite, asi que el numero viajo cuatro sprints hasta acabar
 > gobernando despachos de OTRO repo cuya suite tarda 43 s. Se escribe
 > «la suite de <proyecto> (<n> tests) paso de X a Y».
+
+[R] **De qué estuvo hecho el contexto** — el desglose, no solo el total:
+
+```
+Turnos de asistente: <n>       ← va tambien al frontmatter, en `turnos_asistente:`
+
+Llamadas por herramienta, con bytes de salida acumulados:
+  <herramienta>   <n> llamadas   <bytes>
+  ...
+
+Las 3 salidas mas grandes, con el turno en que entraron:
+  <bytes>  turno <t>/<total>  <comando o fichero>
+  ...
+
+Modelo por despacho de subagente:  <p. ej. 4x sonnet, 0x haiku>
+```
+
+> **Por que el turno importa tanto como los bytes.** Lo que entra en el contexto
+> se RELEE en cada llamada posterior, y ahi esta la factura: descompuesto el
+> `/cost` del 2026-08-17 (`docs/ecosistema/32`), el **73 % del gasto fue cache
+> read** y el output solo el 13 %. Medido en esa sesion: **$0,57 por cada 1 k de
+> basura, $5,66 por 10 k y $28,30 por 50 k**. El mismo volcado cuesta ~8x mas en
+> el turno 50 de 1 132 que en el turno 1 000.
+>
+> Sin este bloque el reporte dice cuanto costo y no dice de que, y la pregunta
+> «¿ayudo la higiene de los logs?» no se puede contestar con `[R]`. Asi se
+> detecto el hueco: el reporte del 08-17 traia `/cost` y aun asi no se pudo.
+>
+> Si no puedes recorrer el transcript, pon **`contexto_medido: no`** y dilo. Lo
+> que no vale es dejarlo en blanco.
 
 [R] Skills cargadas: <lista, o «no lo sé»>
 [R] Hooks disparados: <lista, y si alguno bloqueó (exit 2)>
