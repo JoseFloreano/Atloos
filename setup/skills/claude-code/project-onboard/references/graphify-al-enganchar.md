@@ -31,6 +31,28 @@ chmod +x <repo>/.git/hooks/post-commit
 ⚠ Escribe `codebase-map-snapshot.md`, **nunca el `codebase-map.md` curado**
 (RFD 10 C2).
 
+## Dos banderas que no hacen lo que su nombre sugiere
+
+Medido en campo el 2026-08-01 y reconfirmado el 08-16. **No está en su
+documentación**, y las dos fallan en silencio: no dan error, hacen otra cosa.
+
+1. **`graphify update` sin `--force` puede NO sobrescribir.** Si la
+   reconstrucción sale con **menos nodos** que el grafo que ya hay, se planta y
+   deja el viejo. La intención es no destruir un grafo bueno con una pasada
+   mala; el efecto práctico es que **borrar código y reindexar te deja el grafo
+   de antes**, respondiendo por símbolos que ya no existen. Y el comando termina
+   sin quejarse, así que la única señal es el conteo. Después de una poda,
+   `--force`.
+
+2. **`--code-only` es bandera de `graphify extract`, no de la invocación por
+   defecto.** Ponerla donde no va no la aplica: el comando corre igualmente,
+   indexando todo, y tú te quedas creyendo que acotaste el alcance.
+
+> El patrón de las dos es el mismo, y es el que hace que valga la pena
+> escribirlas: **una bandera que se ignora sin avisar es peor que una que
+> falla.** El conteo de nodos es lo único que las delata — mira siempre el
+> `N/N archivos, N nodos` que imprime.
+
 ## Y lo que hay que BORRAR: la línea vieja
 
 `graphify claude install` deja en el `CLAUDE.md` su propia línea:

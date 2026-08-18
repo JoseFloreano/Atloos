@@ -130,10 +130,43 @@ async def head_sha(path: str, short: bool = True) -> str:
     return await git(args, path)
 
 
-# Secciones que se SUSTITUYEN enteras en la versión bot. Filtrar línea a línea
-# no sirve: los puntos numerados ocupan varias líneas y quitar la primera deja
+# Secciones que se SUSTITUYEN en la versión bot. Filtrar línea a línea no sirve:
+# los puntos numerados ocupan varias líneas y quitar la primera deja
 # continuaciones huérfanas — más confusas que la regla original.
 BOT_SECCIONES_FUERA = ("memory rules",)
+
+# ── Y por qué "sustituir la sección" NO bastaba (arreglado 2026-08-18) ────
+# El `CLAUDE.md` de Atloos tiene TRES encabezados `##` y «Memory Rules» es el
+# ÚLTIMO. Como el corte va de un `## ` al siguiente, ese bloque no terminaba:
+# llegaba hasta el final del fichero. Sustituirlo se llevaba por delante todo lo
+# que el snippet escribe DESPUÉS de las reglas numeradas — párrafos sueltos, sin
+# encabezado propio. Medido: **3 443 → 1 254 caracteres**.
+#
+# Lo que se perdía no eran las órdenes imposibles que este recorte existe para
+# quitar, sino TRES reglas que el bot sí puede cumplir, y de las caras:
+#   · el disparador de Graphify antes de la primera búsqueda de la sesión;
+#   · «para integrar CUALQUIER rama a main, el criterio es workstream-merge-gate»;
+#   · la higiene de salida (−91 % a −99 % de bytes), que es la regla que más
+#     factura mueve en una sesión por Telegram.
+# Y el sello `snippet vN · fecha`, sin el cual una copia no puede decir qué
+# versión lleva.
+#
+# El arreglo NO es cortar por otro sitio: es **partir la sección en dos**. La
+# lista numerada se sustituye entera (el motivo original sigue en pie); la cola
+# de párrafos se filtra uno a uno, y solo se cae el que nombra algo que en el
+# puente no existe. Un párrafo es la unidad correcta porque es como el snippet
+# los escribe: separados por línea en blanco, cada uno una regla completa.
+#
+# `graphiti` y `graphify` son cosas distintas y solo la primera se va: el MCP no
+# está en el bot, pero el CLI de grafo sí puede correr en su worktree.
+BOT_PARRAFOS_FUERA = (
+    "search_facts", "group_ids", "add_episode", "graphiti",
+    "_project.md", "10-projects", "nota de sesión", "session-close",
+    "memory-keeper", "adr-writer", "codebase-map",
+)
+
+# La lista numerada de reglas: un párrafo cuyo primer renglón abre con `N.`.
+_NUMERADA = re.compile(r"^\s*\d+\.\s")
 
 BOT_REGLAS = """## Memory Rules — versión puente Telegram
 
@@ -159,18 +192,63 @@ def bot_claude_md(texto: str) -> str:
     """CLAUDE.md del proyecto → versión para el bot (ADR-20260801-bot-memoria-y-perfil).
 
     Conserva las convenciones del proyecto —que es lo que hace útil el
-    CLAUDE.md— y **sustituye entera** la sección de Memory Rules por una que el
-    bot sí puede cumplir. Si el CLAUDE.md no tiene esa sección (otro proyecto,
-    otra estructura), se devuelve tal cual: no inventamos recortes.
+    CLAUDE.md— y sustituye **la lista de reglas** de Memory Rules por una que el
+    bot sí puede cumplir, **conservando la cola de párrafos** que sigue siendo
+    válida (ver `BOT_PARRAFOS_FUERA` arriba: hasta el 08-18 esa cola se perdía
+    entera). Si el CLAUDE.md no tiene esa sección (otro proyecto, otra
+    estructura), se devuelve tal cual: no inventamos recortes.
+
+    **No lanza nunca.** `create_worktree` la llama dentro de un `try` que solo
+    captura `OSError`, así que una excepción aquí impediría abrir CUALQUIER
+    conversación nueva del bot. Ante lo inesperado devuelve el texto original:
+    un CLAUDE.md con tres órdenes que el bot no puede cumplir es un mal día;
+    un daemon que no abre conversaciones es un daemon caído.
     """
-    texto = texto or ""
+    # `str(texto or "")` y no `texto or ""`: la rama de rescate hace `.rstrip()`,
+    # y si lo que llegó no era una cadena esa llamada lanza DENTRO del `except`
+    # — o sea que el envoltorio que existe para no lanzar, lanzaba. Se normaliza
+    # antes de entrar, que es el único sitio donde el arreglo es total.
+    texto = str(texto) if texto else ""
+    try:
+        return _bot_claude_md(texto)
+    except Exception:
+        return texto.rstrip() + "\n"
+
+
+def _seccion_bot(bloque):
+    """La sección de Memory Rules → su versión bot, párrafo a párrafo.
+
+    Se parte por línea en blanco porque es como el snippet escribe las reglas de
+    la cola: cada párrafo es una regla completa, así que ninguna se queda a
+    medias — que era la objeción original a filtrar línea a línea, y sigue
+    siendo válida contra ESA unidad, no contra esta.
+    """
+    conservados = []
+    for parrafo in re.split(r"\n\s*\n", bloque):
+        if not parrafo.strip():
+            continue
+        primera = parrafo.lstrip().splitlines()[0]
+        if primera.lstrip().startswith("#"):
+            continue                      # el encabezado: lo pone BOT_REGLAS
+        if _NUMERADA.match(primera):
+            continue                      # la lista de reglas: se sustituye entera
+        if any(m in parrafo.lower() for m in BOT_PARRAFOS_FUERA):
+            continue                      # nombra algo que en el puente no existe
+        conservados.append(parrafo.strip())
+    return (BOT_REGLAS.rstrip() + "\n\n" + "\n\n".join(conservados)).rstrip() + "\n"
+
+
+def _bot_claude_md(texto):
+    """El trabajo real. Separado para que el envoltorio de arriba no pueda
+    lanzar y para que el arnés pueda ejercer ESTA función sin la red debajo —
+    un fallo tapado por el `except` es un fallo que nadie ve."""
     partes = re.split(r"(?m)^(?=## )", texto)
     salida, sustituida = [], False
     for bloque in partes:
         titulo = bloque.splitlines()[0].lstrip("# ").strip().lower() if bloque.strip() else ""
         if any(m in titulo for m in BOT_SECCIONES_FUERA):
             if not sustituida:
-                salida.append(BOT_REGLAS)
+                salida.append(_seccion_bot(bloque))
                 sustituida = True
             continue
         salida.append(bloque.rstrip() + "\n")

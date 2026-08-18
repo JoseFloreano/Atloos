@@ -57,6 +57,29 @@ docker compose version >/dev/null 2>&1 && ok "Docker Compose disponible" || { er
 [ -d "${DEVSETUP}" ] || { warn "No se encontró ${DEVSETUP}. Creando..."; mkdir -p "${DEVSETUP}"; }
 [ $ERRORS -gt 0 ] && { err "Hay $ERRORS errores críticos."; exit 1; }
 
+# Versiones mínimas de Claude Code que el bucle `/goal` + `/loop` necesita.
+# Estaban en hooks/README.md con un "conviene comprobar en setup-new-machine" y
+# nadie lo comprobaba (auditoría 21, H7): en una laptop con Claude Code viejo,
+# `/goal` sencillamente no existe y el fallo es SILENCIOSO.
+#
+# Es AVISO y nunca error, a propósito y por dos razones: una máquina puede
+# querer el resto del setup sin el bucle, y un bootstrap que muere por una
+# comparación de versiones sería peor que el hueco que viene a cerrar. Va
+# DESPUÉS del corte por errores críticos para que se lea como lo que es.
+CC_MIN="2.1.202"    # la mayor de las tres; las otras son 2.1.139 y 2.1.196
+if command -v claude >/dev/null 2>&1; then
+  CC_VER="$(claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
+  if [ -z "${CC_VER}" ]; then
+    warn "No se pudo leer la versión de Claude Code. El bucle pide ${CC_MIN}+ — compruébalo a mano."
+  elif [ "$(printf '%s\n%s\n' "${CC_MIN}" "${CC_VER}" | sort -V | head -1)" != "${CC_MIN}" ]; then
+    warn "Claude Code ${CC_VER} < ${CC_MIN}: /goal pide 2.1.139+, el 'stop: true' de ScheduleWakeup 2.1.202+, y el filtro de skills auto-invocables en disparos programados 2.1.196+. Por debajo, el bucle falla en silencio."
+  else
+    ok "Claude Code ${CC_VER} (>= ${CC_MIN}: el bucle tiene sus tres dependencias)"
+  fi
+else
+  warn "Claude Code CLI no encontrado: no se pudieron comprobar las versiones mínimas del bucle (${CC_MIN}+)."
+fi
+
 # Guardia anti-OneDrive (fix A1)
 case "${GRAPHITI_LOCAL}" in
   *OneDrive*)

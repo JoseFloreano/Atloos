@@ -70,6 +70,26 @@ try { docker compose version | Out-Null; Write-OK "Docker Compose disponible" }
 catch { Write-Err "Docker Compose no disponible."; $errors++ }
 if ($errors -gt 0) { Write-Err "Corrige $errors errores críticos antes de continuar."; exit 1 }
 
+# Versiones mínimas de Claude Code para el bucle `/goal` + `/loop` (auditoría
+# 21, H7). Gemelo del bloque de setup-new-machine.sh — si cambias uno, cambia
+# el otro. AVISO y nunca error: un bootstrap que muere comparando versiones
+# sería peor que el hueco silencioso que viene a cerrar.
+$ccMin = [version]"2.1.202"   # la mayor de las tres; las otras, 2.1.139 y 2.1.196
+$ccRaw = $null
+try { $ccRaw = (& claude --version 2>$null | Out-String) } catch { $ccRaw = $null }
+if ([string]::IsNullOrWhiteSpace($ccRaw)) {
+    Write-Warn "Claude Code CLI no encontrado o sin versión legible: no se comprobaron las versiones mínimas del bucle ($ccMin+)."
+} else {
+    $m = [regex]::Match($ccRaw, '\d+\.\d+\.\d+')
+    if (-not $m.Success) {
+        Write-Warn "No se pudo leer la versión de Claude Code. El bucle pide $ccMin+ — compruébalo a mano."
+    } elseif ([version]$m.Value -lt $ccMin) {
+        Write-Warn "Claude Code $($m.Value) < ${ccMin}: /goal pide 2.1.139+, el 'stop: true' de ScheduleWakeup 2.1.202+, y el filtro de skills auto-invocables en disparos programados 2.1.196+. Por debajo, el bucle falla en silencio."
+    } else {
+        Write-OK "Claude Code $($m.Value) (>= ${ccMin}: el bucle tiene sus tres dependencias)"
+    }
+}
+
 # Guardia anti-OneDrive (fix A1): los datos vivos JAMÁS en OneDrive
 if ($GraphitiLocal -match "OneDrive" -and -not $ForceOneDrive) {
     Write-Err "GraphitiLocal resuelve dentro de OneDrive — prohibido (H2, corrupción silenciosa)."
