@@ -78,6 +78,15 @@ RestartSec=30
 #   daemon MAS todos los agentes concurrentes, no solo el proceso de Python.
 #   Por eso el numero se saca de la tabla de frentes y no del RSS del daemon,
 #   que es minusculo y daria una falsa sensacion de holgura.
+#
+# ⚠ SI DEJAS ESTOS 4G EN UNA MAQUINA GRANDE, EL FALLO NO SE VE COMO ERROR: el
+#   agente muere por OOM, systemd lo reinicia a los 30 s (Restart=on-failure) y
+#   desde Telegram parece que "el bot se olvido de lo que estaba haciendo".
+#   Diagnosticar eso despues cuesta una tarde. Ajustalos ANTES de habilitar.
+#
+# ⚠ Y la RAM se lee en DECIMAL: la SER8 tiene 56 GB y `free -g` dice 50
+#   (MemTotal 50,8 GiB; el firmware reserva algo). Quien elija la fila por lo
+#   que dice `free -g` elegira la equivocada. Medido el 2026-08-18.
 MemoryHigh=3G
 MemoryMax=4G
 

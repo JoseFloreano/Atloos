@@ -265,6 +265,39 @@ journalctl --user -u claude-telegram --since "-10 min" | head
 Y la prueba que de verdad importa: **manda un mensaje al bot desde el móvil**.
 `is-active` dice que el proceso vive, no que el puente responda.
 
+### Dónde va cada cosa en Linux, y por qué esas rutas
+
+Ninguna es preferencia: **es donde el código ya mira**, así que respetarlas
+significa cero cambios de código.
+
+| Cosa | Ruta | Quién la busca ahí |
+|---|---|---|
+| Vault | `~/DevSetup/ObsidianVault` | `vaultio.py:31-42`, `check-vault-updated.py:53-65`. Clon **normal**: el `--separate-git-dir` de la Legion existe solo para sacar el `.git` de OneDrive |
+| `.env` del puente | `~/.config/claude-telegram/.env` | `notify_telegram.py:55-64`. En Linux no hay `LOCALAPPDATA`, así que esta es la primera candidata |
+| venv | `~/.local/share/claude-telegram/venv` | `install-deps.sh`, misma raíz que `gitops.worktrees_root()` usa de respaldo — y **fuera del repo** |
+| Perfil del bot | `~/.claude-tg` *(si lo creas)* | El glob `~/.claude-*` de `wire-hooks.py`. Sin él, el daemon usa la config normal y **conserva los 6 hooks** |
+
+⚠ **El `WARNING sin perfil bot` del arranque no es un fallo, es el diseño**: sin
+`~/.claude-tg` el daemon cae a la config normal. Pierde el ahorro de tokens y
+**conserva la capa 3**, que es el orden correcto.
+
+### Tres cosas medidas al dar de alta la SER8 (2026-08-18)
+
+- **La RAM se mira en decimal, y `free -g` engaña.** La SER8 tiene **56 GB** y
+  `free -g` dice **50** (`MemTotal` = 50,8 GiB; `lsmem` = 52 GiB online): los 56
+  son GB decimales y el firmware reserva algo. **Quien elija la fila de la tabla
+  de memoria por lo que dice `free -g` elegirá la equivocada** — la fila que
+  aplica es la de 56 GB (`MemoryMax=16G` · `MemoryHigh=12G`).
+- **Un vault privado necesita credencial, y el `git clone` no es un trámite.**
+  Una caja headless 24/7 no trae helper, ni `gh`, ni clave. La salida correcta
+  es una **clave SSH por máquina** (revocable sola), no `credential.helper
+  store`, que deja un token en claro en disco.
+- **`python3 -m venv --help` sale 0 y aun así puede faltar `ensurepip`.** Ese
+  `--help` es la trampa de siempre —*exit 0 no es «quedó hecho»*— aplicada al
+  preflight. El preflight honesto es **crear un venv de usar y tirar**. Desde el
+  2026-08-18 `install-deps.sh` se recupera solo de ese estado: si el venv existe
+  pero no tiene `pip`, lo rehace.
+
 ---
 
 # Fase T2 — Modo escritura (`/write`)
