@@ -111,8 +111,14 @@ def main():
     print("\nB · lo que NO aplica en el puente y debe irse")
     caso("las reglas numeradas de Graphiti/vault", "add_episode" not in salida)
     caso("el arranque con `search_facts`", "search_facts" not in salida)
-    caso("escribir en la nota de sesión del vault",
-         "nota de sesión" not in salida.lower())
+    # ⚠ NO se busca la frase «nota de sesión»: `BOT_REGLAS` la usa a propósito
+    # —«la nota de sesión la escribe él al hacer /done»— así que prohibirla
+    # ponía en rojo a la regla sustituta por decir la verdad. El primer intento
+    # de este caso hacía exactamente eso. Se busca la ORDEN del original, que es
+    # lo que debe desaparecer: el bot no actualiza pendientes en el vault.
+    caso("la orden de actualizar Pendientes/Estado en el vault",
+         "update Pendientes/Estado" not in salida,
+         "es la orden que el daemon cumple por él; dejarla es pedir lo imposible")
     caso("`memory-keeper` / `adr-writer` (escriben en el vault)",
          "memory-keeper" not in salida and "adr-writer" not in salida)
     caso("el fallback del MCP `graphiti-memory`", "graphiti-memory" not in salida)
