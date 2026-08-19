@@ -385,6 +385,76 @@ def revisa_aviso():
         diverge(f"OnFailure apunta a {unidad}, que NO esta instalada")
 
 
+# ── 7 · El vault: la caja sin Obsidian es la que no sincroniza sola ───────
+def revisa_vault(raiz):
+    """La sincronia del vault en ESTA maquina.
+
+    Existe por el fallo del 2026-08-19: el vault es un repo git que en las
+    laptops mueve el plugin Git de Obsidian, y **la SER8 no tiene Obsidian**. El
+    resultado era mudo por los dos lados — briefings viejos sin decir su edad, y
+    notas de `/done` que solo existian en el disco de la SER8.
+
+    El check que importa es el ultimo (el timer): los otros dos dicen COMO esta
+    el vault ahora, y ese dice si hay algo que lo mantenga asi manana.
+    """
+    titulo("7 · El vault (sincronia)")
+    sys.path.insert(0, str(raiz / "setup" / "telegram-bridge"))
+    try:
+        import vaultio
+    except Exception as exc:                 # noqa: BLE001 — el doctor no revienta
+        na("vault", f"no se pudo importar vaultio ({exc})")
+        return
+    root = vaultio.vault_root()
+    if not root.parts or not root.is_dir():
+        na("vault", "no hay vault en esta maquina")
+        return
+    ok(f"vault en {root}")
+    if not (root / ".git").exists():
+        na("sincronia del vault", "el vault no es un repo git en esta maquina")
+        return
+    if not vaultio.tiene_remoto(root):
+        na("sincronia del vault", "el vault no tiene remoto")
+        return
+
+    # `ls-remote` y NO `fetch`: la regla 1 dice "solo lee, nunca arregla", y un
+    # fetch escribe refs en el repo que esta diagnosticando. Distinto de "no
+    # hace dano": aqui el doctor tiene que poder correr sin cambiar el sujeto.
+    rc, rama = corre(["git", "-C", str(root), "rev-parse", "--abbrev-ref", "HEAD"])
+    rama = rama.strip() if rc == 0 else ""
+    rc, out = corre(["git", "-C", str(root), "ls-remote", "origin",
+                     f"refs/heads/{rama}"], timeout=25)
+    remoto = out.split()[0] if rc == 0 and out.split() else ""
+    _, local = corre(["git", "-C", str(root), "rev-parse", "HEAD"])
+    if not remoto:
+        na("frescura del vault", "no se pudo consultar el remoto (sin red o sin credencial)")
+    elif remoto == local.strip():
+        ok(f"vault al dia con origin/{rama} (ni detras ni sin publicar)")
+    else:
+        rc, _ = corre(["git", "-C", str(root), "cat-file", "-e", remoto + "^{commit}"])
+        if rc != 0:
+            diverge(f"el vault esta DETRAS de origin/{rama}",
+                    "hay commits en el remoto que aqui no estan, y el briefing "
+                    "se sirve de ESTE disco: lo que lea sera viejo")
+        else:
+            _, n = corre(["git", "-C", str(root), "rev-list", "--count",
+                          f"{remoto}..HEAD"])
+            diverge(f"el vault tiene {n or '?'} commit(s) SIN PUBLICAR",
+                    "incluidas las notas de /done: hoy solo existen en esta maquina")
+
+    # Lo anterior es una foto; esto es lo que la mantiene fresca manana.
+    if not hay_systemd_user():
+        na("timer de sincronia del vault", "no hay systemd de usuario aqui")
+        return
+    rc, _ = corre(["systemctl", "--user", "cat", f"{SERVICIO}-vault.timer"])
+    if rc == 0:
+        ok(f"{SERVICIO}-vault.timer instalado (sustituye al plugin de Obsidian)")
+    else:
+        diverge(f"{SERVICIO}-vault.timer NO esta instalado",
+                "sin el, en una maquina sin Obsidian el vault solo se mueve "
+                "cuando alguien entra a hacer git pull a mano. "
+                "Receta: setup/telegram-bridge/claude-telegram-vault.timer.example")
+
+
 def main():
     breve = "--breve" in sys.argv[1:]
     import platform
@@ -405,6 +475,7 @@ def main():
     revisa_disco()
     revisa_exencion(raiz)
     revisa_aviso()
+    revisa_vault(raiz)
 
     print("\n" + "═" * 70)
     if divergencias:

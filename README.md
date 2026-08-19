@@ -185,7 +185,7 @@ primera se monta en cinco minutos:
 | **T0 · Avisos** | "Mándamelo por telegram": al acabar una tarea larga, el resultado te llega al móvil. Solo envía — sin bot escuchando, sin daemon, sin URL pública ni túnel |
 | **T1 · Chat** | Le preguntas al repo desde el móvil, en **solo lectura** |
 | **T2 · Escritura** | Desarrolla en un **worktree aislado**, con `/commit`, `/test`, `/pull` y `/merge` con botón |
-| **T3 · Memoria** | El bot lee el `_PROJECT.md` del vault y escribe su nota de sesión al cerrar |
+| **T3 · Memoria** | El bot lee el `_PROJECT.md` del vault (con su **edad** por delante) y escribe su nota de sesión al cerrar — y la publica: en una máquina sin Obsidian nadie más sincroniza el vault |
 
 **El procedimiento completo está en
 [`setup/telegram-bridge/README.md`](./setup/telegram-bridge/README.md)**: crear

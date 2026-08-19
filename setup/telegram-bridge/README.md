@@ -146,15 +146,38 @@ cualquiera puede escribirle a un bot porque su username es público.
 
 ## Configurar los proyectos
 
-```bash
-cp projects.example.json projects.json    # PowerShell: Copy-Item
-notepad projects.json
+La forma corta, desde el móvil y sin reiniciar nada:
+
+```
+/alta /home/floreano/projects/mi-app npm test
 ```
 
-Mapea `nombre → ruta absoluta del repo`. El nombre es lo que escribes en
-`/p <nombre>`; **usa el mismo que la carpeta del vault** (`10-Projects/<nombre>`)
-para que la memoria del proyecto case. `projects.json` está en `.gitignore`
-(contiene rutas de tu máquina).
+`/alta <ruta> [comando de test]` comprueba **las cinco casillas del alta** y
+responde con el checklist; si pasa, escribe `projects.json` y **lo recarga en
+caliente** (antes, `load_projects()` corría solo en `main()`: dar de alta un
+proyecto exigía reiniciar el servicio, o sea que desde el móvil no se podía).
+Lo mismo desde una shell, sin bot:
+
+```bash
+setup/scripts/py setup/telegram-bridge/altas.py <ruta> [comando de test]
+```
+
+| Casilla | ¿Bloquea? | Si falta |
+|---|---|---|
+| **ruta** existente en ESTA máquina | ✋ sí | Una ruta `C:\…` en Linux se dice con su motivo. Antes se descartaba con un `log.warning` que en la SER8 va al journal, no al chat |
+| **git** (hay `.git`) | ✋ sí | Sin git no hay rama, ni worktree, ni `/merge` |
+| **nombre** libre (kebab, derivado de la carpeta) | ✋ sí | Si ya lo usa otra ruta, se dice cuál |
+| **vault** (`10-Projects/<nombre>`) | ⚠️ avisa | Sin la carpeta, el briefing sale **vacío y en silencio**: trabajas sin memoria sin enterarte. Se engancha con la skill `project-onboard` |
+| **test** resoluble en el PATH **del daemon** | ⚠️ avisa | `npm test` / `flutter test` valen en la laptop y aquí son `FileNotFoundError`: `systemd --user` no lee tu `.bashrc`. Sin comando, `/merge` queda bloqueado (no hay verde posible) |
+
+Bloqueante es solo lo que impide trabajar. Lo demás pasa **diciéndolo**: un
+proyecto sin carpeta en el vault se puede usar hoy, solo que sin memoria.
+
+A mano sigue valiendo (`cp projects.example.json projects.json` y editarlo), y
+un fichero editado por fuera entra en el siguiente `/p` sin reiniciar. El nombre
+es lo que escribes en `/p <nombre>`; **usa el mismo que la carpeta del vault**
+(`10-Projects/<nombre>`) para que la memoria del proyecto case. `projects.json`
+está en `.gitignore` (contiene rutas de tu máquina).
 
 ## Arrancar
 
@@ -174,7 +197,8 @@ Debe imprimir `Daemon en marcha (long polling)`. Los eventos van a
 
 | Comando | Qué hace |
 |---|---|
-| `/p <proyecto>` | Activa un proyecto. Sin argumento o con nombre inexistente → lista |
+| `/p <proyecto>` | Activa un proyecto. Sin argumento o con nombre inexistente → lista. Relee `projects.json` si cambió |
+| `/alta <ruta> [test]` | Da de alta un proyecto: checklist de 5 casillas, escribe `projects.json` y recarga en caliente |
 | *(mensaje normal)* | Consulta al proyecto activo. Sin proyecto → error + lista |
 | `/new` | Empieza conversación nueva (la anterior queda en `/chats`) |
 | `/chats` | Lista las conversaciones guardadas del proyecto, numeradas |
@@ -378,6 +402,44 @@ significa cero cambios de código.
 ⚠ **El `WARNING sin perfil bot` del arranque no es un fallo, es el diseño**: sin
 `~/.claude-tg` el daemon cae a la config normal. Pierde el ahorro de tokens y
 **conserva la capa 3**, que es el orden correcto.
+
+### El vault en una máquina SIN Obsidian (2026-08-19)
+
+El vault es un repo git. En las laptops lo sincronizan **Obsidian + su plugin
+Git** (autocommit + autopush). **La SER8 no tiene Obsidian**, así que en la única
+máquina que corre el daemon 24/7 nadie hacía `pull` ni `push`, y fallaba por los
+dos lados sin decir nada:
+
+- **al leer** → el briefing servía el `_PROJECT.md` que hubiera en disco desde el
+  último `pull` a mano, **sin declarar su edad**: desde el móvil no hay forma de
+  distinguir un vault de hoy de uno de hace una semana;
+- **al escribir** → la nota de `/done` se quedaba SOLO en el disco de la SER8.
+  Eso no es "desincronizado", es **pérdida de datos** en cuanto otra máquina
+  pulle con divergencia.
+
+Ojo con la confusión que costó el diagnóstico: **`/pull` y `/push` no tienen nada
+que ver con esto.** Son `gitops.pull_base` / `push_branch` sobre el **worktree
+del proyecto** (rebasan tu rama sobre `main` y la publican); el vault no se toca
+en ninguno de los dos.
+
+Lo que sí lo sincroniza, en tres piezas:
+
+| Pieza | Cuándo | Qué hace |
+|---|---|---|
+| `vaultio.sync_pull()` | antes de inyectar el briefing | `pull --ff-only` en un hilo, con timeout. Si falla, se sigue con lo que hay **y la edad viaja en el briefing** |
+| `vaultio.commit_push()` | en `/done`, tras escribir la nota | `commit` + `push`. Si rebota, lo dice **el `/done` en el chat**, no el log |
+| `vault-sync.sh` + su timer | cada 20 min | El sustituto del plugin de Obsidian. Ante conflicto **aborta el rebase y avisa**: no lo resuelve nadie a ciegas |
+
+Instalación del timer: `claude-telegram-vault.timer.example` (⚠ escrito el
+2026-08-19 y **sin ejercer en campo todavía** — el fichero lleva dentro cómo
+probarlo por los dos lados). El `doctor` trae el check 7, que mira si el vault
+está detrás, si tiene commits sin publicar y si el timer está instalado.
+
+**Con dos escritores el conflicto es cuestión de tiempo** (Obsidian en la laptop,
+daemon aquí). Se reparten bien —`sessions/*-tg-*.md` es del daemon en
+exclusiva— pero `_PROJECT.md` lo tocan los dos vía `session-close`. Por eso
+nadie resuelve conflictos automáticamente: misma familia que la regla de no
+crear nunca `X 2.md`.
 
 ### Tres cosas medidas al dar de alta la SER8 (2026-08-18)
 

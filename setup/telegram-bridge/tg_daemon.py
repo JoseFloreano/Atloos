@@ -59,6 +59,7 @@ import gitops                                              # noqa: E402
 from progress import ProgressTracker                       # noqa: E402
 import vaultio                                             # noqa: E402
 import testcmd                                              # noqa: E402
+import altas                                                # noqa: E402
 import botprofile                                          # noqa: E402
 from notify_telegram import deliver_text, load_env_file, _env_candidates, redact  # noqa: E402
 
@@ -253,6 +254,7 @@ def bot_profile_dir() -> str:
 # invocar sabiendo que existe. El orden es el del flujo real de trabajo.
 BOT_COMMANDS = [
     ("p", "Activar proyecto · sin argumento lista los disponibles"),
+    ("alta", "Dar de alta un proyecto: /alta <ruta> [comando de test]"),
     ("status", "Dónde estás: proyecto, conversación, modo, rama"),
     ("progress", "Qué está haciendo ahora · 'live' panel, 'off' apagar"),
     ("new", "Empezar una conversación nueva"),
@@ -310,16 +312,23 @@ def load_config() -> dict:
     return cfg
 
 
-def load_projects() -> dict:
-    """nombre → {path, test}. Acepta el formato de T1 (`"nombre": "ruta"`)."""
+def leer_projects() -> tuple:
+    """(proyectos, descartados, error). No mata el proceso: solo informa.
+
+    Existe separado de `load_projects()` porque el arranque y la RECARGA EN
+    CALIENTE necesitan lo mismo con finales distintos: en el arranque un
+    `projects.json` roto debe tumbar el daemon, pero con el daemon ya en marcha
+    tumbarlo por una coma de mas es perder el chat entero por un fichero que se
+    puede volver a leer dentro de un minuto.
+    """
     if not PROJECTS_FILE.is_file():
-        sys.exit(f"Falta {PROJECTS_FILE.name}. Copia projects.example.json y edítalo.")
+        return {}, [], f"Falta {PROJECTS_FILE.name}. Copia projects.example.json y edítalo."
     try:
         raw = json.loads(PROJECTS_FILE.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        sys.exit(f"{PROJECTS_FILE.name} no es JSON válido: {exc}")
+        return {}, [], f"{PROJECTS_FILE.name} no es JSON válido: {exc}"
 
-    valid = {}
+    valid, descartados = {}, []
     for name, entry in raw.items():
         if name.startswith("_"):
             continue
@@ -328,10 +337,61 @@ def load_projects() -> dict:
         if cfg["path"] and Path(cfg["path"]).is_dir():
             valid[name] = cfg
         else:
-            log.warning("Proyecto '%s' ignorado: la ruta no existe (%s)", name, cfg["path"])
+            descartados.append((name, cfg["path"]))
+    return valid, descartados, ""
+
+
+def load_projects() -> dict:
+    """nombre → {path, test}. Acepta el formato de T1 (`"nombre": "ruta"`).
+
+    ⚠ Los descartados se avisan **por su nombre y su ruta**. Antes era un
+    `log.warning` genérico, y en la SER8 eso va al journal: un alta con la ruta
+    de la Legion (`C:\\Users\\…`) desaparecía del listado sin una sola línea en
+    el chat, que es donde estás mirando cuando das de alta un proyecto.
+    """
+    valid, descartados, error = leer_projects()
+    if error:
+        sys.exit(error)
+    for name, ruta in descartados:
+        log.warning("Proyecto '%s' ignorado: la ruta no existe en ESTA máquina (%s). "
+                    "projects.json es por-máquina: da el alta aquí con /alta", name, ruta)
     if not valid:
         sys.exit("Ningún proyecto de projects.json apunta a una carpeta existente.")
     return valid
+
+
+PROJECTS_MTIME = 0.0
+
+
+def refrescar_projects(bot_data) -> list:
+    """Relee `projects.json` si cambió en disco. Devuelve los nombres nuevos.
+
+    POR QUÉ (2026-08-19). `load_projects()` corría SOLO en `main()`, así que dar
+    de alta un proyecto exigía reiniciar el servicio — desde el móvil, que es el
+    único sitio desde donde se usa esto, imposible. El dict se muta EN SITIO
+    porque los handlers ya tienen su referencia desde `bot_data`.
+    """
+    global PROJECTS_MTIME
+    try:
+        mtime = PROJECTS_FILE.stat().st_mtime
+    except OSError:
+        return []
+    if mtime == PROJECTS_MTIME:
+        return []
+    valid, descartados, error = leer_projects()
+    if error:
+        log.warning("projects.json no se pudo releer: %s", error)
+        return []
+    PROJECTS_MTIME = mtime
+    proyectos = bot_data["projects"]
+    nuevos = [n for n in valid if n not in proyectos]
+    proyectos.clear()
+    proyectos.update(valid)
+    for name, ruta in descartados:
+        log.warning("Proyecto '%s' ignorado al recargar: la ruta no existe (%s)", name, ruta)
+    log.info("projects.json recargado: %d proyecto(s)%s", len(valid),
+             f", nuevos: {', '.join(nuevos)}" if nuevos else "")
+    return nuevos
 
 
 # ── Estado persistente ────────────────────────────────────────────────────
@@ -535,7 +595,8 @@ async def cmd_start(update, context):
                 "**Para empezar**\n"
                 "`/p <proyecto>` — activar proyecto (sin argumento: lista)\n"
                 "…y ya escribes normal: te respondo leyendo ese repo.\n"
-                "`/status` — dónde estás · `/model` — cambiar modelo\n\n"
+                "`/status` — dónde estás · `/model` — cambiar modelo\n"
+                "`/alta <ruta> [test]` — dar de alta un proyecto nuevo\n\n"
 
                 "**Mientras trabajo**\n"
                 "`/progress` — foto de qué estoy haciendo ahora\n"
@@ -569,6 +630,11 @@ async def cmd_p(update, context):
         await reply(cfg, chat_id, msg)
         return
 
+    # Un `projects.json` editado a mano (por ssh, o desde la otra laptop vía
+    # sync) entra aquí sin reiniciar el servicio: `/p` es justo el sitio donde
+    # notarías que falta el proyecto que acabas de escribir.
+    refrescar_projects(context.bot_data)
+
     args = context.args or []
     if not args:
         await reply(cfg, chat_id, projects_list_text(projects))
@@ -590,6 +656,57 @@ async def cmd_p(update, context):
         extra = "conversación en curso"
     log.info("chat %s activó proyecto '%s'", chat_id, name)
     await reply(cfg, chat_id, f"✅ Proyecto activo: {name}\n({extra}; /new para empezar limpio)")
+
+
+async def cmd_alta(update, context):
+    """`/alta <ruta> [comando de test]` — dar de alta un proyecto, desde el móvil.
+
+    Las cinco comprobaciones y su veredicto viven en `altas.py` (stdlib, con
+    arnés propio); aquí solo se entrega el checklist y se recarga en caliente.
+
+    El `which` que se le pasa es **el de este proceso**: el daemon corre bajo
+    `systemd --user`, cuyo PATH no es el de tu shell de login. Comprobar el
+    comando de test contra cualquier otro PATH sería comprobar otra máquina.
+    """
+    cfg, projects, state = (context.bot_data[k] for k in ("cfg", "projects", "state"))
+    if not guard(update, cfg):
+        return
+    chat_id = update.effective_chat.id
+    if (msg := busy(chat_id)):
+        await reply(cfg, chat_id, msg)
+        return
+
+    args = context.args or []
+    if not args:
+        await reply(cfg, chat_id,
+                    "*Dar de alta un proyecto*\n"
+                    "`/alta <ruta absoluta> [comando de test]`\n\n"
+                    "Ejemplos:\n"
+                    "`/alta ~/projects/mi-app`\n"
+                    "`/alta /home/floreano/projects/mi-app npm test`\n\n"
+                    "La ruta es **de esta máquina** (el registro es por-máquina: "
+                    "una ruta de la otra laptop no vale). El comando de test es "
+                    "opcional _aquí_, pero sin ninguno declarado `/merge` queda "
+                    "bloqueado: no hay verde posible.")
+        return
+
+    ruta, test = args[0], " ".join(args[1:])
+    v = await asyncio.to_thread(altas.revisar, ruta, "", test, None, shutil.which)
+    texto = altas.texto_veredicto(v)
+
+    if not v["ok"]:
+        await reply(cfg, chat_id, texto)
+        return
+    ok, motivo = await asyncio.to_thread(altas.registrar, v)
+    if not ok:
+        await reply(cfg, chat_id, texto + f"\n\n❌ {motivo}")
+        return
+    refrescar_projects(context.bot_data)
+    activo = v["nombre"] in projects
+    log.info("alta: %s -> %s (activable=%s)", v["nombre"], v["ruta"], activo)
+    await reply(cfg, chat_id, texto + f"\n\n📇 {motivo}\n"
+                + (f"Ya puedes activarlo: `/p {v['nombre']}`" if activo else
+                   "⚠️ Escrito, pero el daemon no lo ve todavía: mira el journal."))
 
 
 async def cmd_new(update, context):
@@ -1286,6 +1403,17 @@ async def cmd_done(update, context):
         if ruta_nota:
             notas.append(f"nota de sesión en el vault: {Path(ruta_nota).name}")
             log.info("nota de sesión escrita: %s", ruta_nota)
+            # C5 — y se PUBLICA. Escribirla y no commitearla no dejaba la nota
+            # "desincronizada": la dejaba existiendo solo en el disco de la
+            # SER8, o sea perdida en cuanto otra máquina pulle con divergencia.
+            # El resultado va al CHAT (aquí, en `notas`), no al log: si el push
+            # rebota, el sitio donde eso se tiene que ver es el /done.
+            ok_vault, motivo = await asyncio.to_thread(
+                vaultio.commit_push, [ruta_nota],
+                f"tg: nota de sesión {Path(ruta_nota).stem}")
+            notas.append(("vault: " + motivo) if ok_vault
+                         else f"⚠️ vault NO sincronizado — {motivo}")
+            log.info("vault commit+push: %s (%s)", "ok" if ok_vault else "no", motivo)
 
         try:
             r = await gitops.remove_worktree(projects[project]["path"], conv["worktree"],
@@ -1563,7 +1691,14 @@ async def on_message(update, context):
         # C1b — solo en el PRIMER mensaje de la conversación: después ya vive en
         # el transcript y repetirlo sería pagar el mismo contexto cada turno.
         if not session_id:
-            briefing = vaultio.project_briefing(project)
+            # C5 — `pull` ANTES de leer: en la SER8 no hay Obsidian que
+            # sincronice el vault, así que sin esto el briefing servía lo que
+            # hubiera en disco desde el último pull a mano, sin decir su edad.
+            # En un hilo (subprocess síncrono) y con timeout: la red no puede
+            # colgar el bucle de eventos, y si falla se sigue con lo que hay.
+            sync = await asyncio.to_thread(vaultio.sync_pull)
+            log.info("vault pull: %s (%s)", "ok" if sync[0] else "no", sync[1])
+            briefing = vaultio.project_briefing(project, sync)
             if briefing:
                 prompt = briefing + prompt
                 log.info("briefing inyectado (%d chars)", len(briefing))
@@ -1710,7 +1845,7 @@ def main() -> None:
         pass
     setup_logging()
 
-    global SECRET_DENIES, BOT_PROFILE_DIR
+    global SECRET_DENIES, BOT_PROFILE_DIR, PROJECTS_MTIME
     SECRET_DENIES = secret_denies()
     BOT_PROFILE_DIR = bot_profile_dir()
     # El perfil ya se registró (con su motivo) dentro de bot_profile_dir().
@@ -1718,6 +1853,10 @@ def main() -> None:
              len(SECRET_DENIES.split(",")) if SECRET_DENIES else 0)
     cfg = load_config()
     projects = load_projects()
+    try:                            # base de la recarga en caliente (/alta, /p)
+        PROJECTS_MTIME = PROJECTS_FILE.stat().st_mtime
+    except OSError:
+        PROJECTS_MTIME = 0.0
     state = load_state()
     asyncio.run(reconcile_startup(projects, state))
     save_state(state)
@@ -1739,6 +1878,7 @@ def main() -> None:
     app.bot_data.update({"cfg": cfg, "projects": projects, "state": state})
 
     for name, fn in (("start", cmd_start), ("help", cmd_start), ("p", cmd_p),
+                     ("alta", cmd_alta),
                      ("new", cmd_new), ("chats", cmd_chats), ("chat", cmd_chat),
                      ("model", cmd_model), ("status", cmd_status), ("progress", cmd_progress),
                      ("write", cmd_write), ("diff", cmd_diff), ("test", cmd_test),

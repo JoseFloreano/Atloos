@@ -46,13 +46,25 @@ aislamiento activo.
    vieja** que escribe `graphify claude install`: el disparador bueno ya viaja
    en el snippet (paso 5). Antes de instalar nada, lee
    `references/graphify-al-enganchar.md`. Sin Graphify, omite sin avisar.
-8. **Da el proyecto de alta en `setup/telegram-bridge/projects.json`** del repo
-   Atloos, con su ruta absoluta. **Enganchar sin dar de alta no engancha nada
-   comprobable**: de ahí saca `test-claude-md-drift.py` los `CLAUDE.md` vivos,
-   así que un proyecto ausente **nunca se audita**. Pasó: el proyecto de los
-   cuatro reportes de campo no estaba, y nada lo dijo.
+8. **Da el proyecto de alta en el puente** — no editando `projects.json` a mano,
+   sino con el validador, que es el único que comprueba las cinco casillas:
+
+   ```bash
+   setup/scripts/py setup/telegram-bridge/altas.py <ruta absoluta> [comando de test]
+   ```
+
+   (desde el móvil, lo mismo: `/alta <ruta> [test]`, que además recarga en
+   caliente). Devuelve un checklist: ruta · git · nombre · carpeta en el vault ·
+   comando de test resoluble **en el PATH del daemon**. Salida 0 = dado de alta.
+
+   **Enganchar sin dar de alta no engancha nada comprobable**: de ahí saca
+   `test-claude-md-drift.py` los `CLAUDE.md` vivos, así que un proyecto ausente
+   **nunca se audita**. Pasó: el proyecto de los cuatro reportes de campo no
+   estaba, y nada lo dijo.
    ⚠ El registro es **por máquina** (gitignorado, rutas absolutas): en la otra
-   laptop se repite el alta allí.
+   laptop se repite el alta allí, y **no se copia el fichero** — una ruta de
+   Windows en Linux la descarta el daemon con un aviso que va al journal, no al
+   chat.
 9. **Verifica**: existe `10-Projects/<nombre>/_PROJECT.md`; el `CLAUDE.md` del
    proyecto contiene el snippet y NO queda ningún `<project-name>` sin
    reemplazar. Y `setup/scripts/py setup/scripts/tests/test-claude-md-drift.py <CLAUDE.md>` [repo]

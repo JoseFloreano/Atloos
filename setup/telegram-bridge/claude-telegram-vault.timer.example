@@ -1,0 +1,70 @@
+# ══════════════════════════════════════════════════════════════════════════
+#  claude-telegram-vault.{service,timer} — la sincronia del vault en la maquina
+#  que no tiene Obsidian.
+#
+#  ⚠ ESTADO: escrito el 2026-08-19, **sin probar en campo todavia**. El de fallo y
+#    el latido diario llevan su "PROBADO" con fecha porque se ejercieron; este no
+#    lo lleva, y hasta que lo lleve no cuenta. Para ejercerlo, abajo.
+#
+#  POR QUE. El vault es un repo git que en las laptops sincroniza el plugin Git de
+#  Obsidian. La SER8 no tiene Obsidian, asi que sin esto el vault de la maquina
+#  24/7 solo se movia cuando alguien entraba por ssh a hacer `git pull`. La
+#  logica —y sobre todo la regla de NO resolver conflictos— vive en
+#  `vault-sync.sh`, que **calla cuando todo esta bien**.
+#
+#  CADENCIA: cada 20 min. No es un numero magico: es el orden de magnitud del
+#  autocommit del plugin en las laptops, asi que las dos puntas del vault se
+#  mueven al mismo ritmo. Subirlo mucho devuelve el problema (trabajas contra un
+#  briefing viejo); bajarlo mucho solo gasta red.
+#
+#  INSTALACION — copia CADA bloque a su fichero, sustituyendo <REPO>:
+#      ~/.config/systemd/user/claude-telegram-vault.service
+#      ~/.config/systemd/user/claude-telegram-vault.timer
+#  y luego:
+#      systemctl --user daemon-reload
+#      systemctl --user enable --now claude-telegram-vault.timer
+#      systemctl --user list-timers claude-telegram-vault
+#
+#  Y para que siga corriendo con la sesion cerrada (una caja headless casi nunca
+#  tiene sesion abierta), lo mismo que el daemon:
+#      sudo loginctl enable-linger "$USER"
+#
+#  COMO EJERCERLO POR LOS DOS LADOS (que es lo unico que lo dara por probado):
+#      # a) el lado que calla: con el vault al dia
+#      setup/telegram-bridge/vault-sync.sh --verboso     # debe decir "al dia" y NADA al movil
+#      # b) el lado que habla: se fabrica un conflicto a proposito
+#      #    edita la MISMA linea de un fichero en la laptop (y pushea) y en la
+#      #    SER8 (sin pushear), y corre el script: debe abortar el rebase,
+#      #    dejar el vault como estaba y mandar el 🔴 al movil.
+#      git -C ~/DevSetup/ObsidianVault status    # comprobar que NO quedo en rebase
+# ══════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────── claude-telegram-vault.service ────────────────
+[Unit]
+Description=Sincroniza el vault de Obsidian (sustituye al plugin Git en la caja sin Obsidian)
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=<REPO>
+# Se invoca con /bin/bash a proposito: asi la unit no depende del bit de
+# ejecucion del fichero, que es lo que se pierde al copiar el repo entre
+# maquinas (y en Windows no existe).
+ExecStart=/bin/bash <REPO>/setup/telegram-bridge/vault-sync.sh
+StandardOutput=journal
+StandardError=journal
+
+# ─────────────────────────── claude-telegram-vault.timer ──────────────────
+# [Unit]
+# Description=Sincroniza el vault cada 20 minutos
+#
+# [Timer]
+# OnBootSec=2min
+# OnUnitActiveSec=20min
+# # Una maquina apagada a la hora del disparo se saltaria la ventana entera; con
+# # esto el primer arranque recupera la sincronia en vez de esperar 20 min.
+# Persistent=true
+# RandomizedDelaySec=120
+#
+# [Install]
+# WantedBy=timers.target

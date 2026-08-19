@@ -722,8 +722,54 @@ Los dos tienen que salir con `exit=0`. Si el segundo dice `command not found`
 de algo raro, **copiaste la carpeta en vez de clonarla**: borra y clona.
 
 ⚠ Y lo que **sí** hay que traer a mano, porque git no lo versiona:
-`setup/telegram-bridge/.env` y `projects.json`. **Cópialos, no los enlaces**
+`setup/telegram-bridge/.env`. **Cópialo, no lo enlaces**
 (`workstream-dispatch/references/higiene-de-shell.md` §1).
+
+**`projects.json` NO se copia de la otra laptop.** Sus rutas son absolutas y de
+allí: `C:\Users\…` aquí no existe, y el daemon descartaba esas entradas con un
+`log.warning` que va al journal — o sea que el proyecto desaparecía del `/p` sin
+una línea en el chat. Se da de alta aquí, uno por uno, y el alta te dice qué
+falta:
+
+```bash
+setup/scripts/py setup/telegram-bridge/altas.py ~/projects/mi-app npm test
+```
+
+o directamente desde el móvil, cuando el bot ya esté arriba: `/alta <ruta> [test]`.
+
+### 8.1c El vault — y el hueco que dejó no tener Obsidian
+
+> ⚠ **Este paso también faltaba**: el manual entero no mencionaba el vault ni una
+> vez, y sin embargo el daemon lo lee en cada conversación. Cazado el 2026-08-19.
+
+El vault es un repo git aparte. Clónalo donde el código ya lo busca
+(`vaultio.vault_root()`), que en Linux es `~/DevSetup/ObsidianVault`:
+
+```bash
+mkdir -p ~/DevSetup
+git clone <url-del-vault> ~/DevSetup/ObsidianVault
+```
+
+Clon **normal**: el `--separate-git-dir` de la Legion existe solo para sacar el
+`.git` de OneDrive, y aquí no hay OneDrive.
+
+**Y ahora lo que no es obvio.** En las laptops el vault lo sincronizan Obsidian y
+su plugin Git (autocommit + autopush). **Aquí no hay Obsidian**, así que sin una
+pieza que lo sustituya el vault solo se mueve cuando entras por SSH a hacer `git
+pull`: el bot te sirve briefings viejos y las notas de `/done` se quedan en este
+disco y en ningún otro sitio. Instala el timer:
+
+```bash
+# la receta completa, con sus dos bloques, está en el fichero
+less setup/telegram-bridge/claude-telegram-vault.timer.example
+systemctl --user daemon-reload
+systemctl --user enable --now claude-telegram-vault.timer
+bash setup/telegram-bridge/vault-sync.sh --verboso      # debe decir "al dia"
+```
+
+Comprobación de que quedó: `setup/scripts/py setup/scripts/doctor.py` trae el
+**check 7**, que mira si el vault está detrás de su remoto, si tiene commits sin
+publicar y si el timer está instalado.
 
 ### 8.2 Claude Code — por apt, no por curl
 
