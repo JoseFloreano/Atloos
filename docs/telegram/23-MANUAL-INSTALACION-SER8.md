@@ -990,6 +990,70 @@ sudo dmidecode -t memory | grep -E "Size|Locator|Speed|Rank|Part Number"
 > documento `24-RAM-DEL-SER8-QUE-COMPRAR.md`, y **conviene resolverlo antes de
 > instalar** — ver la nota de la Parte 0.
 
+### 10.3b Los GiB que faltan, y cómo recuperar 3,5 de ellos
+
+Cuando metas el segundo módulo verás que **`free` enseña menos RAM de la que
+compraste**, y la explicación cómoda («los GB del fabricante son decimales») es
+**falsa**. Esconde justo los gigas que se pueden recuperar.
+
+**Medido en `floreano-server` el 2026-08-18:**
+
+```
+BIOS  Total Memory: 57344 MB              = 56,0 GiB exactos  (24 + 32, binarios)
+$ grep MemTotal /proc/meminfo
+MemTotal:       53306684 kB               = 50,84 GiB
+                                            faltan 5,16 GiB
+$ cat /sys/class/drm/card0/device/mem_info_vram_total
+4294967296                                = 4,00 GiB  <- la iGPU Radeon 780M
+$ free -g
+               total        used        free      shared  buff/cache   available
+Mem:              50           1          48           0           1          49
+Swap:              7           0           7
+```
+
+**Por qué no es conversión decimal:** si los módulos fueran GB decimales, la
+BIOS diría ~53 406 MiB, no 57 344. Los 57 344 MiB cuadran exactamente con
+24 GiB + 32 GiB, así que la memoria instalada **sí** son 56 GiB binarios. Los
+5,16 GiB que faltan se reparten así, y los dos sumandos están medidos:
+
+| Concepto | Cuánto | De dónde sale el número |
+|---|---|---|
+| *Frame buffer* de la iGPU (UMA) | **4,00 GiB** | `mem_info_vram_total` = 4294967296 |
+| Firmware, ACPI y reservas del kernel | ~1,16 GiB | el resto: 5,16 − 4,00 |
+
+En una caja **headless que no dibuja nada**, esos 4 GiB de *frame buffer* son
+memoria tirada — y en esta máquina la RAM es el techo de frentes paralelos.
+
+#### El procedimiento (lo hace una persona, requiere BIOS y reinicio)
+
+1. Anota el `free -g` de AHORA. Sin el «antes», el «después» no prueba nada.
+2. Apaga, conecta monitor y teclado, enciende y entra en la BIOS (`Supr` o
+   `F7` repetidamente durante el arranque).
+3. Busca **`UMA Frame Buffer Size`**. En este equipo cuelga de
+   `Advanced → AMD CBS → NBIO Common Options → GFX Configuration`; en algunas
+   revisiones del firmware está en `Chipset → North Bridge`.
+4. Ponlo en **512M**. No lo dejes en `Auto`: `Auto` es lo que da los 4 GiB.
+5. Guarda y reinicia (`F10`).
+6. Vuelve por SSH y comprueba las DOS cosas, no solo una:
+
+```bash
+grep MemTotal /proc/meminfo                          # tiene que SUBIR
+cat /sys/class/drm/card*/device/mem_info_vram_total  # tiene que BAJAR a ~512 MiB
+free -g
+```
+
+**Hueco a esperar: +3,5 GiB** (de 4096 MiB a 512 MiB). Es decir, `MemTotal`
+debería pasar de ~50,8 a ~54,3 GiB.
+
+> ⚠ **3,5 GiB, no «4-5».** La cuenta de servilleta decía 4-5 porque mezclaba el
+> *frame buffer* con las reservas de firmware, y esas **no se tocan desde la
+> BIOS**: 512 MiB de UMA siguen ocupados y el ~1,16 GiB del firmware se queda
+> donde está. Si tras el reinicio ves +5 GiB, el número bueno es el tuyo y esta
+> tabla está mal — pero mídelo antes de creértelo.
+
+> Si el equipo no arranca con 512M (algunas BIOS de AMD no aceptan bajar tanto
+> con pantalla conectada), sube a `1G` y repite: siguen siendo 3 GiB de vuelta.
+
 ### 10.4 La prueba del apagón — la que de verdad importa
 
 1. Con el servidor encendido y funcionando, **quita el cable de corriente**.

@@ -464,12 +464,35 @@ async def commits_ahead(repo_or_wt: str, branch: str, base: str) -> list:
     return [l for l in out.splitlines() if l.strip()]
 
 
+# Trailer que marca lo que hizo el puente. Va en `commit_all` —el único sitio
+# donde el bot crea commits— y existe por la auditoría 39 (§8.2): los tres
+# commits que el puente empujó a `main` el 2026-08-18 llevaban autor Y committer
+# del humano, cuerpo vacío y cero trailers, así que **nada en los metadatos de
+# git decía que los había hecho un bot**. Ninguna sesión podía saber que `main`
+# se había movido por Telegram y no por una persona; el sprint 16 casi trabaja
+# sobre una base fantasma por eso.
+#
+# Trailer y no committer aparte a propósito: `git log --format=%(trailers)` y
+# `git interpret-trailers` lo leen sin configurar identidades nuevas en la
+# máquina, y no toca la autoría, que sigue siendo de quien pidió el trabajo.
+COMMIT_TRAILER = "Via: telegram-bridge"
+
+
 async def commit_all(worktree: str, message: str) -> dict:
-    """Commit de todo lo pendiente en la rama del worktree."""
+    """Commit de todo lo pendiente en la rama del worktree.
+
+    El mensaje lleva `Via: telegram-bridge` para que un commit del bot se pueda
+    distinguir de uno humano por metadatos, no por el estilo del asunto.
+    """
     await git(["add", "-A"], worktree)
     if not (await git(["diff", "--cached", "--name-only"], worktree)).strip():
         return {"committed": False, "reason": "no hay cambios que commitear"}
-    await git(["-c", "core.autocrlf=false", "commit", "-m", message], worktree)
+    # El trailer va en su propio párrafo: `git` solo lo reconoce como tal si va
+    # en el último bloque del mensaje, separado por una línea en blanco.
+    cuerpo = message.rstrip()
+    if COMMIT_TRAILER not in cuerpo:
+        cuerpo += f"\n\n{COMMIT_TRAILER}"
+    await git(["-c", "core.autocrlf=false", "commit", "-m", cuerpo], worktree)
     return {"committed": True,
             "sha": await git(["rev-parse", "--short", "HEAD"], worktree),
             "subject": await git(["log", "-1", "--pretty=%s"], worktree)}
@@ -533,7 +556,15 @@ async def ensure_pr(worktree: str, branch: str, base: str, title: str) -> dict:
     """Crea el PR si no existe (requiere gh); devuelve su URL si la hay."""
     gh = shutil.which("gh")
     if not gh:
-        return {"pr": False, "reason": "gh no está instalado"}
+        # La razón lleva la CURA dentro, y va aquí —en quien la sabe— y no en
+        # cada llamador: `ensure_pr` tiene dos (/push y /merge) y la cura es la
+        # misma. Sin esto el humano pide un PR, no pasa nada, y no hay forma de
+        # saber por qué (sprint 16, A3).
+        return {"pr": False,
+                "reason": "`gh` no está instalado en la máquina donde corre el "
+                          "bot, así que desde aquí no se pueden crear PRs. "
+                          "Cura: instálalo y autentícalo EN ESA MÁQUINA "
+                          "(`gh auth login`), o abre el PR desde la laptop."}
     rc, out, _ = await run([gh, "pr", "view", branch, "--json", "url,state",
                             "-q", ".url"], worktree, timeout=90)
     if rc == 0 and out.strip():

@@ -60,7 +60,7 @@ from progress import ProgressTracker                       # noqa: E402
 import vaultio                                             # noqa: E402
 import testcmd                                              # noqa: E402
 import botprofile                                          # noqa: E402
-from notify_telegram import deliver_text, load_env_file, _env_candidates  # noqa: E402
+from notify_telegram import deliver_text, load_env_file, _env_candidates, redact  # noqa: E402
 
 BASE = Path(__file__).resolve().parent
 PROJECTS_FILE = BASE / "projects.json"
@@ -68,9 +68,55 @@ STATE_FILE = BASE / "state.json"
 LOG_DIR = BASE / "logs"
 
 SESSION_TTL_H = 24          # R3 `ecosistema/16`: la continuidad durable la da el vault
-READ_TIMEOUT = 600          # 10 min basta para una consulta
+READ_TIMEOUT = 1200         # 20 min · procedencia justo abajo
 WRITE_TIMEOUT = 5400        # 90 min: un desarrollo real no cabe en 10 (RFD C9)
-CHECKPOINT_EVERY = 1800     # 30 min (RFD C2)
+
+# ⏱ DE DÓNDE SALE `READ_TIMEOUT` (sprint 16, 2026-08-18).
+#
+# El 600 anterior venía comentado «10 min basta para una consulta». Eso no era
+# una medida: era una SUPOSICIÓN escrita una vez que nadie volvió a mirar — la
+# misma forma que el ×2,05 y el suelo de ~330 s. El campo la desmintió.
+#
+# MEDIDO, emparejando `invocando claude` con su cierre en los logs de las dos
+# máquinas (26 lecturas que TERMINARON):
+#   Legion, daemon-202608.log, 08-01..08-11 · n=24 · mediana 28 s · p90 138 s · max 394 s
+#   SER8,   journalctl, 08-18               · n=2  · 179 s y 216 s
+#   SER8,   08-18T11:36:42 → 11:46:42       · UNA MUERTE EN EL TECHO:
+#     «invocando claude (escritura=False, prompt=3091 chars)» y diez minutos
+#     después «invocación fallida: La tarea superó 10 minutos y se canceló».
+#
+# Esa muerte es **dato censurado**: no dice cuánto necesitaba, solo que 600 no
+# bastó. Por eso el techo NO se sube «a un número más alto porque sí», se pone
+# donde deja de ser lo que decide: 3× la lectura más larga jamás medida
+# (394 s ⇒ 1182) redondeado a 1200. El acotador real vuelve a ser
+# `--max-turns 15`, que acota por diseño y no por reloj — y esto YA NO es una
+# suposición: la auditoría 39 (§3.2) señaló con razón que la frase iba sin
+# medir, así que se midió el 2026-08-19 con una invocación deliberada:
+#   claude -p ... --max-turns 1  ->  subtype=error_max_turns · num_turns=2
+# El flag corta (ahí está el `error_max_turns`). Lo que NO coincide son las
+# unidades: `num_turns` sale ~2× el tope, y por eso el log de la Legion tiene
+# dos lecturas cerradas con `turnos=30` y `turnos=32` contra un tope de 15 sin
+# un solo `error_max_turns` en 46 invocaciones. No era que el flag no acotara:
+# era que se comparaban dos reglas distintas. Corregido en `progress.py`.
+#
+# QUÉ LO REVISA: rehacer la misma medida, no discutirla. En la SER8
+#   journalctl --user -u claude-telegram -o short-iso
+#     | grep -E "invocando claude|respuesta ok|invocación fallida"
+# y emparejar cada invocación con su cierre. Si la máxima de lectura se acerca a
+# ~400 s otra vez, este número volvió a quedarse corto: re-derívalo, no lo subas.
+#
+# Y el techo ya no mata a ciegas: al 80 % avisa (`TIMEOUT_ALERT_RATIO`) y el
+# mensaje de cancelación dice en qué estaba (`ProgressTracker.death_text`).
+
+# Cadencia del checkpoint: FRACCIÓN del techo, no un número suelto. El 1800
+# anterior («30 min», RFD C2) estaba dimensionado para los 90 min de escritura
+# y bajo el techo de lectura NO SE DISPARABA NUNCA: 30 min de cadencia dentro
+# de 10 de vida. Un número absoluto al lado de un techo variable caduca solo;
+# una fracción no. Con 0,25 salen ~5 min en lectura —que es lo que esta casa ya
+# considera demasiado silencio (`SILENCE_ALERT`)— y 22,5 min en escritura, al
+# lado de los 30 que ya se usaban: un solo criterio sirve a los dos modos.
+CHECKPOINT_RATIO = 0.25     # ⇒ lectura 300 s · escritura 1350 s
+CHECKPOINT_MIN = 60         # suelo: un techo pequeño no puede volverlo spam
 MERGE_TOKEN_TTL = 300       # 5 min de vida del botón de merge (RFD C4)
 MAX_TURNS = "15"            # consultas de lectura
 MAX_TURNS_WRITE = "60"      # desarrollo real: con 15 una investigación se corta
@@ -452,6 +498,16 @@ def need_project(cfg, state, chat_id, projects):
     if not project or project not in projects:
         return None, None
     return project, project_state(state, chat_id, project)
+
+
+def checkpoint_interval(timeout: int) -> int:
+    """Cada cuánto manda checkpoint una invocación con ESE techo.
+
+    Función y no constante porque el techo depende del modo: lo que sirve a 90
+    min no sirve a 20, y escribir dos números sueltos garantiza que uno de los
+    dos se quede atrás (que es exactamente lo que pasó con `CHECKPOINT_EVERY`).
+    """
+    return max(CHECKPOINT_MIN, int(timeout * CHECKPOINT_RATIO))
 
 
 def read_progress(worktree: str) -> str:
@@ -1159,7 +1215,16 @@ async def on_callback(update, context):
                     save_state(state)
                     log.info("PR listo para merge: %s", pr_url)
                 else:
+                    # ⚠ Esto era `log.warning` A SECAS: el único `reason` del
+                    # puente que se quedaba en el diccionario. El humano veía
+                    # que el merge tomaba la ruta local y no sabía por qué —y
+                    # el motivo más frecuente (`gh` ausente) tiene cura. El log
+                    # lo lee quien tiene SSH; el chat, quien pidió el merge.
                     log.warning("sin PR (%s): se intentará merge local", pr.get("reason"))
+                    await reply(cfg, chat_id,
+                                f"ℹ️ Sin PR: {pr.get('reason', 'sin motivo')}\n"
+                                f"Sigo por la ruta local (squash directo sobre "
+                                f"`{base}`).")
 
         r = await gitops.merge_squash(repo, conv["branch"], base,
                                       conv["label"][:70] or f"merge {conv['branch']}",
@@ -1354,7 +1419,11 @@ async def run_claude(prompt: str, cwd: str, session_id, model: str = "",
     except asyncio.TimeoutError:
         proc.kill()
         await proc.wait()
-        raise RuntimeError(f"La tarea superó {timeout // 60} minutos y se canceló.")
+        # Con el tracker delante, la cancelación puede decir EN QUÉ ESTABA. Sin
+        # eso el humano recibe un error; con eso, un diagnóstico.
+        detalle = f"\n{tracker.death_text()}" if tracker is not None else ""
+        raise RuntimeError(f"La tarea superó {timeout // 60} minutos y se canceló."
+                           f"{detalle}")
 
     # El CLI sale con código 1 en errores SEMÁNTICOS (agotar --max-turns) con
     # stderr vacío, pero el evento `result` SÍ llega — con el session_id dentro.
@@ -1373,7 +1442,8 @@ async def run_claude(prompt: str, cwd: str, session_id, model: str = "",
 
 
 async def monitor_loop(cfg: dict, chat_id: int, tracker: ProgressTracker,
-                       worktree: str, bot, live: bool) -> None:
+                       worktree: str, bot, live: bool,
+                       timeout: int = READ_TIMEOUT) -> None:
     """Vigila la invocación: **alertas siempre**, panel solo si `live`.
 
     Las alertas proactivas son la pieza no-opcional (ADR-20260801-puente-telegram).
@@ -1381,6 +1451,7 @@ async def monitor_loop(cfg: dict, chat_id: int, tracker: ProgressTracker,
     Las alertas son la red que no depende de que el usuario esté mirando; el
     panel es comodidad. Por eso este bucle corre aunque el panel esté apagado.
     """
+    cada = checkpoint_interval(timeout)
     ultimo_checkpoint = now_ts()
     while True:
         await asyncio.sleep(MONITOR_TICK)
@@ -1403,13 +1474,24 @@ async def monitor_loop(cfg: dict, chat_id: int, tracker: ProgressTracker,
             except Exception as exc:      # panel roto no puede tumbar la tarea
                 log.warning("panel no actualizado: %s", exc)
 
-        # Checkpoint de T2 (C2): superviviente para tareas MUY largas sin panel
-        if worktree and not live and now_ts() - ultimo_checkpoint >= CHECKPOINT_EVERY:
+        # Checkpoint de T2 (C2): superviviente para tareas largas sin panel.
+        #
+        # ⚠ NO lleva `worktree and`. Lo llevó cuatro sprints y por eso el modo
+        # lectura era una caja negra POR CONSTRUCCIÓN: en lectura no hay
+        # worktree, así que el checkpoint —el propio «superviviente sin panel»—
+        # quedaba excluido justo del único modo que no tiene otra red. El panel
+        # está apagado por defecto y `SILENCE_ALERT` solo salta cuando el stream
+        # se CALLA, y una tarea que trabaja de verdad emite eventos: la red
+        # existía y este caso pasaba por debajo. Medido: una lectura de 10 min
+        # en la SER8 mandó CERO mensajes hasta que el techo la mató.
+        #
+        # El worktree solo hacía falta para `read_progress`; el tiempo y la
+        # última acción los tiene el tracker, que se alimenta del stream.
+        if not live and now_ts() - ultimo_checkpoint >= cada:
             ultimo_checkpoint = now_ts()
-            mins = int((now_ts() - tracker.started) / 60)
-            etapa = tracker.milestone or "(el agente aún no ha reportado etapas)"
-            log.info("checkpoint %s min (%s)", mins, etapa)
-            await reply(cfg, chat_id, f"⏱ {mins} min trabajando.\nÚltima etapa: {etapa}")
+            texto = tracker.checkpoint_text()
+            log.info("checkpoint: %s", texto)
+            await reply(cfg, chat_id, texto)
 
 
 async def close_panel(bot, chat_id: int, tracker: ProgressTracker) -> None:
@@ -1459,10 +1541,11 @@ async def on_message(update, context):
     INFLIGHT[chat_id] = now_ts()
     cs = chat_state(state, chat_id)
     live = bool(cs.get("progress_live"))          # apagado por defecto (ADR del puente)
+    techo = WRITE_TIMEOUT if write_mode else READ_TIMEOUT
     tracker = ProgressTracker(
         branch=conv.get("branch") or "", model=cs["model"] or "default",
         max_turns=int(MAX_TURNS_WRITE if write_mode else MAX_TURNS),
-        write_mode=write_mode)
+        write_mode=write_mode, timeout=techo)
     TRACKERS[chat_id] = tracker
     monitor = None
     try:
@@ -1487,12 +1570,12 @@ async def on_message(update, context):
         # El monitor corre SIEMPRE: las alertas no dependen del panel (P6)
         monitor = asyncio.create_task(
             monitor_loop(cfg, chat_id, tracker, conv.get("worktree") or "",
-                         context.bot, live))
+                         context.bot, live, techo))
 
         try:
             data = await run_claude(prompt, cwd, session_id, cs["model"],
                                     write_mode=write_mode,
-                                    timeout=WRITE_TIMEOUT if write_mode else READ_TIMEOUT,
+                                    timeout=techo,
                                     tracker=tracker,
                                     repo_path=projects[project]["path"])
         except RuntimeError as exc:
@@ -1510,8 +1593,10 @@ async def on_message(update, context):
             # No es un fallo: se quedó sin turnos. El hilo sobrevive (guardamos
             # el session_id abajo), así que basta con pedirle que siga.
             limite = MAX_TURNS_WRITE if write_mode else MAX_TURNS
-            answer = (f"⏹ Alcanzado el límite de {limite} turnos "
-                      f"({data.get('num_turns')} usados) y se detuvo ahí.\n\n"
+            # Sin «(N usados)»: ese N era `num_turns`, que no va en la unidad
+            # del límite y salía mayor que él (auditoría 39 §3.3, medido).
+            answer = (f"⏹ Alcanzado el límite de {limite} turnos y se detuvo "
+                      f"ahí.\n\n"
                       f"{answer or 'No alcanzó a redactar una respuesta.'}\n\n"
                       f"La conversación NO se perdió: escribe «continúa» y sigue "
                       f"desde donde iba"
@@ -1549,7 +1634,39 @@ async def on_message(update, context):
 
 
 async def on_error(update, context):
-    log.error("error no controlado: %s", context.error)
+    # ⚠ El texto de la excepcion va REDACTADO tambien al log. La auditoria 39
+    # (§4.3) encontro que el sprint 16 cerro la fuga por el lado del chat y dejo
+    # abierto el del journal: los errores de la libreria de Telegram llevan la
+    # URL de la API dentro, y ahi va el token. `redact` ya existia en
+    # `notify_telegram` con ese docstring exacto —«jamas debe aparecer en un log
+    # o error»— usada en seis sitios de su fichero y en CERO de este.
+    #
+    # No hubo incidente: `logs/` esta gitignorado y el log actual no tiene
+    # ninguna coincidencia. Era riesgo latente, y los logs se pegan en los
+    # informes de campo (este sprint pego `journalctl` tres veces).
+    token = (context.bot_data or {}).get("cfg", {}).get("token", "")
+    log.error("error no controlado: %s", redact(str(context.error), token))
+    # El barrido de razones mudas (sprint 16, A3) encontro este de paso: un
+    # fallo no controlado dejaba al humano SIN NADA —ni respuesta ni motivo—,
+    # que es la misma caja negra que este sprint cierra por el otro lado. El log
+    # lo lee quien tiene SSH; quien escribio el mensaje merece saber que murio.
+    #
+    # Va el TIPO de la excepcion y no su texto a proposito: los errores de la
+    # libreria de Telegram llevan la URL de la API dentro, y ahi va el token.
+    # Un aviso no puede convertirse en una fuga.
+    #
+    # Y entero dentro de un `try`: reventar en el manejador de errores es la
+    # forma de tumbar el daemon justo cuando ya iba mal.
+    try:
+        cfg = context.bot_data.get("cfg") if context.bot_data else None
+        chat_id = getattr(getattr(update, "effective_chat", None), "id", None)
+        if cfg and chat_id:
+            await reply(cfg, chat_id,
+                        f"❌ Algo se rompio por dentro y tu peticion no llego a "
+                        f"completarse ({type(context.error).__name__}). "
+                        f"El detalle esta en el log del daemon.")
+    except Exception as exc:
+        log.error("ni el aviso del fallo pudo enviarse: %s", exc)
 
 
 # ── Arranque ──────────────────────────────────────────────────────────────

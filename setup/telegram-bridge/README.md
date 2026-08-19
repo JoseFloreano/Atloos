@@ -199,7 +199,10 @@ Los de **escritura** (`/write`, `/diff`, `/commit`, `/test`, `/push`, `/merge`,
   mensajes de hace horas — invocando a Claude por cada uno — y responder a
   preguntas viejas fuera de contexto es peor que no responder. Si no estás
   seguro de si está vivo, mándale `/status`: si no contesta, no está corriendo.
-- **Timeout de 10 min** por consulta: si se pasa, mata el proceso y te avisa.
+- **Timeout de 20 min** por consulta: al **80 %** te avisa de que va a cortar, y
+  si se pasa mata el proceso y te dice **en qué estaba** cuando murió. El número
+  sale de medir los logs de las dos máquinas, no de una suposición: la
+  procedencia está escrita al lado de la constante en `tg_daemon.py`.
 - **Máx. 15 turnos** por mensaje.
 - **Respuestas largas**: >4096 caracteres → resumen + `.md` adjunto (misma
   política que T0, código compartido).
@@ -441,10 +444,17 @@ Puedes estar editando en la laptop mientras el bot desarrolla: no se ven.
 
 ## Durante tareas largas
 
-- **Timeout de 90 minutos** en escritura (10 en lectura); hasta **60 turnos**
-  por invocación (15 en lectura).
-- **Checkpoint cada 30 minutos** con el tiempo transcurrido y la última etapa:
-  el agente va anotando su avance en `.tg/progress.md` (excluido de los commits).
+- **Timeout de 90 minutos** en escritura (20 en lectura); hasta **60 turnos**
+  por invocación (15 en lectura). Al 80 % del techo llega un aviso, y si aun así
+  se corta, el mensaje dice el turno y la última acción.
+- **Checkpoint periódico** con el tiempo transcurrido y lo último que hizo. La
+  cadencia es una **fracción del techo** (un cuarto), no un número fijo: salen
+  ~5 min en lectura y ~22 en escritura. Antes era «cada 30 min» en los dos
+  modos, así que bajo el techo de lectura **no llegaba nunca** y una consulta
+  larga era una caja negra hasta que la mataban.
+- En escritura la etapa la elige el agente en `.tg/progress.md` (excluido de los
+  commits); **en lectura no hay worktree donde escribirla**, así que el
+  checkpoint cae a la última acción del stream — y por eso ahora también llega.
 - `/chat` y `/p` responden `⏳` mientras hay una invocación en curso — cambiar
   de conversación a mitad de vuelo entregaría la respuesta a la equivocada. El
   desarrollo **paralelo** es una idea futura (RFD 03), no está en T2.

@@ -59,6 +59,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 from datetime import date
 from pathlib import Path
 
@@ -141,8 +142,17 @@ def exencion(fichero=None, maquina=None, hoy=None):
 
 
 def ficheros(base):
+    """Los `.py` del repo que este arnés tiene que compilar.
+
+    ⚠ Se excluye `_lab_*.py` (auditoría 39, §8.1). Es el CINTURÓN; el TIRANTE es
+    que `autoprueba` ya no los escribe aquí. Hacen falta los dos: el tirante
+    protege a las corridas futuras, y el cinturón a los clones donde un Ctrl-C
+    de ayer YA dejó uno — que si no, salen rojos para siempre por un fichero que
+    fabricó el propio arnés.
+    """
     return [p for p in sorted(Path(base).rglob("*.py"))
-            if not any(x in p.parts for x in EXCLUIDOS)]
+            if not any(x in p.parts for x in EXCLUIDOS)
+            and not p.name.startswith("_lab_")]
 
 
 def interprete_del_suelo():
@@ -269,8 +279,22 @@ def main():
                   f"                 setup/scripts/tests/{EXENCIONES.name}, "
                   f"con motivo y fecha.")
 
-    tmp = Path(base) / "setup" / "scripts" / "tests"
-    ok_auto, motivo = autoprueba(cmd, tmp)
+    # ⚠ FUERA del repo (auditoría 39, §8.1). Antes era
+    # `Path(base)/"setup"/"scripts"/"tests"`: el arnés fabricaba `_lab_sucio.py`
+    # DENTRO del árbol que después barre, y lo borraba en un `finally` cuyo
+    # `unlink` iba envuelto en `except OSError: pass`. Dos caminos lo dejaban
+    # puesto —un Ctrl-C antes del `finally`, o un borrado denegado— y a partir
+    # de ahí el arnés salía ROJO para siempre por su propio fichero, diciendo
+    # «1 de 61 ficheros NO compilan». Un auditor externo lo provocó en vivo.
+    #
+    # `TemporaryDirectory` y NO `mkdtemp` + `rmtree(tmp)`: el segundo borra la
+    # ruta que le den, y al probar la mutación que devolvía `tmp` al repo se
+    # llevó por delante `setup/scripts/tests/` entero (recuperado de git, pero
+    # el susto fue real). Este solo puede destruir el directorio que él mismo
+    # creó, así que la mutación deja residuos —que es lo que el arnés hermano
+    # comprueba— en vez de borrar código.
+    with tempfile.TemporaryDirectory(prefix="suelo-lab-") as lab:
+        ok_auto, motivo = autoprueba(cmd, Path(lab))
     if ok_auto is None:
         print(f"  [SKIP] autoprueba: {motivo}")
     else:

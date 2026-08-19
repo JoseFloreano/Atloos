@@ -21,6 +21,7 @@ from collections import deque
 MAX_ACTIONS = 6           # últimas acciones visibles en el panel
 EDIT_THROTTLE = 8         # segundos mínimos entre ediciones del panel
 TURN_ALERT_RATIO = 0.8    # avisar al 80% del límite de turnos
+TIMEOUT_ALERT_RATIO = 0.8 # avisar al 80% del TECHO DE TIEMPO (sprint 16)
 SILENCE_ALERT = 300       # 5 min sin eventos del stream
 
 # Verbo legible por herramienta; lo que no esté aquí sale con su nombre crudo.
@@ -33,6 +34,44 @@ VERBS = {"Read": "Leído", "Write": "Escrito", "Edit": "Editado",
 def _short(value: str, n: int = 46) -> str:
     value = " ".join(str(value or "").split())
     return value if len(value) <= n else value[: n - 1] + "…"
+
+
+def fraccion_turnos(n: int, tope: int) -> str:
+    """`n/tope` cuando la fracción se puede leer; si no, se dice qué pasa.
+
+    POR QUÉ (auditoría 39 §3.3 y §13.3). El humano recibía «Turnos: 30/15», un
+    numerador que dobla a su denominador. El sprint 16 lo movió de un contador
+    a otro, y el auditor demostró que **seguía pudiendo pasar**: 20 eventos
+    contra un tope de 15 imprimían «Turnos: 20/15». Anclar el arnés en 15
+    eventos —justo el valor que lo hace pasar— fue mi error, y era el mismo
+    patrón que este sprint persigue.
+
+    LO QUE ESTÁ MEDIDO (2026-08-19), y por qué NINGÚN contador vale de
+    numerador fiable:
+
+      · `claude -p … --max-turns 1`  → `subtype=error_max_turns`, `num_turns=2`
+        El flag SÍ corta. Pero devuelve 2 con un tope de 1.
+      · `claude -p … --max-turns 4` (tarea terminada) → eventos `assistant`= 3,
+        `num_turns` = 2. Los tres números difieren, y sin razón fija.
+      · `--resume` NO acumula `num_turns` (2 → 2): esa hipótesis queda refutada.
+      · En campo (SER8, 08-18) el aviso saltó con **12** eventos y el cierre
+        declaró `num_turns=10`: se cruzan en las dos direcciones.
+
+    Conclusión: `--max-turns` acota de verdad, pero ni el contador de eventos ni
+    `num_turns` están garantizados en su unidad. Así que la fracción se imprime
+    mientras se sostiene, y cuando no, se dice — nunca una fracción imposible.
+
+    Queda un dato SIN explicar y se deja escrito en vez de taparlo: el log de la
+    Legion tiene una lectura del 08-01 18:00 con `turnos=30` contra un tope de
+    15 y `subtype=success`. (El otro caso, `turnos=32` de la 01:23, sí está
+    explicado: `--max-turns` entró en el daemon a las 02:18 de ese mismo día,
+    55 min después — esa invocación corrió SIN tope.)
+    """
+    if not tope:
+        return str(n)
+    if n <= tope:
+        return f"{n}/{tope}"
+    return f"{n} (el límite del modo era {tope}; el contador va en otra unidad)"
 
 
 def _describe(name: str, tool_input: dict) -> str:
@@ -55,15 +94,18 @@ class ProgressTracker:
     """Estado vivo de UNA invocación."""
 
     def __init__(self, branch: str = "", model: str = "", max_turns: int = 0,
-                 write_mode: bool = False):
+                 write_mode: bool = False, timeout: int = 0):
         self.branch = branch
         self.model = model or "default"
         self.max_turns = max_turns          # límite REAL del modo, no hardcodeado
+        self.timeout = timeout              # techo REAL del modo, por lo mismo
         self.write_mode = write_mode
         self.started = time.time()
         self.last_event = time.time()
         self.actions = deque(maxlen=MAX_ACTIONS)
-        self.turns = 0
+        self.turns = 0                      # unidad del FLAG `--max-turns`
+        self.turns_cli = 0                  # unidad del CLI (`num_turns`): NO
+                                            # es la misma, ver `feed`
         self.cost = 0.0
         self.subtype = ""
         self.denials = 0
@@ -94,7 +136,25 @@ class ProgressTracker:
             elif etype == "result":
                 self.finished = True
                 self.subtype = event.get("subtype") or ""
-                self.turns = event.get("num_turns") or self.turns
+                # ⚠ `num_turns` NO viene en la unidad de `--max-turns`, y este
+                # campo lo sobrescribia con ella. Resultado: el humano recibia
+                # «Turnos: 30/15», un numerador que dobla a su denominador.
+                #
+                # MEDIDO (auditoria 39 §3.2, resuelto el 2026-08-19 con una
+                # invocacion deliberada):
+                #   claude -p ... --max-turns 1  ->  subtype=error_max_turns
+                #                                    num_turns=2
+                # El flag SI corta —ahi esta el `error_max_turns`— pero el
+                # contador que devuelve va en otra unidad, ~2x. En el log de la
+                # Legion eso explica las dos lecturas cerradas con `turnos=30` y
+                # `turnos=32` contra un tope de 15 SIN un solo `error_max_turns`
+                # en 46 invocaciones: nunca se corto, y lo que se imprimia no
+                # era comparable con el tope.
+                #
+                # Se guardan por separado: `turns` (el contador de eventos, que
+                # SI comparte unidad con el flag) manda en todo lo que se
+                # compara con `max_turns`; `turns_cli` queda para el registro.
+                self.turns_cli = event.get("num_turns") or 0
                 self.cost = event.get("total_cost_usd") or self.cost
                 self.denials = len(event.get("permission_denials") or [])
         except Exception:
@@ -110,9 +170,24 @@ class ProgressTracker:
         if ("turnos" not in self._alerts_sent and self.max_turns
                 and self.turns >= self.max_turns * TURN_ALERT_RATIO):
             self._alerts_sent.add("turnos")
-            out.append(f"⚠️ {self.turns}/{self.max_turns} turnos consumidos: "
+            out.append(f"⚠️ {fraccion_turnos(self.turns, self.max_turns)} turnos consumidos: "
                        f"la tarea puede cortarse pronto."
                        + (" Si se corta, escribe «continúa»." if self.write_mode else ""))
+
+        # Techo de tiempo. Misma forma que el aviso de turnos y por la misma
+        # razón: morir sin previo aviso convierte un límite en una sorpresa.
+        # El caso que lo motivó (sprint 16): una lectura murió a los 600 s en la
+        # SER8 sin que hubiera salido un solo mensaje al chat.
+        transcurrido = time.time() - self.started
+        if ("techo" not in self._alerts_sent and self.timeout
+                and transcurrido >= self.timeout * TIMEOUT_ALERT_RATIO):
+            self._alerts_sent.add("techo")
+            quedan = max(1, int((self.timeout - transcurrido) / 60))
+            aviso = (f"⏳ {self._elapsed()} de un techo de {self.timeout // 60} min: "
+                     f"si no termina en ~{quedan} min se cancela.")
+            if self.last_action():
+                aviso += f"\nAhora mismo: {self.last_action()}"
+            out.append(aviso)
 
         silencio = time.time() - self.last_event
         if "silencio" not in self._alerts_sent and silencio >= SILENCE_ALERT:
@@ -134,6 +209,33 @@ class ProgressTracker:
             partes.append(turnos)
         return "🔨 " + " · ".join(partes)
 
+    def last_action(self) -> str:
+        """Última acción observada, o cadena vacía. El tracker SIEMPRE la tiene:
+        se alimenta del stream, no del worktree — que en lectura no existe."""
+        return self.actions[-1] if self.actions else ""
+
+    def checkpoint_text(self) -> str:
+        """Sigo vivo, y esto es lo último que hice.
+
+        En escritura la etapa la elige el agente (`.tg/progress.md`); en lectura
+        NO HAY worktree donde escribirla, así que cae a la última acción del
+        stream. Antes del sprint 16 el checkpoint ni siquiera se disparaba sin
+        worktree y el modo lectura no mandaba nada hasta el timeout.
+        """
+        mins = int((time.time() - self.started) / 60)
+        etapa = self.milestone or self.last_action() or "(aún sin acciones)"
+        return f"⏱ {mins} min trabajando · último: {_short(etapa, 60)}"
+
+    def death_text(self) -> str:
+        """En qué estaba cuando la mataron. La diferencia entre un error y un
+        diagnóstico: «superó N minutos» no dice qué se perdió."""
+        partes = [f"iba por el turno {fraccion_turnos(self.turns, self.max_turns)}"]
+        if self.milestone:
+            partes.append(f"etapa «{_short(self.milestone, 60)}»")
+        if self.last_action():
+            partes.append(f"última acción: {self.last_action()}")
+        return "Se perdió lo que llevaba: " + " · ".join(partes) + "."
+
     def panel_text(self) -> str:
         lines = [self._header()]
         if self.milestone:
@@ -151,7 +253,9 @@ class ProgressTracker:
                   "error_max_turns": "detenido por límite de turnos"}.get(
                       self.subtype, "terminado con error")
         lines = [f"{icono} {self.branch or 'tarea'} · {estado} en {self._elapsed()}"]
-        detalle = [f"Turnos: {self.turns}" + (f"/{self.max_turns}" if self.max_turns else "")]
+        detalle = [f"Turnos: {fraccion_turnos(self.turns, self.max_turns)}"]
+        if self.turns_cli and self.turns_cli != self.turns:
+            detalle[0] += f" · el CLI cuenta {self.turns_cli}"
         if self.cost:
             detalle.append(f"Costo: {self.cost:.2f} USD")
         lines.append(" · ".join(detalle))
