@@ -2,9 +2,17 @@
 #  claude-telegram-vault.{service,timer} — la sincronia del vault en la maquina
 #  que no tiene Obsidian.
 #
-#  ⚠ ESTADO: escrito el 2026-08-19, **sin probar en campo todavia**. El de fallo y
-#    el latido diario llevan su "PROBADO" con fecha porque se ejercieron; este no
-#    lo lleva, y hasta que lo lleve no cuenta. Para ejercerlo, abajo.
+#  ✅ ESTADO: **PROBADO 2026-08-20 en floreano-server**, por los dos lados.
+#    A · `is-enabled` -> enabled; NEXT 08:18:52, Result=success tras un disparo real
+#    B · el timer disparo solo a las 07:57:35: Finished en 2 s y CERO lineas al journal
+#    C · conflicto fabricado -> exit 1, 🔴 al movil (187 chars), NO quedo en rebase
+#
+#  ⚠ Dos avisos para quien lo instale, medidos ese dia:
+#    · el fichero esta en git como `100644`: invocarlo directo da `Permission
+#      denied` (exit 126). Por eso la unit lo llama con `/bin/bash`, y por eso
+#      cualquier receta que diga `vault-sync.sh ...` a secas falla aqui.
+#    · con `RandomizedDelaySec=120`, LEFT nunca baja de 20min: el valor sano es
+#      20-22min, no "<20min". Un criterio que pida menos se contradice con esta unit.
 #
 #  POR QUE. El vault es un repo git que en las laptops sincroniza el plugin Git de
 #  Obsidian. La SER8 no tiene Obsidian, asi que sin esto el vault de la maquina
