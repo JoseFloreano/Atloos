@@ -1503,6 +1503,13 @@ async def cmd_done(update, context):
             commits = await gitops.commits_ahead(conv["worktree"], conv["branch"], base)
         except gitops.GitError:
             commits = []
+        # El sha se lee AQUÍ, con el worktree todavía en pie: después de
+        # `remove_worktree` la rama local ya no existe y no habría contra qué
+        # comparar el remoto. Es la guarda de `delete_remote_branch`.
+        try:
+            sha_local = await gitops.head_sha(conv["worktree"], short=False)
+        except gitops.GitError:
+            sha_local = ""
         etapas = []
         try:
             pf = Path(conv["worktree"]) / gitops.PROGRESS_DIR / "progress.md"
@@ -1531,9 +1538,19 @@ async def cmd_done(update, context):
                          else f"⚠️ vault NO sincronizado — {motivo}")
             log.info("vault commit+push: %s (%s)", "ok" if ok_vault else "no", motivo)
 
+        # ⚠ `merged` NO es «esta conversación mergeó alguna vez»: es «lo que hay
+        # en la rama AHORA es lo que se integró». La diferencia no es teórica —
+        # `merged=True` fuerza `git branch -D`, y un `/commit` posterior al
+        # `/merge` se iría con la rama sin que nada lo dijera. El sha verde es el
+        # que `/merge` exigió que fuera HEAD, así que si HEAD ya no es ese, hay
+        # trabajo posterior: se pasa `merged=False` y la rama se CONSERVA.
+        verde = conv.get("test_ok_sha") or ""
+        integro = bool(conv.get("merged")) and bool(verde) and sha_local.startswith(verde)
+        if conv.get("merged") and not integro:
+            notas.append("⚠️ hay commits posteriores al /merge: la rama NO se borra")
         try:
             r = await gitops.remove_worktree(projects[project]["path"], conv["worktree"],
-                                             conv["branch"], merged=bool(conv.get("merged")))
+                                             conv["branch"], merged=integro)
             log.info("done: %s -> %s", conv["branch"], r)
         except gitops.GitError as exc:
             await reply(cfg, chat_id, f"❌ {exc}")
@@ -1547,6 +1564,19 @@ async def cmd_done(update, context):
         if r.get("branch_status"):          # ya viene redactado y sin duplicar
             notas.append(f"rama {r['branch_status']}")
         notas += r["notes"]
+
+        # La remota, con UN SOLO criterio: se borra si se borró la local. Dos
+        # reglas distintas para el mismo objeto acaban discrepando, y aquí
+        # discrepar significa o dejar basura o tirar trabajo. `/done` es el acto
+        # explícito de "ya no la uso" — mientras la conversación viva, la rama
+        # vive; si sigues trabajando, nada de esto ocurre.
+        if r.get("branch_deleted"):
+            rm = await gitops.delete_remote_branch(projects[project]["path"],
+                                                   conv["branch"], sha_local)
+            notas.append(("remota: " + rm["motivo"]) if rm["borrada"]
+                         else f"⚠️ remota conservada — {rm['motivo']}")
+            log.info("done: remota %s -> %s (%s)", conv["branch"],
+                     "borrada" if rm["borrada"] else "conservada", rm["motivo"])
 
     conv["archived"] = True
     conv["write"] = False

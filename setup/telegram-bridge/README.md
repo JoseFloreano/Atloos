@@ -491,7 +491,7 @@ Puedes estar editando en la laptop mientras el bot desarrolla: no se ven.
 | `/push` | Publica la rama; con `gh`, crea/actualiza el PR y manda el link | — |
 | `/pull` | Trae `main` a la rama de la conversación; si trajo cambios, el verde de `/test` caduca y hay que repetirlo | — |
 | `/merge` | Integra en `main` (squash). Por la ruta PR, **un PR recién abierto no se integra en la misma pulsación** — ver abajo | **Sí** |
-| `/done` | Quita worktree, borra la rama y archiva la conversación | — |
+| `/done` | Quita worktree, borra la rama **local y remota** y archiva la conversación | — |
 
 ## Las tres reglas que gobiernan T2
 
@@ -503,6 +503,31 @@ Puedes estar editando en la laptop mientras el bot desarrolla: no se ven.
    5 minutos.
 3. **`/merge` exige tests en verde** posteriores al último commit. Si commiteas
    después de un `/test`, el verde caduca y hay que repetirlo.
+
+### Qué se borra al hacer `/done` (2026-08-20)
+
+Hasta el 2026-08-20 `/done` borraba la rama **local** y no tocaba `origin`
+jamás: cada conversación publicaba su rama con `/push` y ahí se quedaba —
+**cinco `origin/tg/*`** contadas en campo, de conversaciones cerradas hace
+semanas. Ahora se borran las dos, con **un solo criterio**: *se borra la remota
+si se borró la local*. Dos reglas para el mismo objeto acaban discrepando, y
+aquí discrepar es dejar basura o tirar trabajo.
+
+Las tres guardas, y ninguna es decorativa:
+
+1. **Mientras la conversación viva, la rama vive.** `/done` es el acto explícito
+   de "ya no la uso"; si sigues trabajando no se borra nada.
+2. **Commits posteriores al `/merge` conservan la rama.** `merged` no significa
+   "esta conversación mergeó alguna vez" sino "lo que hay en la rama AHORA es lo
+   que se integró": si commiteaste después, `/done` lo dice y **no borra**.
+3. **Si el remoto avanzó por fuera, no se borra.** Al llegar ahí la local ya no
+   existe, así que el remoto puede ser la única copia. Se compara contra el sha
+   integrado y, si no coincide, se conserva y se explica.
+
+Para la basura ya acumulada (y para las ramas del gate, que no pasan por aquí):
+`setup/scripts/py setup/scripts/limpia-ramas.py [--remotas] [--borrar]`. Lista
+por defecto y borra solo con el flag; detecta el **squash** por contenido, que
+es lo que `git branch --merged` no ve.
 
 ### La ruta PR, y por qué necesita su propia guarda
 
