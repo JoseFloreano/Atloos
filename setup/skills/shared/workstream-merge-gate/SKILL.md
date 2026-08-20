@@ -70,9 +70,14 @@ La ley: **el código de salida no es el estado, y el reporte no es el artefacto.
 
 6. **Destino `main` ⇒ confirmación humana explícita.** Sin excepción.
 
-7. **Limpieza**: quita el worktree y borra la rama ya mergeada. Tras un squash,
-   `git branch -d` no la reconoce. ⚠ Y `git worktree prune` **falla en OneDrive
-   sin decir que hay otra vía** → `references/por-que-cada-paso.md`.
+7. **Limpieza**: quita el worktree y borra la rama ya mergeada, **local y
+   remota**. Tras un squash, `git branch -d` no la reconoce. ⚠ Y `git worktree
+   prune` **falla en OneDrive sin decir que hay otra vía** →
+   `references/por-que-cada-paso.md`.
+
+   Ya no es solo una instrucción: `setup/scripts/py setup/scripts/limpia-ramas.py
+   --remotas` [repo] lista lo integrado (detecta el squash **por contenido**) y
+   borra solo con `--borrar` → `references/por-que-cada-paso.md`.
 
 ## Cuando el gate rechaza
 

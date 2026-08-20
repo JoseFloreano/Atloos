@@ -434,6 +434,50 @@ async def remove_worktree(repo: str, path: str, branch: str = "",
     return result
 
 
+async def delete_remote_branch(repo: str, branch: str, sha_local: str = "") -> dict:
+    """Borra `origin/<branch>`. Devuelve {borrada, motivo}.
+
+    POR QUÉ EXISTE (2026-08-20). `remove_worktree` borraba la rama LOCAL y no
+    tocaba el remoto **nunca**: cada conversación del bot publicaba su rama con
+    `/push` y ahí se quedaba para siempre. En campo se contaron **cinco**
+    `origin/tg/*` de conversaciones ya integradas y cerradas. El paso 7 del
+    merge-gate ya avisa de a dónde lleva eso: se llegó a **92 ramas remotas**, y
+    bajarlas a 17 se comió una sesión entera sin producir nada.
+
+    ⚠ LA GUARDA DEL SHA, y es la parte que importa. Al llegar aquí la rama local
+    ya no existe, así que el remoto puede ser **la única copia**. Si alguien
+    empujó a esa rama por fuera (otra laptop, otra sesión), su trabajo no está en
+    el merge que acabamos de hacer y borrarla lo tiraría sin rastro. Por eso se
+    compara contra el sha que tenía la local: si no coinciden, NO se borra y se
+    dice. Fallar cerrado aquí cuesta una rama de más; fallar abierto cuesta el
+    trabajo de otro.
+    """
+    if not branch:
+        return {"borrada": False, "motivo": "sin rama que borrar"}
+    if not await has_remote(repo):
+        return {"borrada": False, "motivo": "el repo no tiene remoto"}
+
+    remoto = await remote_head(repo, branch)
+    if not remoto:
+        return {"borrada": False, "motivo": "no estaba publicada (nada que borrar)"}
+    if sha_local and not (remoto.startswith(sha_local) or sha_local.startswith(remoto)):
+        return {"borrada": False,
+                "motivo": (f"el remoto está en `{remoto[:7]}` y lo integrado era "
+                           f"`{sha_local[:7]}`: alguien empujó ahí por fuera. NO la "
+                           f"borro — revísala antes.")}
+
+    rc, out, err = await run(["git", "push", "origin", "--delete", branch], repo, timeout=180)
+    if rc != 0:
+        salida = (err or out)
+        # `remote ref does not exist` no es un fallo: es que ya no estaba (un
+        # `gh pr merge --delete-branch`, o un borrado a mano). Decir "no pude"
+        # ahí sería alarmar por un trabajo que ya estaba hecho.
+        if "remote ref does not exist" in salida or "does not exist" in salida:
+            return {"borrada": True, "motivo": "ya no estaba en el remoto"}
+        return {"borrada": False, "motivo": salida[:200]}
+    return {"borrada": True, "motivo": f"borrada del remoto (estaba en {remoto[:7]})"}
+
+
 async def reconcile(repo: str, known: list) -> dict:
     """Contrasta el estado guardado con los worktrees reales.
 

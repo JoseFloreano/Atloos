@@ -81,6 +81,35 @@ Detalle operativo: **tras un squash, `git branch -d` no reconoce la rama como
 integrada**, porque sus commits no son ancestros de `main`. Hace falta `-D`, y
 conviene saberlo antes de asustarse.
 
+### La herramienta (2026-08-20), y por qué el comando obvio no vale
+
+Este paso llevaba meses siendo una instrucción que nadie ejecutaba. Ahora tiene
+herramienta:
+
+```bash
+setup/scripts/py setup/scripts/limpia-ramas.py --remotas            # solo lista
+setup/scripts/py setup/scripts/limpia-ramas.py --remotas --borrar   # borra las CONFIRMADAS
+```
+
+**Por qué hacía falta escribirla.** `git branch --merged` no lista una rama
+aplastada —sus commits no son ancestros—, así que el comando que uno probaría
+primero dice que **no hay nada que limpiar**. Y el que parece su sustituto,
+`git diff main...rama`, está **al revés**: tres puntos es *lo que la rama aporta
+desde que se bifurcó*, que tras un squash nunca está vacío. Los dos callan justo
+en el caso normal de esta casa.
+
+Los tres tests que sí valen, en orden de fuerza: **ancestro** (`merge-base
+--is-ancestor`) · **mismo árbol** (`diff --quiet base rama`) · **contenido de lo
+que tocó** (¿difiere hoy alguno de los ficheros que cambió?). El tercero es el
+que caza el squash. Lo que no encaje en ninguno sale como `SIN CONFIRMAR` y
+**no se borra**: aquí equivocarse borra trabajo, y "no lo sé" es una respuesta
+legítima. Las ramas con un worktree vivo tampoco se tocan — si alguien la está
+usando, se queda.
+
+Para las ramas del **puente** esto ya no hace falta: desde el 2026-08-20 su
+`/done` borra la local y la remota con un solo criterio, y con guarda de sha
+por si el remoto avanzó por fuera.
+
 ## Paso 7 · el worktree que git no puede borrar
 
 `git worktree remove` y `git worktree prune` fallan en este repo con:
