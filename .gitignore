@@ -28,6 +28,13 @@ setup/telegram-bridge/state.json
 setup/telegram-bridge/state.json.tmp
 setup/telegram-bridge/logs/
 
+# Artefactos de `medir-disparo.py`: resultados por máquina y volcados crudos de
+# sesiones de medición. Son evidencia LOCAL —`--aplicar` los exige en la misma
+# máquina donde se midió, y eso es a propósito—; lo que tiene que sobrevivir es
+# el NÚMERO, y ese se escribe a mano en `skill-forge/references/disparadores.md`,
+# que es donde esta casa guarda las medidas.
+setup/scripts/_mediciones/
+
 # ── Ruido de sistema / Python ───────────────────────────────────────
 __pycache__/
 *.pyc

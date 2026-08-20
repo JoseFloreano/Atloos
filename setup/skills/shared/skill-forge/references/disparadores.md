@@ -146,21 +146,83 @@ De los dos «en clase», la **regla 6 quedó cerrada** (2026-08-17). Sigue abier
 vale una skill). «La tercera vez» es un **contador**, y además nombra la
 evidencia: si no puedes señalar las tres, no hay skill que crear.
 
-**Las 5 frases, en sesión NUEVA y desde fuera del repo.** Las 3 primeras deben
-cargar `skill-forge`; las 2 últimas **no** (son las vecinas más cercanas):
+⚠ **Sube de grado, pero no llega a ✅ sano, y conviene decirlo al cerrarlo.** Por
+la ley de arriba, lo sano se ancla en un evento del harness, y aquí no hay
+ninguno: el agente no cuenta a través de sesiones. Lo que lo salva es **«en el
+repo»**, que sí es contable con un `grep`. Queda en **⚠ autoevaluación con
+evidencia nombrable** — un ascenso real desde dos juicios encadenados, no un
+sano. El sano de verdad sería un hook que cuente bloques repetidos, y es otro
+trabajo.
 
-| # | Frase | Esperado |
-|---|---|---|
-| 1 | «la skill no dispara, arréglala» *(la petición real que falló, literal)* | **carga** |
-| 2 | «llevo tres sprints copiando esta misma instrucción a mano» | **carga** |
-| 3 | «crea una skill para esto» | **carga** |
-| 4 | «documenta esta decisión de arquitectura» | NO (es `adr-writer`) |
-| 5 | «guarda esto para que no se olvide» | NO (es `memory-keeper`) |
+**Las 6 frases, en sesión NUEVA y desde fuera del repo**, más un canario. Las 3
+primeras deben cargar `skill-forge`; las 3 últimas **no** (son las vecinas más
+cercanas):
+
+| # | Frase | Papel | Esperado |
+|---|---|---|---|
+| 0 | «usa la skill skill-forge ahora» | **canario** | **carga** |
+| 1 | «la skill no dispara, arréglala» *(la petición real que falló, literal)* | control + | **carga** |
+| 2 | «llevo tres sprints copiando esta misma instrucción a mano» | **discriminante** | **carga** |
+| 3 | «crea una skill para esto» | control + | **carga** |
+| 4 | «documenta esta decisión de arquitectura» | control − | NO (es `adr-writer`) |
+| 5 | «guarda esto para que no se olvide» | control − | NO (es `memory-keeper`) |
+| 6 | «cada vez que haga un commit quiero que corra el linter automáticamente» | control − | NO (es `bundled:update-config`) |
+
+**De las seis, solo la 2 mide el cambio.** La 1 y la 3 ya son disparadores
+literales de la `description` de hoy (`"la skill no dispara"`, `"crea una
+skill"`): cargan antes y después pase lo que pase. Las negativas dicen que no
+rompiste nada, que también hay que saberlo — pero el «antes/después» no son seis
+evidencias, es **una** más cinco controles de regresión, y leerlo al revés
+infla el resultado.
+
+**La 6 es nueva (2026-08-19) y cubre la vecina que faltaba.** «Se repite a mano»
+es también el territorio de `bundled:update-config` —la de fábrica de Claude
+Code—, cuya `description` dice literalmente *«from now on when X», «each time
+X», «whenever X»* → hooks. Y es una frontera legítima: repetir algo a mano puede
+pedir **hook**, no skill. Si la 6 carga
+`skill-forge`, el trigger nuevo se ensanchó de más y la cura está escrita abajo
+en «Cuando ensanchar el trigger pisa a una vecina» — se desambigua **en la
+`description`**. No se desambigua *antes* de medir: sería cambiar dos cosas y no
+saber cuál movió el número.
+
+**El canario (0) separa el rojo de lo roto.** Pide la skill por su nombre; si con
+eso no carga, lo averiado es el arnés —la copia instalada, el config dir, un flag
+del CLI— y **no hay tabla que interpretar**. Sin él, un arnés mal enchufado se
+lee como «no dispara» y condena una `description` sana. Es el mismo error que el
+check 6 del sprint 14 y el `gate-verde.json` duplicado: medir la cara que no es.
+
+### El arnés: `setup/scripts/medir-disparo.py`
+
+```
+setup/scripts/py setup/scripts/medir-disparo.py --seco   # [repo] · el plan, gratis
+setup/scripts/py setup/scripts/medir-disparo.py          # [repo] · mide (n=3)
+setup/scripts/py setup/scripts/medir-disparo.py --aplicar   # [repo] · exige el ANTES
+```
+
+Lanza `claude -p` una vez por frase con el `cwd` en un temporal fuera del repo, y
+busca la invocación de la herramienta `Skill` en el flujo de eventos — la
+llamada, no el resumen del modelo. Tres cosas que un tecleo a mano no da:
+
+- **La fase la dicta el disco.** Lee la `description` **instalada** en
+  `~/.claude/skills/` —no la del repo, que no es la que decide si carga— y de ahí
+  saca la etiqueta ANTES/DESPUÉS y su sha256. La etiqueta no se teclea, así que
+  no se puede equivocar.
+- **N repeticiones.** Una pasada no distingue «no dispara» de «esta vez no
+  disparó». El veredicto es `k/n`.
+- **`--aplicar` está bloqueado** hasta que exista un artefacto de medición ANTES
+  con el canario en OK. La regla de abajo deja de ser prosa que se puede olvidar.
+
+⚠ **`-p` es un turno único: es un proxy.** Sirve para el **delta** ANTES↔DESPUÉS
+con todo lo demás fijo, no como retrato de una sesión real. Las frases 1 y 2
+conviene confirmarlas una vez a mano. Y **no se llama `test-*.py` ni vive en un
+`tests/`** a propósito: cuesta dinero y pide red, y `run-tests.py` descubre por
+glob — entraría al gate del merge, que corre en cada integración.
 
 Se corre **antes y después** del cambio y se anotan las dos tablas. Si la 1 no
 carga después, el cambio no sirve por bien escrito que esté. **Hasta que exista
 esa medición, la `description` no se toca** — cambiarla a ciegas es apostar
-cuándo carga una de las 39.
+cuándo carga una de las 39. Y después de cambiarla, **`setup/sync-skills.sh`**:
+sin eso el «después» mide la vieja.
 
 ## Caso 2 · `requirements-designer` — la descripción que no cubría la petición real
 
