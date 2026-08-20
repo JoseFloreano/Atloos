@@ -24,9 +24,32 @@ Están enteros en `setup/hooks/README.md` (sección «Graphify»). En corto:
 El hook nuestro, que mantiene el snapshot del vault fresco:
 
 ```bash
+# MIRA PRIMERO si ya hay uno. `graphify hook install` deja el SUYO justo ahí.
+cat <repo>/.git/hooks/post-commit 2>/dev/null | head -5
 cp setup/hooks/git-post-commit-graph-report.sh <repo>/.git/hooks/post-commit
 chmod +x <repo>/.git/hooks/post-commit
 ```
+
+⚠ **Ese `cp` pisa un hook ajeno, y `graphify hook install` pone el suyo en ese
+mismo fichero** (aviso 3 de arriba: son dos hooks de git, y uno vive en
+`.git/hooks/post-commit`). Git admite **uno solo** por repo, así que copiar a
+ciegas **borra en silencio** la reconstrucción automática del grafo — y no se
+nota hasta que alguien pregunta por código reciente y el grafo responde por
+símbolos viejos. Encontrado en `alphadogs` el 2026-08-19, con el hook de
+graphify vivo y esta receta mandando pisarlo.
+
+Los dos hacen lo mismo y no igual, y por eso la elección es real:
+
+|  | hook de graphify | el nuestro |
+|---|---|---|
+| Reconstruye el grafo | sí, **desacoplado** (el commit vuelve enseguida) | sí, **en primer plano** (~5,6 s por commit) |
+| Mantiene `codebase-map-snapshot.md` en el vault | **no** | sí |
+| Si la reconstrucción falla | lo deja en su log | **no re-sella**: avisa de que el grafo es viejo |
+
+Si el repo es ajeno o hace muchos commits, **pregunta a su dueño antes**: le
+estás cambiando el coste de cada commit. Si decide quedarse con el de graphify,
+el briefing del bot se queda sin snapshot **a propósito** — que es distinto de
+por olvido, y así hay que decirlo en su `_PROJECT.md`.
 
 ⚠ Escribe `codebase-map-snapshot.md`, **nunca el `codebase-map.md` curado**
 (RFD 10 C2).

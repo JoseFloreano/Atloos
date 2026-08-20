@@ -178,7 +178,88 @@ def deny_glob(base, sep=os.sep) -> str:
     return f"{sabor.normpath(str(base))}{sep}**"
 
 
-def secret_denies() -> str:
+ENV_SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv",
+                 "site-packages", ".mypy_cache", ".pytest_cache", "dist",
+                 "build", ".next"}
+ENV_MAX_DEPTH = 3          # raíz + 2 niveles: cubre `backend/`, `apps/api/`
+
+
+def _dirs_con_env(base, max_depth: int = ENV_MAX_DEPTH) -> list:
+    """Subdirectorios de `base` (relativos) donde HOY vive algún fichero `.env*`.
+
+    Solo sirve para DESCUBRIR dónde mirar; lo que protege es el patrón que se
+    construye encima, que cubre el prefijo entero. Por eso un `.env.prod`
+    creado después de arrancar el daemon queda cubierto igual: la regla no
+    enumera ficheros, cubre el directorio.
+
+    Acotado a propósito (profundidad y lista de saltos): esto corre en el
+    arranque, y un repo con `node_modules` o 4 GB de corpus no puede volver
+    lento el arranque del puente. Medido el 2026-08-19 sobre los 4 proyectos
+    de esta máquina (uno de ellos con 4,1 GB de corpus): **0,01 s, 9 reglas**.
+
+    ⚠ Un `.env.example` CUENTA como hallazgo, y es deliberado: el directorio
+    donde vive la plantilla es justo donde alguien copiará el `.env` de verdad,
+    así que conviene tenerlo cubierto ANTES de que exista. Se paga que el bot
+    tampoco pueda leer la plantilla; sale barato al lado de la alternativa.
+    """
+    encontrados = []
+    base = str(base)
+    try:
+        for actual, dirs, ficheros in os.walk(base):
+            rel = os.path.relpath(actual, base)
+            dirs[:] = [d for d in dirs if d not in ENV_SKIP_DIRS]
+            profundidad = 0 if rel == "." else rel.count(os.sep) + 1
+            if profundidad >= max_depth - 1:
+                dirs[:] = []
+            if rel != "." and any(f.startswith(".env") for f in ficheros):
+                encontrados.append(rel)
+    except OSError:
+        return []
+    return encontrados
+
+
+def project_env_denies(paths, sep=os.sep, subdirs=None) -> list:
+    """Deny de lectura sobre los ficheros de entorno de los repos enganchados.
+
+    POR QUÉ EXISTE. `secret_denies` cubre los secretos del PUENTE y del HOME.
+    El `.env` del PROYECTO no estaba en ninguna lista, y la lectura no tiene
+    frontera de directorio en ningún modo (ver el docstring de abajo). Mientras
+    los proyectos enganchados fueron repos de documentación eso era un residual
+    teórico; el día que entra uno que guarda credenciales de producción
+    —clave de API, credenciales de una BD ajena, secreto de sesión de un panel
+    admin— deja de serlo: el bot puede leerlas por ruta absoluta desde el móvil.
+
+    ⚠ LA FORMA DE LA REGLA NO ES ESTÉTICA. La única forma verificada en campo
+    es `<prefijo literal>**` (2026-08-01: `Read(**/.env)` y `Read(*.env)`
+    dejaron pasar la lectura). Por eso aquí se emite `<dir><sep>.env**` y no
+    `Read(<fichero exacto>)`, cuya eficacia nadie ha medido en esta casa. De
+    paso, el prefijo cubre `.env`, `.env.local` y `.env.prod` con una regla.
+
+    `sep` y `subdirs` se inyectan solo para que el arnés pueda ejercer la
+    plataforma ajena —donde el separador ya falló abierto y en silencio
+    (auditoría 31, H1)— sin necesitar el repo en disco. En producción nadie
+    los pasa: los subdirectorios se descubren.
+
+    Residual declarado: cubre la raíz y los directorios con `.env*` hallados
+    hasta `ENV_MAX_DEPTH`. Un `.env` más hondo, o en un directorio creado
+    después del arranque, NO queda cubierto hasta el siguiente reinicio.
+    """
+    sabor = ntpath if sep == "\\" else posixpath
+    reglas = []
+    for base in paths or ():
+        try:
+            raiz = sabor.normpath(str(base))
+        except Exception:
+            continue
+        relativos = list(subdirs) if subdirs is not None else _dirs_con_env(base)
+        for rel in [""] + relativos:
+            partes = [p for p in re.split(r"[\\/]+", rel) if p]
+            directorio = sabor.join(raiz, *partes) if partes else raiz
+            reglas.append(f"Read({directorio}{sep}.env**)")
+    return list(dict.fromkeys(reglas))                         # sin duplicados
+
+
+def secret_denies(project_paths=()) -> str:
     """Deny de lectura sobre las rutas sensibles conocidas de ESTA máquina.
 
     Las LECTURAS no tienen frontera de directorio en ningún modo — el agente
@@ -202,6 +283,7 @@ def secret_denies() -> str:
             reglas.append(f"Read({deny_glob(d)})")
         except Exception:
             continue
+    reglas += project_env_denies(project_paths)
     return ",".join(dict.fromkeys(reglas))                     # sin duplicados
 
 WRITE_PREAMBLE = (
@@ -1880,7 +1962,12 @@ def main() -> None:
     setup_logging()
 
     global SECRET_DENIES, BOT_PROFILE_DIR, PROJECTS_MTIME
-    SECRET_DENIES = secret_denies()
+    cfg = load_config()
+    projects = load_projects()
+    # ⚠ Los proyectos se cargan ANTES del deny, y ese orden es el arreglo: el
+    # deny de los `.env` necesita las rutas de los repos, y calculado antes
+    # salía sin ellas — una denegación correcta que no denegaba nada.
+    SECRET_DENIES = secret_denies([c["path"] for c in projects.values()])
     BOT_PROFILE_DIR = bot_profile_dir()
     # El perfil ya se registró (con su motivo) dentro de bot_profile_dir().
     log.info("deny de secretos: %d rutas",
@@ -1890,8 +1977,6 @@ def main() -> None:
     # contención que nadie había declarado (mismo motivo que el perfil del bot).
     _pol, _motivo_pol = mergepol.modo()
     (log.warning if _pol == "auto" else log.info)("política de la ruta PR: %s", _motivo_pol)
-    cfg = load_config()
-    projects = load_projects()
     try:                            # base de la recarga en caliente (/alta, /p)
         PROJECTS_MTIME = PROJECTS_FILE.stat().st_mtime
     except OSError:

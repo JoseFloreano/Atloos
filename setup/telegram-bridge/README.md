@@ -612,6 +612,16 @@ bloqueado** (no hay verde posible). Se acepta el formato viejo de
    directorio (verificado con canario — commit `2e44223`). Y en ambos modos se
    **deniega la lectura** de rutas con secretos (`.env` del bridge, `~/.ssh`,
    `~/.aws`) con rutas absolutas — los globs `Read(**/.env)` no funcionan.
+
+   Desde el 2026-08-19 eso incluye **los `.env` de los repos enganchados**:
+   `project_env_denies` recorre cada `path` de `projects.json` y emite una regla
+   `<dir><sep>.env**` por la raíz y por cada directorio con ficheros de entorno
+   (medido: 0,01 s y 9 reglas con 4 proyectos, uno de ellos con 4,1 GB de
+   corpus). Hasta entonces era un residual teórico porque ningún proyecto
+   enganchado guardaba credenciales de producción; el primero que las guarda lo
+   vuelve concreto. **Residual que queda**: un `.env` más hondo que
+   `ENV_MAX_DEPTH`, o en un directorio creado después del arranque, no queda
+   cubierto hasta el siguiente reinicio del daemon.
 3. **`CLAUDE_TG_BOT=1`** en el entorno de cada invocación: el hook anti-drift
    `check-vault-updated.py` sale en silencio (no hay humano que cierre el vault).
    *(Consecuencia conocida y no resuelta: en un servidor 24/7 ese hook no
