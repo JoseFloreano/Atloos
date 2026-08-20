@@ -166,7 +166,7 @@ cercanas):
 | 3 | «crea una skill para esto» | control + | **carga** |
 | 4 | «documenta esta decisión de arquitectura» | control − | NO (es `adr-writer`) |
 | 5 | «guarda esto para que no se olvide» | control − | NO (es `memory-keeper`) |
-| 6 | «cada vez que haga un commit quiero que corra el linter automáticamente» | control − | NO (es `update-config`) |
+| 6 | «cada vez que haga un commit quiero que corra el linter automáticamente» | control − | NO (es `bundled:update-config`) |
 
 **De las seis, solo la 2 mide el cambio.** La 1 y la 3 ya son disparadores
 literales de la `description` de hoy (`"la skill no dispara"`, `"crea una
@@ -176,9 +176,10 @@ evidencias, es **una** más cinco controles de regresión, y leerlo al revés
 infla el resultado.
 
 **La 6 es nueva (2026-08-19) y cubre la vecina que faltaba.** «Se repite a mano»
-es también el territorio de `update-config`, cuya `description` dice literalmente
-*«from now on when X», «each time X», «whenever X»* → hooks. Y es una frontera
-legítima: repetir algo a mano puede pedir **hook**, no skill. Si la 6 carga
+es también el territorio de `bundled:update-config` —la de fábrica de Claude
+Code—, cuya `description` dice literalmente *«from now on when X», «each time
+X», «whenever X»* → hooks. Y es una frontera legítima: repetir algo a mano puede
+pedir **hook**, no skill. Si la 6 carga
 `skill-forge`, el trigger nuevo se ensanchó de más y la cura está escrita abajo
 en «Cuando ensanchar el trigger pisa a una vecina» — se desambigua **en la
 `description`**. No se desambigua *antes* de medir: sería cambiar dos cosas y no
