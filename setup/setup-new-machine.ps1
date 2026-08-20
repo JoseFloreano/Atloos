@@ -20,7 +20,10 @@ param(
     [string]$OneDrivePath = $(if ($env:OneDrive) { $env:OneDrive } else { "$env:USERPROFILE\OneDrive" }),
     [switch]$Local = $false,          # modo single-laptop: DevSetup en el home, sin OneDrive
     [switch]$SkipRestore = $false,
-    [switch]$ForceOneDrive = $false   # escape hatch para Estrategia B (bajo tu riesgo)
+    [switch]$ForceOneDrive = $false,  # escape hatch para Estrategia B (bajo tu riesgo)
+    [switch]$SinGraphiti = $false,    # saltar Graphiti aunque haya Docker
+    [switch]$ConGraphiti = $false,    # EXIGIRLO: sin Docker, exit 1
+    [switch]$Preflight = $false       # solo el veredicto, no toca nada
 )
 
 $ErrorActionPreference = "Stop"
@@ -62,12 +65,37 @@ Write-Host " Backups       : $BackupDir" -ForegroundColor White
 Write-Host "════════════════════════════════════════════════════`n" -ForegroundColor White
 
 # ── 1. Verificar dependencias ──────────────────────────────────────────────
+# GEMELO del bloque de setup-new-machine.sh — si cambias uno, cambia el otro.
+#
+# Docker NO es dependencia del alta: lo es de GRAPHITI, pospuesto por ADR. Que
+# su ausencia matara el script con `exit 1` dejaba a la máquina sin skills, sin
+# hooks y sin esqueletos de .env por algo que no iba a usar (2026-08-19).
 Write-Header "Verificando dependencias"
 $errors = 0
-try { docker --version | Out-Null; Write-OK "Docker instalado" }
-catch { Write-Err "Docker no encontrado. Instala Docker Desktop."; $errors++ }
-try { docker compose version | Out-Null; Write-OK "Docker Compose disponible" }
-catch { Write-Err "Docker Compose no disponible."; $errors++ }
+$DockerCmd = if ($env:DOCKER_CMD) { $env:DOCKER_CMD } else { "docker" }
+
+function Test-Docker {
+    try { & $DockerCmd compose version 2>$null | Out-Null; return $LASTEXITCODE -eq 0 }
+    catch { return $false }
+}
+
+$Graphiti = $false
+$MotivoGraphiti = ""
+if ($SinGraphiti) {
+    $MotivoGraphiti = "-SinGraphiti: se salta a petición tuya, haya o no Docker"
+    Write-Info "Graphiti: $MotivoGraphiti"
+} elseif (Test-Docker) {
+    $Graphiti = $true
+    $MotivoGraphiti = "Docker y Compose disponibles"
+    Write-OK "Docker + Compose disponibles (Graphiti se montará)"
+} elseif ($ConGraphiti) {
+    Write-Err "-ConGraphiti pero no hay Docker/Compose utilizables ($DockerCmd)."
+    Write-Err "Instala Docker Desktop, o quita -ConGraphiti y el alta seguirá sin Graphiti."
+    $errors++
+} else {
+    $MotivoGraphiti = "sin Docker/Compose utilizables ($DockerCmd)"
+    Write-Warn "Graphiti se SALTA: $MotivoGraphiti. No es un fallo del alta — Graphiti está pospuesto por ADR y solo él necesita Docker. Skills, hooks y .env se instalan igual."
+}
 if ($errors -gt 0) { Write-Err "Corrige $errors errores críticos antes de continuar."; exit 1 }
 
 # Versiones mínimas de Claude Code para el bucle `/goal` + `/loop` (auditoría
@@ -90,23 +118,40 @@ if ([string]::IsNullOrWhiteSpace($ccRaw)) {
     }
 }
 
-# Guardia anti-OneDrive (fix A1): los datos vivos JAMÁS en OneDrive
-if ($GraphitiLocal -match "OneDrive" -and -not $ForceOneDrive) {
-    Write-Err "GraphitiLocal resuelve dentro de OneDrive — prohibido (H2, corrupción silenciosa)."
-    Write-Err "Usa -ForceOneDrive solo si sabes exactamente lo que haces (Estrategia B)."
-    exit 1
+# ── Preflight: el veredicto SIN tocar nada ────────────────────────────────
+# Gemelo del `--preflight` de setup-new-machine.sh. Sale ANTES de crear
+# directorios: un preflight que escribe es la trampa del `--help` que sale 0.
+if ($Preflight) {
+    Write-Host ""
+    if ($Graphiti) { Write-OK "Preflight: el alta montará Graphiti ($MotivoGraphiti)" }
+    else {
+        Write-Info "Preflight: el alta se hará SIN Graphiti ($MotivoGraphiti)"
+        Write-Info "  Se instalan igual: esqueletos de .env, skills (sync-skills) y HOOKS (sync-hooks)."
+    }
+    Write-Info "Preflight: no se ha escrito nada en el disco."
+    exit 0
 }
 
-# ── 2. Crear directorios ───────────────────────────────────────────────────
-Write-Header "Creando directorios"
-@("$GraphitiLocal\data", "$GraphitiLocal\config", "$GraphitiLocal\scripts", $BackupDir) | ForEach-Object {
-    New-Item -ItemType Directory -Force -Path $_ | Out-Null
+$hasBackupScript  = $false
+$hasRestoreScript = $false
+if ($Graphiti) {
+    # Guardia anti-OneDrive (fix A1): los datos vivos JAMÁS en OneDrive
+    if ($GraphitiLocal -match "OneDrive" -and -not $ForceOneDrive) {
+        Write-Err "GraphitiLocal resuelve dentro de OneDrive — prohibido (H2, corrupción silenciosa)."
+        Write-Err "Usa -ForceOneDrive solo si sabes exactamente lo que haces (Estrategia B)."
+        exit 1
+    }
+
+    # ── 2. Crear directorios ───────────────────────────────────────────────
+    Write-Header "Creando directorios"
+    @("$GraphitiLocal\data", "$GraphitiLocal\config", "$GraphitiLocal\scripts", $BackupDir) | ForEach-Object {
+        New-Item -ItemType Directory -Force -Path $_ | Out-Null
+    }
+    Write-OK "Local:   $GraphitiLocal\{data,config,scripts}"
+    Write-OK "Backups: $BackupDir (solo snapshots)"
 }
-Write-OK "Local:   $GraphitiLocal\{data,config,scripts}"
-Write-OK "Backups: $BackupDir (solo snapshots)"
 
 # ── 3. Copiar compose, config y scripts (fix A2: los scripts SÍ se instalan) ──
-Write-Header "Instalando archivos"
 $sources = @($PSScriptRoot, "$DevSetup\claude-dotfiles\graphiti") | Where-Object { $_ -and (Test-Path $_) }
 function Install-File { param($name, $dest)
     foreach ($src in $sources) {
@@ -115,14 +160,21 @@ function Install-File { param($name, $dest)
     Write-Warn "$name no encontrado en $($sources -join ', '). Cópialo manualmente."
     return $false
 }
-Install-File "docker-compose.yml" "$GraphitiLocal\" | Out-Null
-Install-File "config.yaml"        "$GraphitiLocal\config\" | Out-Null
-$hasBackupScript  = Install-File "backup-graph.ps1"  "$GraphitiLocal\scripts\"
-$hasRestoreScript = Install-File "restore-graph.ps1" "$GraphitiLocal\scripts\"
+if ($Graphiti) {
+    Write-Header "Instalando archivos"
+    Install-File "docker-compose.yml" "$GraphitiLocal\" | Out-Null
+    Install-File "config.yaml"        "$GraphitiLocal\config\" | Out-Null
+    $hasBackupScript  = Install-File "backup-graph.ps1"  "$GraphitiLocal\scripts\"
+    $hasRestoreScript = Install-File "restore-graph.ps1" "$GraphitiLocal\scripts\"
+}
 
 # ── 4. Crear .env LOCAL (fix A4: API keys nunca en OneDrive) ──────────────
-Write-Header "Creando .env (local, fuera de OneDrive)"
+# `$envFile` y `$envReady` se declaran FUERA del guardia: los leen el 4b, los
+# pasos 6-7 y el resumen final.
 $envFile = "$GraphitiLocal\.env"
+$envReady = $false
+if ($Graphiti) {
+Write-Header "Creando .env (local, fuera de OneDrive)"
 $dataDocker   = ConvertTo-DockerPath "$GraphitiLocal\data"
 $configDocker = ConvertTo-DockerPath "$GraphitiLocal\config"
 
@@ -185,6 +237,7 @@ if ($provider -eq "anthropic") { Write-Warn "LLM_PROVIDER=anthropic: extracción
 if (($envContent -match "(?m)^FALKORDB_DATA_PATH=.*OneDrive") -and -not $ForceOneDrive) {
     Write-Err "FALKORDB_DATA_PATH apunta a OneDrive — prohibido (H2)."; exit 1
 }
+}   # ── fin del bloque 4 (solo con Graphiti) ──
 
 # ── 4b. Esqueletos de .env por servicio (registro en setup/README.md) ─────
 # UN .env POR SERVICIO a propósito: `docker --env-file` inyecta el archivo
@@ -196,7 +249,11 @@ if (($envContent -match "(?m)^FALKORDB_DATA_PATH=.*OneDrive") -and -not $ForceOn
 # reales dentro; rozarlos sería destruirlos.
 Write-Header "Esqueletos de .env por servicio"
 
-$SecretFiles = @(
+# El de graphiti solo si esta máquina lo monta: un esqueleto de credenciales de
+# un servicio que no existe aquí es un fichero que nadie rellenará y que el
+# siguiente lector confundirá con configuración viva. El del puente SIEMPRE.
+$SecretFiles = @()
+if ($Graphiti) { $SecretFiles += @(
     @{ Name = "graphiti"
        Path = "$GraphitiLocal\.env"
        Body = @"
@@ -213,6 +270,8 @@ LLM_STRUCTURED_OUTPUT_MODE=json_object
 FALKORDB_PASSWORD=
 SEMAPHORE_LIMIT=3
 "@ }
+) } else { Write-Info "graphiti: sin esqueleto de .env (esta máquina no monta Graphiti)" }
+$SecretFiles += @(
     @{ Name = "claude-telegram"
        Path = "$env:LOCALAPPDATA\claude-telegram\.env"
        Body = @"
@@ -243,6 +302,9 @@ foreach ($s in $SecretFiles) {
 }
 
 # ── 5. Agregar Graphiti al MCP de Claude Code ────────────────────────────
+# Registrar un MCP que apunta a un stack inexistente no es inofensivo: cada
+# sesión paga el intento de conexión y la superficie del cliente.
+if ($Graphiti) {
 Write-Header "Configurando MCP"
 try {
     $mcpList = claude mcp list 2>&1
@@ -254,6 +316,7 @@ try {
 } catch {
     Write-Warn "No se pudo configurar MCP automáticamente. Ejecuta:"
     Write-Info "claude mcp add --transport http graphiti-memory http://localhost:8000/mcp/ -s user"
+}
 }
 
 # ── 5b. Sincronizar skills (raíz de sync → Claude Code + plugin Cowork) ───
@@ -271,6 +334,11 @@ if (Test-Path $syncHooks) {
     try { & $syncHooks }
     catch { Write-Warn "sync-hooks falló: $($_.Exception.Message). Córrelo manualmente." }
 } else { Write-Warn "sync-hooks.ps1 no encontrado junto a este script." }
+
+# ── 6-9. Todo lo que sigue es de Graphiti ─────────────────────────────────
+# Restaurar, levantar, health check y la tarea de backup: las cuatro necesitan
+# el stack. Sin él no hay nada que hacer ahí — no es degradar el alta.
+if ($Graphiti) {
 
 # ── 6. Restaurar backup (fix A3: SOLO via restore-graph, AOF-safe) ────────
 Write-Header "Verificando backups"
@@ -338,7 +406,10 @@ if ($hasBackupScript -and (Test-Path $backupScript)) {
     $Warnings += "CRÍTICO: sin backup automático (backup-graph.ps1 ausente)"
 }
 
+}   # ── fin de los bloques 6-9 (solo con Graphiti) ──
+
 # ── 9b. Sync de skills al iniciar sesión (fix R8) ─────────────────────────
+# FUERA del guardia: esto es de skills, no de Graphiti.
 if (Test-Path $syncSkills) {
     $taskName2 = "ClaudeSkillsSync"
     if (-not (Get-ScheduledTask -TaskName $taskName2 -ErrorAction SilentlyContinue)) {
@@ -359,11 +430,20 @@ else {
     $Warnings | ForEach-Object { Write-Host "   • $_" -ForegroundColor Yellow }
 }
 Write-Host "════════════════════════════════════════════════════`n" -ForegroundColor White
-Write-Info "FalkorDB Browser UI : http://localhost:3000 (solo esta máquina)"
-Write-Info "MCP endpoint        : http://localhost:8000/mcp/"
-Write-Info "Datos (LOCAL)       : $GraphitiLocal\data\"
-Write-Info ".env (LOCAL)        : $envFile"
-Write-Info "Backups             : $BackupDir"
+if ($Graphiti) {
+    Write-Info "FalkorDB Browser UI : http://localhost:3000 (solo esta máquina)"
+    Write-Info "MCP endpoint        : http://localhost:8000/mcp/"
+    Write-Info "Datos (LOCAL)       : $GraphitiLocal\data\"
+    Write-Info ".env (LOCAL)        : $envFile"
+    Write-Info "Backups             : $BackupDir"
+} else {
+    # Anunciar un endpoint y unos backups que aquí no existen sería un dato
+    # falso impreso al final, que es lo único que mucha gente lee.
+    Write-Info "Graphiti            : NO montado — $MotivoGraphiti"
+    Write-Info "                      (pospuesto por ADR; el vault es la memoria durable)"
+    Write-Info "Skills y hooks      : instalados igual — es lo que necesita esta máquina"
+    Write-Info "Si algún día lo quieres: instala Docker y corre .\setup-new-machine.ps1 -ConGraphiti"
+}
 Write-Host ""
 if ($Local) {
     Write-Warn "Modo single-laptop: los backups quedan en el MISMO disco. Protegen contra"

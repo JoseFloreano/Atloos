@@ -12,7 +12,7 @@ productos en `docs/cowork-y-multiagente/08-COWORK-VS-CLAUDE-CODE.md`.
 | **Memoria por proyecto** (aislamiento estricto anti-alucinación) | `memory-instructions.md` (snippet CLAUDE.md ~230 tokens), `cowork-project-instructions.md` (Cowork), skill `memory-keeper`, `graphiti-project-template.json` | Ambos |
 | **Enforcement del aislamiento** (garantía determinista, no solo instrucciones) | `hooks/validate-graphiti-group-id.py` + `hooks/README.md` | Claude Code |
 | **Graphiti + FalkorDB** (memoria temporal, resto de este README) | `docker-compose.yml`, `config.yaml`, `.env.example`, `backup-graph.ps1/.sh`, `restore-graph.ps1/.sh` | Claude Code (Cowork solo vía puente del desktop app) |
-| **Bootstrap laptop nueva** | `setup-new-machine.ps1/.sh` (incluye sync de skills y tareas programadas de backup) | Ambos |
+| **Bootstrap laptop nueva** | `setup-new-machine.ps1/.sh` (incluye sync de skills, de hooks y tareas programadas de backup). **Docker es opcional**: sin él se salta Graphiti —pospuesto por ADR— y el resto del alta se completa. `--preflight` dice qué haría sin tocar nada | Ambos |
 | **Tareas programadas** (patrón "heartbeat barato") | `templates/scheduled-task-prompt.md` | Ambos |
 | **Puente Telegram** (avisos + chat + escritura por worktree + memoria) | `telegram-bridge/` (5 módulos Python + README propio) | Claude Code |
 | **Sync de hooks** (copia + cablea settings.json, idempotente) | `sync-hooks.ps1` | Claude Code |

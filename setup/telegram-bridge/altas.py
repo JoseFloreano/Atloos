@@ -126,14 +126,39 @@ class Check:
         return f"{marca} {self.clave}" + (f" — {self.detalle}" if self.detalle else "")
 
 
-def leer_registro(projects_file=None) -> dict:
-    """El `projects.json` crudo (con sus claves `_`), o {} si no hay/esta roto."""
+def leer_registro_estricto(projects_file=None) -> tuple:
+    """(datos, error). Distingue "no hay fichero" de "no lo pude leer".
+
+    LA DISTINCION ES EL PUNTO (2026-08-19). Un lector que devuelve `{}` para las
+    dos cosas es inofensivo mientras solo se LEA, y destructivo en cuanto alguien
+    escriba encima: `registrar()` reescribe el fichero entero, asi que un
+    `projects.json` con una coma de mas se traducia en un alta que borraba TODOS
+    los proyectos y las claves `_`, y contestaba `[OK]` al movil.
+
+    Es la misma regla que `tg_daemon.leer_projects()` ya aplicaba en el otro
+    lado: ahi un fichero roto devuelve su motivo y no pisa nada. Aqui faltaba.
+    """
     f = Path(projects_file or PROJECTS_FILE)
+    if not f.exists():
+        return {}, ""                       # aun no hay registro: se crea limpio
     try:
         datos = json.loads(f.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    return datos if isinstance(datos, dict) else {}
+    except OSError as exc:
+        return {}, f"no se pudo leer {f.name}: {exc}"
+    except ValueError as exc:
+        return {}, f"{f.name} no es JSON valido: {exc}"
+    if not isinstance(datos, dict):
+        return {}, f"{f.name} no es un objeto JSON (es {type(datos).__name__})"
+    return datos, ""
+
+
+def leer_registro(projects_file=None) -> dict:
+    """El `projects.json` crudo (con sus claves `_`), o {} si no hay/esta roto.
+
+    Para LEER (la casilla del nombre). Quien vaya a ESCRIBIR usa
+    `leer_registro_estricto`, que no confunde vacio con ilegible.
+    """
+    return leer_registro_estricto(projects_file)[0]
 
 
 def revisar(ruta, nombre="", test="", projects_file=None,
@@ -263,7 +288,14 @@ def registrar(veredicto: dict, projects_file=None) -> tuple:
     if not veredicto.get("ok"):
         return False, "el alta esta bloqueada: no se escribe nada"
     f = Path(projects_file or PROJECTS_FILE)
-    datos = leer_registro(f)
+    datos, error = leer_registro_estricto(f)
+    if error:
+        # NO se escribe encima de lo que no se pudo leer: la escritura es un
+        # reemplazo completo y atomico, asi que "leerlo como vacio" aqui no es
+        # degradar, es borrar el registro entero sin decirlo.
+        return False, (f"{error}. NO he tocado el fichero: reescribirlo borraria "
+                       f"los proyectos que ya estan dados de alta. Arregla el JSON "
+                       f"y repite el alta")
     entrada = {"path": veredicto["ruta"]}
     # Solo se persiste el comando declarado AQUI. El que sale del repo
     # (`GATE_TEST_CMD`) no se copia: ya gana solo, y duplicarlo en projects.json

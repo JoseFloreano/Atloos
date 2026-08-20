@@ -1,22 +1,62 @@
 #!/usr/bin/env bash
 # ══════════════════════════════════════════════════════════════
-#  setup-new-machine.sh — Bootstrap Graphiti en laptop nueva (macOS/Linux)
+#  setup-new-machine.sh — Alta de una máquina nueva (macOS/Linux)
 #
 #  ESTRATEGIA A REAL (fix auditoría A1): datos vivos en disco LOCAL
 #  (~/.local/share/graphiti), la raíz de sync SOLO recibe backups terminados.
 #  El .env con API keys también vive LOCAL (fix A4 — nunca en OneDrive).
 #
-#  Prerequisitos: Docker Desktop corriendo, claude CLI. OneDrive es opcional.
+#  ⚠ GRAPHITI ES OPCIONAL DESDE EL 2026-08-19, y esto es el arreglo de un fallo
+#  real. El script MORÍA con `exit 1` si no encontraba Docker —lo contaba como
+#  "error crítico"— cuando **Docker solo lo pide Graphiti, que está POSPUESTO
+#  por ADR** ([[ADR-20260808-graphiti-ratificado-pospuesto]]). O sea: el script
+#  que da de alta una máquina nueva se negaba a instalar las skills, los hooks y
+#  los esqueletos de .env por una dependencia que el propio repo decidió no
+#  usar, y lo hacía **en el primer minuto**, que es cuando la máquina todavía no
+#  tiene nada con que depurarlo. Sin Docker ahora se salta Graphiti DICIÉNDOLO y
+#  el resto del alta se completa.
+#
+#  Lo que SIEMPRE corre, haya o no Docker: los esqueletos de `.env` por
+#  servicio, las skills (`sync-skills.sh`) y los **hooks** (`sync-hooks.sh`) —
+#  la capa 3, que es lo que no puede faltar en una máquina que va a correr sin
+#  nadie delante.
+#
+#  Prerequisitos: claude CLI. Docker y OneDrive son opcionales.
 #
 #  Uso:
 #    bash setup-new-machine.sh                   # OneDrive en ~/OneDrive
 #    bash setup-new-machine.sh /ruta/a/OneDrive  # path explícito
 #    LOCAL=1 bash setup-new-machine.sh           # single-laptop, sin OneDrive
 #    FORCE_ONEDRIVE=1 bash setup-new-machine.sh  # escape hatch Estrategia B
+#    SIN_GRAPHITI=1 bash setup-new-machine.sh    # saltar Graphiti aunque haya Docker
+#    CON_GRAPHITI=1 bash setup-new-machine.sh    # EXIGIRLO: sin Docker, exit 1
+#    bash setup-new-machine.sh --preflight       # solo el veredicto, no toca nada
 # ══════════════════════════════════════════════════════════════
 
 set -euo pipefail
-ONEDRIVE="${1:-$HOME/OneDrive}"
+
+# `--preflight` se saca de los argumentos ANTES de leer la ruta de OneDrive:
+# si no, `setup-new-machine.sh --preflight` interpretaría el flag como ruta y
+# el veredicto hablaría de un OneDrive llamado "--preflight".
+#
+# Con variables sueltas y no con un array: en macOS el `bash` de sistema sigue
+# siendo 3.2, donde un array vacío bajo `set -u` es una mina — y este script
+# declara macOS en su primera línea.
+PREFLIGHT=""
+RUTA_ARG=""
+for a in "$@"; do
+  case "$a" in
+    --preflight|--solo-preflight) PREFLIGHT=1 ;;
+    *) if [ -z "${RUTA_ARG}" ]; then RUTA_ARG="$a"; fi ;;
+  esac
+done
+ONEDRIVE="${RUTA_ARG:-$HOME/OneDrive}"
+
+# El comando de Docker, INYECTABLE. No es un adorno de pruebas: es la única
+# forma de que el arnés ejerza «una máquina sin Docker» sin depender de que la
+# máquina donde corre la suite lo tenga o no — el mismo motivo por el que
+# `deny_glob` recibe el separador y `altas.revisar` recibe su `which`.
+DOCKER_CMD="${DOCKER_CMD:-docker}"
 
 # ── Modo de sincronización ────────────────────────────────────────────────
 # multi-laptop (default): DevSetup vive en OneDrive → skills/backups viajan solos.
@@ -43,7 +83,7 @@ err()    { echo -e "  ${RED}[ERR]${NC} $1"; }
 info()   { echo -e "  ${BLUE}[INFO]${NC} $1"; }
 
 echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
-echo -e "${BOLD} Graphiti + FalkorDB — Setup (Estrategia A)${NC}"
+echo -e "${BOLD} Alta de máquina — Estrategia A${NC}"
 echo -e "${BOLD} Modo          : ${SYNC_MODE}${NC}"
 echo -e "${BOLD} Datos locales : ${GRAPHITI_LOCAL}${NC}"
 echo -e "${BOLD} Backups       : ${BACKUP_DIR}${NC}"
@@ -52,10 +92,38 @@ echo -e "${BOLD}═════════════════════�
 # ── 1. Verificar dependencias ──────────────────────────────────────────────
 header "Verificando dependencias"
 ERRORS=0
-command -v docker >/dev/null 2>&1 && ok "Docker instalado" || { err "Docker no encontrado."; ERRORS=$((ERRORS+1)); }
-docker compose version >/dev/null 2>&1 && ok "Docker Compose disponible" || { err "Docker Compose no disponible."; ERRORS=$((ERRORS+1)); }
-[ -d "${DEVSETUP}" ] || { warn "No se encontró ${DEVSETUP}. Creando..."; mkdir -p "${DEVSETUP}"; }
-[ $ERRORS -gt 0 ] && { err "Hay $ERRORS errores críticos."; exit 1; }
+
+# Docker NO es una dependencia del alta: es una dependencia de GRAPHITI, que
+# está pospuesto por ADR. Contarlo como "error crítico" era negarle a la máquina
+# sus skills y sus hooks por algo que no iba a usar (ver la cabecera).
+hay_docker() {
+  command -v "${DOCKER_CMD}" >/dev/null 2>&1 \
+    && "${DOCKER_CMD}" compose version >/dev/null 2>&1
+}
+
+GRAPHITI=false
+MOTIVO_GRAPHITI=""
+if [ -n "${SIN_GRAPHITI:-}" ]; then
+  MOTIVO_GRAPHITI="SIN_GRAPHITI=1: se salta a petición tuya, haya o no Docker"
+  info "Graphiti: ${MOTIVO_GRAPHITI}"
+elif hay_docker; then
+  GRAPHITI=true
+  MOTIVO_GRAPHITI="Docker y Compose disponibles"
+  ok "Docker + Compose disponibles (Graphiti se montará)"
+elif [ -n "${CON_GRAPHITI:-}" ]; then
+  # Lo pediste explícitamente: aquí SÍ es un error crítico, y solo aquí.
+  err "CON_GRAPHITI=1 pero no hay Docker/Compose utilizables (${DOCKER_CMD})."
+  err "Instala Docker, o quita CON_GRAPHITI y el alta seguirá sin Graphiti."
+  ERRORS=$((ERRORS+1))
+else
+  MOTIVO_GRAPHITI="sin Docker/Compose utilizables (${DOCKER_CMD})"
+  warn "Graphiti se SALTA: ${MOTIVO_GRAPHITI}. No es un fallo del alta — Graphiti está pospuesto por ADR y solo él necesita Docker. Skills, hooks y .env se instalan igual."
+fi
+
+if [ -z "${PREFLIGHT}" ]; then
+  if [ ! -d "${DEVSETUP}" ]; then warn "No se encontró ${DEVSETUP}. Creando..."; mkdir -p "${DEVSETUP}"; fi
+fi
+if [ $ERRORS -gt 0 ]; then err "Hay $ERRORS errores críticos."; exit 1; fi
 
 # Versiones mínimas de Claude Code que el bucle `/goal` + `/loop` necesita.
 # Estaban en hooks/README.md con un "conviene comprobar en setup-new-machine" y
@@ -80,25 +148,43 @@ else
   warn "Claude Code CLI no encontrado: no se pudieron comprobar las versiones mínimas del bucle (${CC_MIN}+)."
 fi
 
-# Guardia anti-OneDrive (fix A1)
-case "${GRAPHITI_LOCAL}" in
-  *OneDrive*)
-    if [ -z "${FORCE_ONEDRIVE:-}" ]; then
-      err "GRAPHITI_LOCAL apunta dentro de OneDrive — prohibido (H2, corrupción silenciosa)."
-      err "Usa FORCE_ONEDRIVE=1 solo si sabes lo que haces (Estrategia B)."
-      exit 1
-    fi ;;
-esac
+# ── Preflight: el veredicto SIN tocar nada ────────────────────────────────
+# El manual de la SER8 lo dice con todas las letras: «`python3 -m venv --help`
+# sale 0 y aun así puede faltar `ensurepip`» — *exit 0 no es «quedó hecho»*. Un
+# preflight que escribiera directorios sería esa misma trampa, así que este sale
+# ANTES de crear nada. Sirve para saber qué va a hacer el alta antes de correrla.
+if [ -n "${PREFLIGHT}" ]; then
+  echo ""
+  if [ "${GRAPHITI}" = true ]; then
+    ok "Preflight: el alta montará Graphiti (${MOTIVO_GRAPHITI})"
+  else
+    info "Preflight: el alta se hará SIN Graphiti (${MOTIVO_GRAPHITI})"
+    info "  Se instalan igual: esqueletos de .env, skills (sync-skills) y HOOKS (sync-hooks)."
+  fi
+  info "Preflight: no se ha escrito nada en el disco."
+  exit 0
+fi
 
-# ── 2. Crear directorios ───────────────────────────────────────────────────
-header "Creando directorios"
-mkdir -p "${GRAPHITI_LOCAL}"/{data,config,scripts}
-mkdir -p "${BACKUP_DIR}"
-ok "Local:   ${GRAPHITI_LOCAL}/{data,config,scripts}"
-ok "Backups: ${BACKUP_DIR} (solo snapshots)"
+if [ "${GRAPHITI}" = true ]; then
+  # Guardia anti-OneDrive (fix A1)
+  case "${GRAPHITI_LOCAL}" in
+    *OneDrive*)
+      if [ -z "${FORCE_ONEDRIVE:-}" ]; then
+        err "GRAPHITI_LOCAL apunta dentro de OneDrive — prohibido (H2, corrupción silenciosa)."
+        err "Usa FORCE_ONEDRIVE=1 solo si sabes lo que haces (Estrategia B)."
+        exit 1
+      fi ;;
+  esac
+
+  # ── 2. Crear directorios ─────────────────────────────────────────────────
+  header "Creando directorios"
+  mkdir -p "${GRAPHITI_LOCAL}"/{data,config,scripts}
+  mkdir -p "${BACKUP_DIR}"
+  ok "Local:   ${GRAPHITI_LOCAL}/{data,config,scripts}"
+  ok "Backups: ${BACKUP_DIR} (solo snapshots)"
+fi
 
 # ── 3. Instalar compose, config y scripts (fix A2) ────────────────────────
-header "Instalando archivos"
 DOTFILES="${DEVSETUP}/claude-dotfiles/graphiti"
 install_file() {  # $1 nombre, $2 destino
   local src
@@ -112,15 +198,26 @@ install_file() {  # $1 nombre, $2 destino
   warn "$1 no encontrado (busqué en ${SCRIPT_DIR} y ${DOTFILES}). Cópialo manualmente."
   return 1
 }
-install_file "docker-compose.yml" "${GRAPHITI_LOCAL}/" || true
-install_file "config.yaml"        "${GRAPHITI_LOCAL}/config/" || true
-HAS_BACKUP=true;  install_file "backup-graph.sh"  "${GRAPHITI_LOCAL}/scripts/" || HAS_BACKUP=false
-HAS_RESTORE=true; install_file "restore-graph.sh" "${GRAPHITI_LOCAL}/scripts/" || HAS_RESTORE=false
-chmod +x "${GRAPHITI_LOCAL}/scripts/"*.sh 2>/dev/null || true
+HAS_BACKUP=false
+HAS_RESTORE=false
+if [ "${GRAPHITI}" = true ]; then
+  header "Instalando archivos"
+  install_file "docker-compose.yml" "${GRAPHITI_LOCAL}/" || true
+  install_file "config.yaml"        "${GRAPHITI_LOCAL}/config/" || true
+  HAS_BACKUP=true;  install_file "backup-graph.sh"  "${GRAPHITI_LOCAL}/scripts/" || HAS_BACKUP=false
+  HAS_RESTORE=true; install_file "restore-graph.sh" "${GRAPHITI_LOCAL}/scripts/" || HAS_RESTORE=false
+  chmod +x "${GRAPHITI_LOCAL}/scripts/"*.sh 2>/dev/null || true
+fi
 
 # ── 4. Crear .env LOCAL (fix A4: API keys nunca en OneDrive) ──────────────
-header "Creando .env (local, fuera de OneDrive)"
+# `ENV_FILE` y `ENV_READY` se declaran FUERA del guardia: los leen el paso 4b,
+# los pasos 6-7 y el resumen final. Con `set -u`, dejarlos dentro convertiría el
+# camino sin Graphiti en un `unbound variable` — el arreglo reventando por el
+# lado que venía a arreglar.
 ENV_FILE="${GRAPHITI_LOCAL}/.env"
+ENV_READY=false
+if [ "${GRAPHITI}" = true ]; then
+header "Creando .env (local, fuera de OneDrive)"
 if [ -f "${ENV_FILE}" ]; then
   info ".env ya existe. No sobreescrito."
 else
@@ -185,6 +282,7 @@ if grep -qE "^FALKORDB_DATA_PATH=.*OneDrive" "${ENV_FILE}" && [ -z "${FORCE_ONED
   err "FALKORDB_DATA_PATH apunta a OneDrive — prohibido (H2)."
   exit 1
 fi
+fi      # ── fin del bloque 4 (solo con Graphiti) ──
 
 # ── 4b. Esqueletos de .env por servicio (registro en setup/README.md) ─────
 # UN .env POR SERVICIO a propósito: `docker --env-file` inyecta el archivo
@@ -200,6 +298,10 @@ header "Esqueletos de .env por servicio"
 TELEGRAM_ENV="${HOME}/.config/claude-telegram/.env"
 
 # graphiti: normalmente ya lo creó el paso 4; este bloque es la red de seguridad.
+# Sin Graphiti no se crea: un esqueleto de credenciales para un servicio que esta
+# máquina no va a levantar es un fichero con `chmod 600` que nadie va a rellenar
+# y que el siguiente lector confundirá con configuración viva.
+if [ "${GRAPHITI}" = true ]; then
 mkdir -p "$(dirname "${ENV_FILE}")"
 if [ -f "${ENV_FILE}" ]; then
   info "graphiti: .env ya existe — NO se toca (${ENV_FILE})"
@@ -222,7 +324,12 @@ ENVSKEL
   ok "graphiti: esqueleto creado en ${ENV_FILE}"
   warn "graphiti: rellena sus llaves — ver 'Registro de secretos' en setup/README.md"
 fi
+else
+  info "graphiti: sin esqueleto de .env (esta máquina no monta Graphiti)"
+fi
 
+# El de Telegram SIEMPRE, haya Docker o no: el puente es lo que de verdad corre
+# en la máquina 24/7, y era justo lo que el `exit 1` por Docker impedía instalar.
 mkdir -p "$(dirname "${TELEGRAM_ENV}")"
 if [ -f "${TELEGRAM_ENV}" ]; then
   info "claude-telegram: .env ya existe — NO se toca (${TELEGRAM_ENV})"
@@ -242,6 +349,9 @@ ENVSKEL
 fi
 
 # ── 5. Agregar Graphiti al MCP de Claude Code ────────────────────────────
+# Registrar un MCP que apunta a un stack que no existe no es inofensivo: cada
+# sesión de Claude Code paga el intento de conexión y la superficie del cliente.
+if [ "${GRAPHITI}" = true ]; then
 header "Configurando MCP en Claude Code"
 if command -v claude >/dev/null 2>&1; then
   if claude mcp list 2>/dev/null | grep -q "graphiti"; then
@@ -253,6 +363,7 @@ if command -v claude >/dev/null 2>&1; then
   fi
 else
   warn "Claude Code CLI no encontrado. Agrega el MCP manualmente."
+fi
 fi
 
 # ── 5b. Sincronizar skills (raíz de sync → Claude Code + plugin Cowork) ───
@@ -277,6 +388,12 @@ else
   WARNINGS+=("CRÍTICO: sin hooks instalados (no hay compuerta de merge)")
 fi
 
+# ── 6-9. Todo lo que sigue es de Graphiti ─────────────────────────────────
+# Restaurar, levantar containers, health check y el cron de backup: las cuatro
+# cosas necesitan el stack. Sin él, saltarlas no es degradar el alta — es que no
+# hay nada que hacer ahí.
+if [ "${GRAPHITI}" = true ]; then
+
 # ── 6. Restaurar backup (fix A3: SOLO via restore-graph, AOF-safe) ────────
 header "Verificando backups existentes"
 STACK_UP=false
@@ -300,7 +417,7 @@ fi
 if [ "${STACK_UP}" = false ]; then
   header "Levantando Docker containers"
   if [ "${ENV_READY}" = true ]; then
-    docker compose --env-file "${ENV_FILE}" -f "${GRAPHITI_LOCAL}/docker-compose.yml" up -d \
+    "${DOCKER_CMD}" compose --env-file "${ENV_FILE}" -f "${GRAPHITI_LOCAL}/docker-compose.yml" up -d \
       && { ok "Containers levantados"; STACK_UP=true; } \
       || err "Error al levantar containers."
   else
@@ -313,7 +430,7 @@ fi
 if [ "${STACK_UP}" = true ]; then
   header "Verificando health (espera 10s...)"
   sleep 10
-  docker exec graphiti-falkordb redis-cli ping 2>/dev/null | grep -q PONG \
+  "${DOCKER_CMD}" exec graphiti-falkordb redis-cli ping 2>/dev/null | grep -q PONG \
     && ok "FalkorDB respondiendo" \
     || warn "FalkorDB no responde aún: docker logs graphiti-falkordb"
   (curl -sf "http://localhost:8000/mcp/" >/dev/null 2>&1 || curl -sf "http://localhost:8000/" >/dev/null 2>&1) \
@@ -337,6 +454,8 @@ else
   command -v crontab >/dev/null 2>&1 || warn "crontab no disponible — configura el backup con launchd/systemd."
 fi
 
+fi      # ── fin de los bloques 6-9 (solo con Graphiti) ──
+
 # ── Resumen final ─────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
@@ -348,11 +467,23 @@ else
 fi
 echo -e "${BOLD}════════════════════════════════════════════════════${NC}"
 echo ""
-echo "  FalkorDB Browser UI : http://localhost:3000 (solo esta máquina)"
-echo "  MCP endpoint        : http://localhost:8000/mcp/"
-echo "  Datos (LOCAL)       : ${GRAPHITI_LOCAL}/data/"
-echo "  .env (LOCAL)        : ${ENV_FILE}"
-echo "  Backups             : ${BACKUP_DIR}"
+if [ "${GRAPHITI}" = true ]; then
+  echo "  FalkorDB Browser UI : http://localhost:3000 (solo esta máquina)"
+  echo "  MCP endpoint        : http://localhost:8000/mcp/"
+  echo "  Datos (LOCAL)       : ${GRAPHITI_LOCAL}/data/"
+  echo "  .env (LOCAL)        : ${ENV_FILE}"
+  echo "  Backups             : ${BACKUP_DIR}"
+else
+  # Sin esto, el resumen anunciaba un endpoint y unos backups que en esta
+  # máquina no existen: exactamente el género de dato falso que el repo lleva
+  # dieciséis sprints persiguiendo, impreso además al final, que es lo único
+  # que mucha gente lee.
+  echo "  Graphiti            : NO montado — ${MOTIVO_GRAPHITI}"
+  echo "                        (pospuesto por ADR; el vault es la memoria durable)"
+  echo "  Skills y hooks      : instalados igual — es lo que necesita esta máquina"
+  echo "  .env del puente     : ${TELEGRAM_ENV}"
+  echo "  Si algún día lo quieres: instala Docker y corre CON_GRAPHITI=1 $(basename "$0")"
+fi
 echo ""
 if [ -n "${LOCAL:-}" ]; then
   echo -e "  ${YELLOW}Modo single-laptop: los backups quedan en el MISMO disco. Protegen contra${NC}"

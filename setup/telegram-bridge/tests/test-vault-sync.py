@@ -80,6 +80,43 @@ def laboratorio(tmp):
     return origen, a, b
 
 
+def banco(tmp, vault):
+    """Un `bridge/` de mentira para EJECUTAR vault-sync.sh de verdad.
+
+    El script resuelve la raíz del vault preguntándole a `vaultio`, y avisa
+    llamando a `notify_telegram.py`, los dos por su propio `dirname`. Copiándolo
+    a un directorio con esos dos vecinos falsos se ejerce el TEXTO REAL del
+    script sin remoto de verdad, sin bot y sin tocar el vault de esta máquina.
+
+    Devuelve (script, buzon): el buzón es el fichero donde aterriza cada aviso.
+    """
+    bridge = Path(tmp) / "bridge"
+    bridge.mkdir(parents=True, exist_ok=True)
+    real = Path(__file__).resolve().parent.parent / "vault-sync.sh"
+    destino = bridge / "vault-sync.sh"
+    shutil.copy2(real, destino)
+    destino.chmod(0o755)
+    buzon = Path(tmp) / "avisos.txt"
+    escribe(bridge / "vaultio.py",
+            "from pathlib import Path\n"
+            f"def vault_root():\n    return Path(r'{vault}')\n")
+    escribe(bridge / "notify_telegram.py",
+            "import sys\n"
+            f"open(r'{buzon}', 'a', encoding='utf-8').write(' '.join(sys.argv[1:]) + chr(10))\n")
+    return destino, buzon
+
+
+def corre(script, tmp):
+    """(exit, salida). El script, tal cual lo lanzaría el timer."""
+    p = subprocess.run(["bash", str(script)], cwd=str(tmp), stdout=subprocess.PIPE,
+                       stderr=subprocess.STDOUT, timeout=120, env=dict(os.environ))
+    return p.returncode, p.stdout.decode("utf-8", "replace").strip()
+
+
+def avisos(buzon):
+    return Path(buzon).read_text(encoding="utf-8") if Path(buzon).is_file() else ""
+
+
 def main():
     if not shutil.which("git"):
         print("[SKIP] no hay git en esta máquina: la sincronía del vault no se mide")
@@ -212,6 +249,80 @@ def main():
           "rebase --abort" in fuente and "-X ours" not in fuente
           and "--strategy-option" not in fuente and "push --force" not in fuente,
           "el script resuelve conflictos solo: eso es exactamente lo que no debe hacer")
+
+    # ══ Los casos que EJECUTAN el script ══════════════════════════════════
+    # Hasta 2026-08-19 el script solo tenía `bash -n` y un grep de su fuente:
+    # 116 líneas que estrenaban sin cobertura en la máquina que corre sola. Lo
+    # que sigue lo ejerce contra un remoto de mentira.
+    if not shutil.which("bash"):
+        print("[SKIP] 12-16. el script no se puede ejercer: no hay bash")
+    else:
+        # --- Caso 12: todo al día -> calla y sale 0 ---
+        with tempfile.TemporaryDirectory(prefix="vaultsync-") as tmp:
+            _, a, _b = laboratorio(tmp)
+            script, buzon = banco(tmp, a)
+            rc, out = corre(script, tmp)
+            check("12. al día: sale 0 y no dice nada", rc == 0 and not avisos(buzon),
+                  f"rc={rc} avisos={avisos(buzon)!r} out={out[:200]!r}")
+
+        # --- Caso 13: la nota local acaba EN EL REMOTO ---
+        # Es la pérdida de datos que motivó el script: la nota de `/done` se
+        # quedaba en el disco de la SER8. Se comprueba en el remoto, no aquí.
+        with tempfile.TemporaryDirectory(prefix="vaultsync-") as tmp:
+            origen, a, _b = laboratorio(tmp)
+            escribe(a / "10-Projects" / "demo" / "sessions" / "hoy.md", "la nota\n")
+            script, buzon = banco(tmp, a)
+            rc, out = corre(script, tmp)
+            _, listado = git(["ls-tree", "-r", "--name-only", "main"], origen)
+            check("13. la nota sin commitear acaba publicada en el remoto",
+                  rc == 0 and "sessions/hoy.md" in listado and not avisos(buzon),
+                  f"rc={rc} listado={listado!r} avisos={avisos(buzon)!r}")
+
+        # --- Caso 14: conflicto -> avisa, aborta y NO deja el vault a medias ---
+        with tempfile.TemporaryDirectory(prefix="vaultsync-") as tmp:
+            _, a, b = laboratorio(tmp)
+            escribe(b / "choca.md", "lo de la laptop\n")
+            git(["add", "-A"], b); git(["commit", "-m", "laptop"], b); git(["push"], b)
+            escribe(a / "choca.md", "lo del servidor\n")     # misma línea, otro texto
+            script, buzon = banco(tmp, a)
+            rc, out = corre(script, tmp)
+            _, gitdir = git(["rev-parse", "--absolute-git-dir"], a)
+            a_medias = Path(gitdir, "rebase-merge").is_dir() or Path(gitdir, "rebase-apply").is_dir()
+            check("14. conflicto: avisa, aborta el rebase y conserva lo local",
+                  rc == 1 and "CONFLICTO" in avisos(buzon) and not a_medias
+                  and (a / "choca.md").read_text(encoding="utf-8") == "lo del servidor\n",
+                  f"rc={rc} a_medias={a_medias} avisos={avisos(buzon)!r}")
+
+        # --- Caso 15: remoto caído CON trabajo en juego -> avisa, y NO de conflicto ---
+        # La regresión que cerró este caso: el script hacía `rebase --abort`
+        # (no-op) y mandaba "🔴 CONFLICTO" ante un fallo de RED. Con el timer a
+        # 20 min eso son tres falsas alarmas por hora.
+        with tempfile.TemporaryDirectory(prefix="vaultsync-") as tmp:
+            _, a, _b = laboratorio(tmp)
+            escribe(a / "pendiente.md", "sin publicar\n")
+            git(["remote", "set-url", "origin", str(Path(tmp) / "no-existe.git")], a)
+            script, buzon = banco(tmp, a)
+            rc, out = corre(script, tmp)
+            # Se comprueba que NO saltó la alarma roja (su frase exacta), no que
+            # la palabra "conflicto" no aparezca: el mensaje correcto dice "no es
+            # un conflicto", y una aserción sobre la subcadena lo daría por malo.
+            check("15. remoto caído con nota sin publicar: avisa SIN dar la alarma de conflicto",
+                  rc == 1 and "SIN PUBLICAR" in avisos(buzon)
+                  and "CONFLICTO al sincronizar" not in avisos(buzon),
+                  f"rc={rc} avisos={avisos(buzon)!r}")
+
+        # --- Caso 16: remoto caído SIN nada en juego -> se calla ---
+        # La otra mitad del 15: si avisara igual, el fix habría cambiado una
+        # falsa alarma por otra, y la regla de la casa es callar cuando no hay
+        # nada que decidir.
+        with tempfile.TemporaryDirectory(prefix="vaultsync-") as tmp:
+            _, a, _b = laboratorio(tmp)
+            git(["remote", "set-url", "origin", str(Path(tmp) / "no-existe.git")], a)
+            script, buzon = banco(tmp, a)
+            rc, out = corre(script, tmp)
+            check("16. remoto caído sin nada sin publicar: sale != 0 y CALLA",
+                  rc != 0 and not avisos(buzon),
+                  f"rc={rc} avisos={avisos(buzon)!r}")
 
     print()
     fallos = [n for n, ok, _ in results if not ok]

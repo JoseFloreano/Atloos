@@ -18,7 +18,11 @@
 #
 #  LA REGLA QUE LO GOBIERNA, la misma del `latido-doctor.sh`: **calla cuando todo
 #  esta bien.** Solo habla al movil cuando hay algo que una persona tiene que
-#  decidir — y el unico caso asi es el conflicto.
+#  decidir, que son tres casos y no uno: el conflicto, el push rebotado y el
+#  pull que falla TENIENDO trabajo local sin publicar. Un pull que falla sin
+#  nada en juego se calla y lo reintenta el pase de dentro de 20 min: con el
+#  timer a esa cadencia, avisar de cada corte de red son tres mensajes por hora
+#  que enseñan a no leer el unico que importa.
 #
 #  ANTE CONFLICTO NO RESUELVE NADA: aborta el rebase, deja el vault como estaba y
 #  avisa. Con dos escritores (Obsidian en la laptop, daemon en la SER8) el
@@ -87,21 +91,56 @@ if [ -n "$(git -C "$VAULT" status --porcelain)" ]; then
     || { avisa "🔴 vault en $(hostname): el commit automatico fallo"; exit 1; }
 fi
 
+# ¿Hay trabajo local sin publicar? -> 0 si, 1 no, 2 no se puede saber (sin
+# upstream). Existe porque la respuesta decide DOS cosas distintas: si hay que
+# empujar (paso 3) y si un fallo de red merece despertar a alguien (paso 2). El
+# `2>/dev/null` de antes convertia "esta rama no tiene upstream" en "nada que
+# publicar", que es la forma callada de no publicar nunca.
+sin_publicar() {
+  git -C "$VAULT" rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1 || return 2
+  [ -n "$(git -C "$VAULT" log --oneline '@{u}..HEAD' 2>/dev/null)" ]
+}
+
 # 2 · Traer. `--rebase` para no llenar el historial de merges vacios;
 #     `--autostash` por si el paso 1 dejo algo sin trackear en medio.
 if ! SALIDA="$(git -C "$VAULT" pull --rebase --autostash 2>&1)"; then
-  # Deshacer ANTES de avisar: un vault en rebase a medias rompe la lectura del
-  # briefing, y el mensaje al movil llegaria describiendo un estado que ya
-  # estaria haciendo dano.
-  git -C "$VAULT" rebase --abort 2>/dev/null
   echo "$SALIDA" >&2
-  avisa "🔴 vault en $(hostname): CONFLICTO al sincronizar. Rebase abortado, el vault quedo como estaba. Hace falta resolverlo a mano: git -C ${VAULT} pull --rebase"
+  # UN PULL QUE FALLA NO ES UN CONFLICTO. Se pregunta por el rebase EN CURSO en
+  # vez de suponerlo: sin remoto alcanzable, sin credencial o sin upstream, git
+  # falla ANTES de empezar el rebase, y el `rebase --abort` de antes era un
+  # no-op cuyo mensaje decia "CONFLICTO ... rebase abortado". Con el timer cada
+  # 20 min, un corte de red mandaba esa falsa alarma tres veces por hora — y una
+  # alarma que casi siempre miente deja de leerse justo el dia que dice verdad.
+  GITDIR="$(git -C "$VAULT" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  if [ -n "$GITDIR" ] && { [ -d "${GITDIR}/rebase-merge" ] || [ -d "${GITDIR}/rebase-apply" ]; }; then
+    # Deshacer ANTES de avisar: un vault en rebase a medias rompe la lectura del
+    # briefing, y el mensaje al movil llegaria describiendo un estado que ya
+    # estaria haciendo dano.
+    git -C "$VAULT" rebase --abort 2>/dev/null
+    avisa "🔴 vault en $(hostname): CONFLICTO al sincronizar. Rebase abortado, el vault quedo como estaba. Hace falta resolverlo a mano: git -C ${VAULT} pull --rebase"
+    exit 1
+  fi
+  # No es conflicto. Se habla SOLO si hay algo local en juego, que es la regla
+  # de la casa: el pase de dentro de 20 min lo reintenta y nadie tiene nada que
+  # decidir mientras no haya una nota sin publicar. Si no se puede saber, se
+  # habla: no saber cuenta como algo en juego.
+  sin_publicar; PENDIENTE=$?
+  if [ "$PENDIENTE" -eq 1 ]; then
+    di "pull fallido (no es conflicto) y no hay nada local sin publicar; callo"
+    exit 1
+  fi
+  avisa "🟠 vault en $(hostname): el pull NO salio y no es un conflicto (red, credencial o rama sin upstream). Hay trabajo local SIN PUBLICAR esperando. No he tocado nada; el proximo pase reintenta."
   exit 1
 fi
 di "pull: ok"
 
 # 3 · Publicar, solo si hay algo que publicar.
-if [ -n "$(git -C "$VAULT" log --oneline @{u}..HEAD 2>/dev/null)" ]; then
+sin_publicar; PENDIENTE=$?
+if [ "$PENDIENTE" -eq 2 ]; then
+  avisa "🟠 vault en $(hostname): la rama del vault no tiene upstream, asi que NADA se esta publicando. Arreglalo: git -C ${VAULT} push -u origin HEAD"
+  exit 1
+fi
+if [ "$PENDIENTE" -eq 0 ]; then
   if ! SALIDA="$(git -C "$VAULT" push 2>&1)"; then
     echo "$SALIDA" >&2
     avisa "🔴 vault en $(hostname): el push rebota. Lo local esta commiteado pero NO publicado."

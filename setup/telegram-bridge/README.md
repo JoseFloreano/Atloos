@@ -490,7 +490,7 @@ Puedes estar editando en la laptop mientras el bot desarrolla: no se ven.
 | `/test` | Corre el comando de test del proyecto dentro del worktree | — |
 | `/push` | Publica la rama; con `gh`, crea/actualiza el PR y manda el link | — |
 | `/pull` | Trae `main` a la rama de la conversación; si trajo cambios, el verde de `/test` caduca y hay que repetirlo | — |
-| `/merge` | Integra en `main` (squash) | **Sí** |
+| `/merge` | Integra en `main` (squash). Por la ruta PR, **un PR recién abierto no se integra en la misma pulsación** — ver abajo | **Sí** |
 | `/done` | Quita worktree, borra la rama y archiva la conversación | — |
 
 ## Las tres reglas que gobiernan T2
@@ -503,6 +503,35 @@ Puedes estar editando en la laptop mientras el bot desarrolla: no se ven.
    5 minutos.
 3. **`/merge` exige tests en verde** posteriores al último commit. Si commiteas
    después de un `/test`, el verde caduca y hay que repetirlo.
+
+### La ruta PR, y por qué necesita su propia guarda
+
+Con `gh` instalado, el `/merge` iba por PR — y hasta el 2026-08-19 lo abría y lo
+integraba **en la misma pulsación** (`ensure_pr` y, la línea siguiente,
+`gh pr merge --squash`). O sea: **sin ventana de revisión**, y sin que ninguna
+de las dos guardas del camino local (árbol en `base`, árbol limpio) aplicara al
+remoto, porque el merge por PR ocurre allí a propósito.
+
+Estaba contenido **por accidente**: `gh` no está instalado en la SER8 (firma
+B1, [[ADR-20260819-gh-fuera-del-puente]]). Pero la contención era *la ausencia
+de un binario*: un `apt install` que arrastrara `gh` cambiaba la ruta en
+silencio, en la máquina 24/7. Ahora la política es explícita, con
+`CLAUDE_TG_PR_MERGE`:
+
+| Valor | Qué hace |
+|---|---|
+| *(sin declarar)* → `ventana` | Integra por PR **solo si el PR ya existía** antes de la pulsación. Si lo acaba de abrir el puente, lo publica, te manda el link y pide un segundo `/merge` |
+| `off` | El puente **nunca** integra por PR: lo abre y ahí lo deja |
+| `auto` | El comportamiento viejo. Se avisa al arrancar (`WARNING`) y en cada merge |
+| *cualquier otra cosa* | Se trata como `off` **nombrando el valor crudo**: una variable mal escrita nunca concede más permiso que una bien escrita |
+
+La ventana no es un retardo simbólico: entre las dos pulsaciones el PR existe,
+está publicado y se puede mirar desde el móvil. El verde sigue vigente mientras
+no llegue otro commit, así que la segunda pulsación cuesta una pulsación.
+
+⚠ Esto gobierna **solo la ruta PR**. Sin `gh` no hay PR y el merge va por la
+ruta local, donde siguen mandando sus dos guardas — que esta política no
+sustituye.
 
 ## Durante tareas largas
 

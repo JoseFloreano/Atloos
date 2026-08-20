@@ -60,6 +60,7 @@ from progress import ProgressTracker                       # noqa: E402
 import vaultio                                             # noqa: E402
 import testcmd                                              # noqa: E402
 import altas                                                # noqa: E402
+import mergepol                                             # noqa: E402
 import botprofile                                          # noqa: E402
 from notify_telegram import deliver_text, load_env_file, _env_candidates, redact  # noqa: E402
 
@@ -1234,7 +1235,11 @@ async def cmd_merge(update, context):
         chat_id,
         f"¿Integrar {conv['branch']} en {base}?\n\n"
         f"Modo: squash · Tests: verdes en {head}\n"
-        f"{'Vía PR: ' + conv['pr_url'] if conv.get('pr_url') else 'Merge local'}\n\n"
+        f"{'Vía PR: ' + conv['pr_url'] if conv.get('pr_url') else 'Merge local'}\n"
+        # Solo si la ruta PR puede tomarse: anunciar una política que no va a
+        # aplicar es ruido, y del que induce a error (aquí no hay `gh`).
+        + (f"Ruta PR: {mergepol.modo()[0]}\n" if shutil.which("gh") else "")
+        + "\n"
         f"Este botón caduca en {MERGE_TOKEN_TTL // 60} minutos.",
         reply_markup=kb)
 
@@ -1289,6 +1294,13 @@ async def on_callback(update, context):
     try:
         base = await gitops.default_branch(repo)
         pr_url = conv.get("pr_url", "")
+        # La ruta PR abría el PR y lo integraba en la línea siguiente: sin
+        # ventana de revisión, y sin que ninguna de las guardas del camino local
+        # aplicara al remoto. Hoy eso está contenido porque `gh` no está
+        # instalado (firma B1) — o sea, por la AUSENCIA DE UN BINARIO. La
+        # política lo hace explícito; el detalle, en `mergepol.py`.
+        politica, motivo_politica = mergepol.modo()
+        pr_creado_ahora = False
 
         # Ruta preferente: vía PR. El merge ocurre en el remoto y NO toca el
         # árbol del usuario — que casi siempre tiene cambios sin commitear, así
@@ -1328,9 +1340,11 @@ async def on_callback(update, context):
                                             conv["label"][:70] or conv["branch"])
                 if pr.get("pr"):
                     pr_url = pr["url"]
+                    pr_creado_ahora = bool(pr.get("created"))
                     conv["pr_url"] = pr_url
                     save_state(state)
-                    log.info("PR listo para merge: %s", pr_url)
+                    log.info("PR listo para merge: %s (creado ahora: %s)",
+                             pr_url, pr_creado_ahora)
                 else:
                     # ⚠ Esto era `log.warning` A SECAS: el único `reason` del
                     # puente que se quedaba en el diccionario. El humano veía
@@ -1342,6 +1356,26 @@ async def on_callback(update, context):
                                 f"ℹ️ Sin PR: {pr.get('reason', 'sin motivo')}\n"
                                 f"Sigo por la ruta local (squash directo sobre "
                                 f"`{base}`).")
+
+        # La guarda de la ruta PR, JUSTO ANTES de integrar y no dentro del `if`
+        # del remoto: la decisión manda venga el PR de esta pulsación o de un
+        # /push anterior. `aplica()` exige URL **y** `gh`, que es exactamente lo
+        # que `merge_squash` exige para irse por el remoto: sin las dos cosas el
+        # merge es local, tiene sus propias guardas, y bloquearlo aquí sería
+        # bloquear de más.
+        if mergepol.aplica(pr_url, shutil.which("gh")):
+            d = mergepol.decidir(politica, pr_creado_ahora)
+            log.info("política de merge: %s (%s) -> integrar=%s",
+                     politica, motivo_politica, d["integrar"])
+            if not d["integrar"]:
+                await reply(cfg, chat_id,
+                            f"🛑 **No he integrado.** {d['motivo']}\n\n"
+                            f"PR abierto y publicado: {pr_url}\n"
+                            f"Rama: `{conv['branch']}` · verde en `{head_ahora}`\n\n"
+                            f"_Política: {motivo_politica}_")
+                return
+            if politica == "auto":
+                await reply(cfg, chat_id, f"⚠️ {d['motivo']}")
 
         r = await gitops.merge_squash(repo, conv["branch"], base,
                                       conv["label"][:70] or f"merge {conv['branch']}",
@@ -1851,6 +1885,11 @@ def main() -> None:
     # El perfil ya se registró (con su motivo) dentro de bot_profile_dir().
     log.info("deny de secretos: %d rutas",
              len(SECRET_DENIES.split(",")) if SECRET_DENIES else 0)
+    # La política de la ruta PR se anuncia al arrancar, aunque sea la de por
+    # defecto: lo que este módulo vino a arreglar era precisamente una
+    # contención que nadie había declarado (mismo motivo que el perfil del bot).
+    _pol, _motivo_pol = mergepol.modo()
+    (log.warning if _pol == "auto" else log.info)("política de la ruta PR: %s", _motivo_pol)
     cfg = load_config()
     projects = load_projects()
     try:                            # base de la recarga en caliente (/alta, /p)

@@ -228,6 +228,40 @@ def main():
               txt.count("\n") >= len(v["checks"]) and ("⚠️" in txt or "✅" in txt),
               f"txt={txt!r}")
 
+    # --- Caso 16: el registro ilegible NO se reescribe ---
+    # El fallo que cerró este caso (2026-08-19): `leer_registro` devolvía `{}`
+    # tanto para "no hay fichero" como para "no lo pude parsear", y `registrar`
+    # reescribe el fichero ENTERO. Un `projects.json` con una coma de más se
+    # traducía en un alta que borraba los otros proyectos y las claves `_`, y
+    # contestaba `[OK]` al móvil. Se ejerce el borrado, no la cadena del motivo.
+    with tempfile.TemporaryDirectory(prefix="altas-") as tmp:
+        d = repo(tmp)
+        pj = registro(tmp, {"_comentario": "no me borres",
+                            "ya-estaba": {"path": tmp, "test": "npm test"}})
+        crudo = open(pj, encoding="utf-8").read()
+        with open(pj, "w", encoding="utf-8") as fh:
+            fh.write(crudo.replace('"ya-estaba"', ',,"ya-estaba"'))   # JSON roto
+        antes = open(pj, encoding="utf-8").read()
+        v = altas.revisar(d, projects_file=pj, which=lambda x: None, vault_project_dir="")
+        ok, motivo = altas.registrar(v, projects_file=pj)
+        despues = open(pj, encoding="utf-8").read()
+        check("16. projects.json ilegible: NO se escribe y se dice por qué",
+              (not ok) and antes == despues and "JSON" in motivo.upper(),
+              f"ok={ok} motivo={motivo!r} cambio={antes != despues}")
+
+    # --- Caso 17: y el fichero AUSENTE sí se crea (vacío no es ilegible) ---
+    # La otra mitad del 16: si "no lo pude leer" bloqueara también el primer
+    # alta de una máquina virgen, el fix habría cambiado un borrado por un
+    # bloqueo permanente, y nadie podría dar de alta nada nunca.
+    with tempfile.TemporaryDirectory(prefix="altas-") as tmp:
+        d = repo(tmp)
+        pj = os.path.join(tmp, "projects.json")            # NO existe
+        v = altas.revisar(d, projects_file=pj, which=lambda x: None, vault_project_dir="")
+        ok, motivo = altas.registrar(v, projects_file=pj)
+        datos = json.load(open(pj, encoding="utf-8")) if os.path.isfile(pj) else {}
+        check("17. registro ausente: el alta lo crea igual", ok and len(datos) == 1,
+              f"ok={ok} motivo={motivo!r} datos={datos!r}")
+
     print()
     fallos = [n for n, ok, _ in results if not ok]
     print(f"[test-altas] {len(results) - len(fallos)}/{len(results)} en verde.")
