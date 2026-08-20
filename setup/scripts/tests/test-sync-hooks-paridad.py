@@ -49,6 +49,8 @@ for _s in (sys.stdout, sys.stderr):
         pass
 
 RAIZ = Path(__file__).resolve().parents[2]        # setup/
+sys.path.insert(0, str(RAIZ / "scripts"))
+import shellrun  # noqa: E402  (fuente unica de "como se invoca un .sh")
 MAPA = RAIZ / "hooks" / "hooks-map.json"
 PS1 = RAIZ / "sync-hooks.ps1"
 SH = RAIZ / "sync-hooks.sh"
@@ -118,22 +120,11 @@ def entorno(home):
     return env
 
 
-def bash_exe():
-    """El bash que sabe leer rutas `C:/...`.
-
-    En Windows `bash` en el PATH puede ser el de WSL (`System32\bash.exe`), que
-    vive en OTRO sistema de ficheros: recibe `C:/Users/...`, no lo encuentra y
-    responde `/bin/bash: ...: No such file or directory` — exit 127 con el
-    fichero delante. Lo caza que el arnés eligiera mal, no que el `.sh` esté mal.
-    """
-    w = shutil.which("bash")
-    if w and "system32" not in w.lower():
-        return w
-    for c in (r"C:\Program Files\Gitinash.exe",
-              r"C:\Program Files (x86)\Gitinash.exe"):
-        if os.path.isfile(c):
-            return c
-    return w or "bash"
+# `bash_exe` vivia AQUI duplicado, y su lista de candidatos llevaba BACKSPACES
+# literales (`Git\x08in\x08ash.exe`): el fallback de WSL no podia encontrar nada
+# y este arnes seguia verde solo porque esta maquina tiene Git Bash en el PATH.
+# Ahora hay una sola copia, en setup/scripts/shellrun.py.
+bash_exe = shellrun.bash_exe
 
 
 def corre_sh(home, hooks_source=None):

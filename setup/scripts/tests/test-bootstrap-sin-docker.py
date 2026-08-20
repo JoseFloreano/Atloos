@@ -52,6 +52,9 @@ for _s in (sys.stdout, sys.stderr):
         pass
 
 RAIZ = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(RAIZ / "setup" / "scripts"))
+import shellrun  # noqa: E402  (como se invoca un .sh en LAS DOS plataformas)
+
 SH = RAIZ / "setup" / "setup-new-machine.sh"
 PS1 = RAIZ / "setup" / "setup-new-machine.ps1"
 
@@ -76,15 +79,19 @@ def corre_preflight(extra_env=None, args=("--preflight",), home=None):
     env.pop("CON_GRAPHITI", None)
     env.pop("SIN_GRAPHITI", None)
     env.update(extra_env or {})
-    p = subprocess.run(["bash", str(SH), *args], stdout=subprocess.PIPE,
+    # `shellrun.cmd_bash` y no `["bash", str(SH)]`: en Windows los backslashes
+    # de la ruta llegan a bash como escapes y el fichero desaparece (exit 127
+    # con el .sh delante). El helper resuelve el bash Y la forma de la ruta.
+    p = subprocess.run(shellrun.cmd_bash(SH, *args), stdout=subprocess.PIPE,
                        stderr=subprocess.STDOUT, env=env, timeout=120,
                        stdin=subprocess.DEVNULL)
     return p.returncode, p.stdout.decode("utf-8", "replace")
 
 
 def main():
-    if not shutil.which("bash"):
-        print("[SKIP] no hay bash en esta máquina: el bootstrap .sh no se puede ejercer")
+    usable, motivo = shellrun.bash_utilizable()
+    if not usable:
+        print("[SKIP] el bootstrap .sh no se puede ejercer aquí: %s" % motivo)
         return 0
     if not SH.is_file():
         check("0. existe setup-new-machine.sh", False, f"no está en {SH}")

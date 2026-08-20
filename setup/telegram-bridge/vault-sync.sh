@@ -37,18 +37,36 @@
 set -uo pipefail          # SIN -e: los exit != 0 de git son el mecanismo
 
 AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# La ruta NATIVA, que es la que entiende un programa que no sea de MSYS. En Git
+# Bash `pwd` da `/c/Users/...` y un Python de Windows no puede importar desde
+# ahi; `pwd -W` da `C:/Users/...`. En Linux `pwd -W` no existe y cae al mismo
+# `pwd`, asi que la linea vale para las dos plataformas. Tercera vez que esta
+# casa tropieza con la MISMA piedra: la ruta cruza una frontera de mundo.
+AQUI_NATIVO="$(cd "$AQUI" && { pwd -W 2>/dev/null || pwd; })"
 REPO="$(cd "${AQUI}/../.." && pwd)"
 VENV="${CLAUDE_TG_VENV:-${XDG_DATA_HOME:-$HOME/.local/share}/claude-telegram/venv}"
-PY="${VENV}/bin/python"
-[ -x "$PY" ] || PY="$(command -v python3 || true)"
+
+# El interprete se PRUEBA, no se supone. `[ -x ]` daba por bueno el stub de la
+# Microsoft Store (`WindowsApps/python3`): es ejecutable, sale 49 y no imprime
+# nada. Con el, `vault_root()` salia vacia, el script lo leia como "no hay
+# vault" y salia 0 — el timer corria cada 20 min, siempre "bien", y el vault no
+# se sincronizaba nunca. Misma leccion que la guarda de bash en los arneses:
+# la pregunta no es "existe" sino "funciona".
+py_sirve() { [ -n "${1:-}" ] && [ -x "$1" ] && "$1" -c "" >/dev/null 2>&1; }
+
+PY=""
+for _c in "${VENV}/bin/python" "${VENV}/bin/python3" "${VENV}/Scripts/python.exe"           "$(command -v python3 || true)" "$(command -v py || true)"           "$(command -v python || true)"; do
+  if py_sirve "$_c"; then PY="$_c"; break; fi
+done
+unset _c
 
 VERBOSO=0
 [ "${1:-}" = "--verboso" ] && VERBOSO=1
 di() { [ "$VERBOSO" -eq 1 ] && echo "vault-sync: $*"; return 0; }
 
 avisa() {   # $1 = titulo. Sin interprete no hay aviso: se dice y se sale != 0.
-  if [ -n "${PY:-}" ] && [ -x "$PY" ]; then
-    "$PY" "${AQUI}/notify_telegram.py" "$1" || echo "vault-sync: el aviso NO salio" >&2
+  if py_sirve "${PY:-}"; then
+    "$PY" "${AQUI_NATIVO}/notify_telegram.py" "$1" || echo "vault-sync: el aviso NO salio" >&2
   else
     echo "vault-sync: HAY algo que decidir y NO se pudo avisar (sin interprete)" >&2
   fi
@@ -58,11 +76,21 @@ avisa() {   # $1 = titulo. Sin interprete no hay aviso: se dice y se sale != 0.
 # la misma ruta divergen en cuanto uno de los dos cambia, y el que se quedaria
 # atras es siempre el que nadie lee — la lista de candidatos vive en
 # `vaultio.vault_root()` y aqui solo se consulta.
-if [ -z "${PY:-}" ] || [ ! -x "$PY" ]; then
-  echo "vault-sync: sin interprete de Python; no puedo resolver la raiz del vault" >&2
+if [ -z "${PY:-}" ]; then
+  echo "vault-sync: ningun interprete de Python FUNCIONA aqui; no puedo resolver la raiz del vault" >&2
   exit 1
 fi
-VAULT="$("$PY" -c "import sys; sys.path.insert(0, '${AQUI}'); import vaultio; print(vaultio.vault_root())" 2>/dev/null)"
+VAULT="$("$PY" -c "import sys; sys.path.insert(0, r'${AQUI_NATIVO}'); import vaultio; print(vaultio.vault_root())" 2>/dev/null)"
+RC_VAULT=$?
+
+# No poder PREGUNTAR por el vault no es lo mismo que no tener vault, y hasta hoy
+# las dos cosas salian por la misma puerta con exit 0. Se separan: si el
+# interprete revento, esto es un fallo ruidoso, porque nadie mira un timer.
+if [ "$RC_VAULT" -ne 0 ]; then
+  echo "vault-sync: vaultio.vault_root() fallo (exit ${RC_VAULT}) con ${PY}" >&2
+  avisa "🔴 vault en $(hostname): no se pudo resolver la raiz del vault. NO es que no haya vault: el interprete fallo, y el vault lleva sin sincronizarse desde entonces."
+  exit 1
+fi
 
 if [ -z "$VAULT" ] || [ "$VAULT" = "." ] || [ ! -d "$VAULT" ]; then
   di "no hay vault en esta maquina; nada que sincronizar"

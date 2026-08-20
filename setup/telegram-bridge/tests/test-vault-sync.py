@@ -35,6 +35,11 @@ sys.path.insert(0, os.path.normpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)), os.pardir)))
 import vaultio  # noqa: E402
 
+sys.path.insert(0, os.path.normpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    os.pardir, os.pardir, "scripts")))
+import shellrun  # noqa: E402  (como se invoca un .sh en LAS DOS plataformas)
+
 results = []
 
 # Identidad y config mínimas por ENTORNO: una caja headless puede no tener
@@ -108,7 +113,8 @@ def banco(tmp, vault):
 
 def corre(script, tmp):
     """(exit, salida). El script, tal cual lo lanzaría el timer."""
-    p = subprocess.run(["bash", str(script)], cwd=str(tmp), stdout=subprocess.PIPE,
+    # `shellrun.cmd_bash` y no `["bash", str(script)]`: ver setup/scripts/shellrun.py.
+    p = subprocess.run(shellrun.cmd_bash(script), cwd=str(tmp), stdout=subprocess.PIPE,
                        stderr=subprocess.STDOUT, timeout=120, env=dict(os.environ))
     return p.returncode, p.stdout.decode("utf-8", "replace").strip()
 
@@ -231,10 +237,12 @@ def main():
     # las 3 de la mañana. `bash -n` no prueba que haga lo correcto (eso se
     # ejerce en campo, y el .timer.example dice cómo), pero sí que no está roto.
     script = Path(__file__).resolve().parent.parent / "vault-sync.sh"
-    if not shutil.which("bash"):
-        print("[SKIP] 10. la sintaxis de vault-sync.sh: no hay bash en esta máquina")
+    _usable, _motivo = shellrun.bash_utilizable()
+    if not _usable:
+        print("[SKIP] 10. la sintaxis de vault-sync.sh: %s" % _motivo)
     else:
-        p = subprocess.run(["bash", "-n", str(script)], stdout=subprocess.PIPE,
+        p = subprocess.run([shellrun.bash_exe(), "-n", shellrun.sh(script)],
+                           stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT, timeout=20)
         check("10. vault-sync.sh parsea (bash -n)", p.returncode == 0,
               p.stdout.decode("utf-8", "replace")[:300])
