@@ -8,9 +8,11 @@
 #    C · conflicto fabricado -> exit 1, 🔴 al movil (187 chars), NO quedo en rebase
 #
 #  ⚠ Dos avisos para quien lo instale, medidos ese dia:
-#    · el fichero esta en git como `100644`: invocarlo directo da `Permission
-#      denied` (exit 126). Por eso la unit lo llama con `/bin/bash`, y por eso
-#      cualquier receta que diga `vault-sync.sh ...` a secas falla aqui.
+#    · el fichero estaba en git como `100644`: invocarlo directo daba `Permission
+#      denied` (exit 126), y por eso la unit lo llama con `/bin/bash`. CORREGIDO
+#      el 2026-08-20 (ahora `100755`), asi que las recetas que lo nombran a secas
+#      ya funcionan; la unit conserva el `/bin/bash` porque el bit no viaja a
+#      Windows. Lo vigila `test-units-plantillas.py`.
 #    · con `RandomizedDelaySec=120`, LEFT nunca baja de 20min: el valor sano es
 #      20-22min, no "<20min". Un criterio que pida menos se contradice con esta unit.
 #

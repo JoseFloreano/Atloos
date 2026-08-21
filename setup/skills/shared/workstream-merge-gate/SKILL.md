@@ -57,8 +57,9 @@ La ley: **el código de salida no es el estado, y el reporte no es el artefacto.
    (`workstream-dispatch/references/revisor.md` §3).
 
 3. **El reloj: una corrida sospechosamente RÁPIDA no es un verde.** Compárala
-   contra el suelo conocido; por debajo de ~⅔, cuenta cuántos tests corrieron.
-   En campo cazó dos verdes falsos, **ninguno por exit code**.
+   contra el suelo **de ESTA máquina**; por debajo de ~⅔, cuenta cuántos tests
+   corrieron. En campo cazó dos verdes falsos, **ninguno por exit code**.
+   ⚠ Un suelo **sin máquina escrita no se usa**: se remide.
    ⚠ **Suelo, nunca techo**: lento no es sospechoso →
    `references/criterio-del-reloj.md`.
 

@@ -1468,6 +1468,13 @@ async def on_callback(update, context):
             log.info("merge %s -> %s (%s)", conv["branch"], base, r.get("via"))
             await reply(cfg, chat_id, f"✅ Integrado en `{base}` ({r.get('via')}).\n"
                                       f"{r.get('sha','')}\n\nUsa /done para limpiar la rama y el worktree.")
+        elif r.get("ya_integrada"):
+            # No es un fallo y no debe leerse como uno: el trabajo YA está en la
+            # base. Decir "❌ no se integró" aquí mandaba al usuario a buscar un
+            # problema donde no lo hay — que es justo lo que pasó el 08-19, con
+            # un conflicto de contenido que parecía culpa del fichero.
+            log.info("merge %s -> %s: ya estaba integrada", conv["branch"], base)
+            await reply(cfg, chat_id, f"ℹ️ {r['reason']}")
         else:
             await reply(cfg, chat_id, f"❌ No se integró: {r['reason']}")
     except gitops.GitError as exc:

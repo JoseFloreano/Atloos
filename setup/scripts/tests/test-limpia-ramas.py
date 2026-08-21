@@ -184,6 +184,36 @@ def main():
               rc == 0 and bool(salida.strip()),
               "si esto sale vacío, el test ingenuo habría funcionado y esta nota sobra")
 
+    # --- Casos 11-13: el ámbito `--remotas`, que no se ejercía en absoluto ---
+    # Por eso pasó el fallo: el filtro de "en uso" vivía solo en el bucle local,
+    # y la misma rama salía "EN USO — se queda" (local) mientras su copia
+    # publicada se borraba en la MISMA corrida. Medido el 2026-08-20.
+    with tempfile.TemporaryDirectory(prefix="limpiaramas-") as tmp:
+        repo = laboratorio(tmp)
+        bare = Path(tmp) / "remoto.git"
+        g(["init", "--bare", str(bare)], Path(tmp))
+        g(["remote", "add", "origin", str(bare)], repo)
+        g(["push", "--all", "origin"], repo)
+        # Un worktree vivo sobre `aplastada`, que POR CONTENIDO ya está dentro:
+        # es justo la combinación que hacía falta — integrada Y en uso.
+        wt = Path(tmp) / "wt"
+        g(["worktree", "add", str(wt), "aplastada"], repo)
+
+        filas = limpia.revisar(str(repo), "main", incluir_remotas=True)
+        remotas = [f for f in filas if f[0] == "remota"]
+        check("11. `--remotas` mira de verdad el ámbito remoto",
+              len(remotas) >= 4, f"remotas={[f[1] for f in remotas]!r}")
+        check("12. LA QUE MANDA: remota con worktree vivo NO sale integrada",
+              next((f[2] for f in remotas if f[1] == "aplastada"), None) == "EN USO",
+              f"{[f for f in remotas if f[1] == 'aplastada']!r}")
+
+        limpia.main(["--repo", str(repo), "--base", "main", "--remotas", "--borrar"])
+        _rc, quedan = g(["ls-remote", "--heads", str(bare)], repo)
+        check("13. y sigue publicada tras --borrar",
+              "refs/heads/aplastada\n" in quedan + "\n" or "/aplastada" in quedan,
+              f"quedan={quedan!r}")
+        g(["worktree", "remove", "--force", str(wt)], repo)
+
     print()
     fallos = [n for n, ok in results if not ok]
     print(f"[test-limpia-ramas] {len(results) - len(fallos)}/{len(results)} en verde.")

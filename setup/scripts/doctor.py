@@ -455,6 +455,47 @@ def revisa_vault(raiz):
                 "Receta: setup/telegram-bridge/claude-telegram-vault.timer.example")
 
 
+# ── 8 · El perfil recortado del bot: el ADR lo exige y nadie lo instala ──
+def revisa_perfil_bot(raiz):
+    """¿Corre el agente del puente con el perfil que el ADR decidio?
+
+    Existe por el fallo del 2026-08-20: el daemon emitia
+    `WARNING sin perfil bot (no hay directorio con skills): config normal`
+    en LOS 6 arranques registrados desde el 08-18, y ese aviso va al journal,
+    que no lee nadie. ADR-20260801-bot-memoria-y-perfil fija que el agente corre
+    con un recorte de skills; en esta maquina corre con la superficie entera y
+    la unica senal estaba enterrada.
+
+    Aqui se saca a la superficie que SI se mira: el latido diario del doctor
+    avisa al movil cuando algo diverge, asi que a partir de ahora esto insiste
+    todos los dias hasta que se instale o se decida que no se instala.
+
+    ⚠ Lo que NO hace: instalarlo. El repo no define QUE 15 skills entran (el
+    doc 29 da la regla por superficie, no la lista), asi que inventarla aqui
+    seria decidir por el humano una cosa que el RFD 30 tiene abierta.
+    """
+    titulo("8 · El perfil recortado del bot")
+    puente = raiz / "setup" / "telegram-bridge"
+    sys.path.insert(0, str(puente))
+    try:
+        import botprofile
+    except ImportError as exc:
+        na("perfil del bot", f"no se pudo importar botprofile ({exc})")
+        return
+    finally:
+        sys.path.pop(0)
+
+    ruta, motivo = botprofile.resolver()
+    if ruta:
+        ok(motivo)
+        return
+    diverge("el agente del puente NO usa el perfil recortado: " + motivo,
+            "ADR-20260801-bot-memoria-y-perfil fija ~15 skills y los secretos "
+            "denegados por ruta. Sin perfil, la superficie del agente que "
+            "contesta al movil es mayor que la que se decidio. El aviso "
+            "existia desde el 08-18 y vivia solo en el journal.")
+
+
 def main():
     breve = "--breve" in sys.argv[1:]
     import platform
@@ -476,6 +517,7 @@ def main():
     revisa_exencion(raiz)
     revisa_aviso()
     revisa_vault(raiz)
+    revisa_perfil_bot(raiz)
 
     print("\n" + "═" * 70)
     if divergencias:

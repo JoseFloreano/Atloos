@@ -365,6 +365,43 @@ async def has_tracked_changes(worktree: str) -> bool:
     return any(line and not line.startswith("??") for line in out.splitlines())
 
 
+async def ya_integrada(repo: str, branch: str, base: str) -> tuple:
+    """¿Lo que trae `branch` ya está en `base`? Devuelve (bool, motivo).
+
+    ⚠ ESTA ES LA PREGUNTA DIFÍCIL, y tiene un gemelo. Los mismos tres tests
+    viven en `setup/scripts/limpia-ramas.py` (`veredicto`), que es el limpiador
+    de línea de comandos. Son dos runtimes distintos —aquí async, allí
+    subprocess— así que el código no se comparte; lo que SÍ se comparte es la
+    respuesta, y `test-veredicto-compartido.py` la compara caso a caso. Si tocas
+    uno, el arnés te manda al otro.
+
+    Los tres, en orden de fuerza:
+      1. **Ancestro** — la prueba más fuerte que hay (merge normal).
+      2. **Mismo árbol** — no aporta nada aunque su historia sea otra.
+      3. **Contenido de lo que tocó** — de los ficheros que cambió respecto a
+         su bifurcación, ¿difiere hoy alguno? Si no, lo suyo ya está dentro.
+         **Este es el que caza el squash**, que es el caso normal de esta casa.
+
+    Lo que no encaje en ninguno responde False: aquí un falso positivo borra
+    trabajo, y "no lo sé" es una respuesta legítima.
+    """
+    if not branch or not base:
+        return False, "falta la rama o la base"
+    if (await run(["git", "merge-base", "--is-ancestor", branch, base], repo))[0] == 0:
+        return True, "es ancestro de la base (merge normal)"
+    if (await run(["git", "diff", "--quiet", base, branch], repo))[0] == 0:
+        return True, "mismo árbol que la base"
+    rc, out, _ = await run(["git", "diff", "--name-only", f"{base}...{branch}"], repo)
+    if rc != 0:
+        return False, "no se pudieron listar sus ficheros"
+    ficheros = [l for l in out.splitlines() if l.strip()]
+    if not ficheros:
+        return True, "no toca ningún fichero respecto a la base"
+    if (await run(["git", "diff", "--quiet", base, branch, "--", *ficheros], repo))[0] == 0:
+        return True, f"su contenido ya está en la base ({len(ficheros)} fichero(s), squash)"
+    return False, f"{len(ficheros)} fichero(s) suyos difieren de la base"
+
+
 async def remove_worktree(repo: str, path: str, branch: str = "",
                           merged: bool = False) -> dict:
     """Quita el worktree y su rama.
@@ -416,21 +453,35 @@ async def remove_worktree(repo: str, path: str, branch: str = "",
             # Decir "conservada" aquí sería mentir sobre el estado real.
             result["branch_status"] = "ya no existía"
             return result
+        # ⚠ `git branch -d` NO responde "¿está integrada?" — responde "¿es
+        # seguro borrarla?", y su criterio incluye EL UPSTREAM. Una rama que
+        # hizo `/push` está contenida en `origin/<ella misma>` por definición,
+        # así que `-d` sale 0 aunque la base no tenga ni uno de sus commits.
+        # Usar ese exit code como prueba de integración borraba la rama de toda
+        # conversación publicada y NO mergeada; desde que `cmd_done` encadena
+        # `delete_remote_branch` a esta misma señal, se llevaba también la única
+        # copia que quedaba. Medido el 2026-08-20 → [[bug-done-borra-sin-mergear]].
+        # La pregunta se hace ahora explícita, y `-d` pasa a ser solo la forma
+        # de borrar, nunca el juez.
+        base = await default_branch(repo)
+        dentro, _motivo = await ya_integrada(repo, branch, base)
+        if not (merged or dentro):
+            result["branch_status"] = "conservada (sin mergear; se borra tras /merge)"
+            return result
         rc, _, _ = await run(["git", "branch", "-d", branch], repo)
         if rc == 0:
             result["branch_deleted"] = True
             result["branch_status"] = "borrada"
-        elif merged:
+        else:
             # Tras un squash, `-d` no la reconoce como integrada: por eso -D,
-            # pero solo cuando el daemon confirma que hubo merge.
+            # que aquí ya es seguro porque la integración está probada arriba.
             rc2, _, err2 = await run(["git", "branch", "-D", branch], repo)
             if rc2 == 0:
                 result["branch_deleted"] = True
-                result["branch_status"] = "borrada (squash merge)"
+                result["branch_status"] = ("borrada (squash merge)" if merged
+                                           else "borrada")
             else:
                 result["branch_status"] = f"conservada: {err2[:120]}"
-        else:
-            result["branch_status"] = "conservada (sin mergear; se borra tras /merge)"
     return result
 
 
@@ -460,7 +511,15 @@ async def delete_remote_branch(repo: str, branch: str, sha_local: str = "") -> d
     remoto = await remote_head(repo, branch)
     if not remoto:
         return {"borrada": False, "motivo": "no estaba publicada (nada que borrar)"}
-    if sha_local and not (remoto.startswith(sha_local) or sha_local.startswith(remoto)):
+    if not sha_local:
+        # Sin sha no hay contraste posible, y esto es justo el caso que la
+        # cabecera manda fallar CERRADO: la local ya no existe, el remoto puede
+        # ser la unica copia, y "no se" no es permiso para borrarla. Cuesta una
+        # rama de mas, que `limpia-ramas.py --remotas` recoge despues.
+        return {"borrada": False,
+                "motivo": ("no pude leer el sha de lo integrado: NO la borro. "
+                           "Limpiala con `limpia-ramas.py --remotas` si sobra.")}
+    if not (remoto.startswith(sha_local) or sha_local.startswith(remoto)):
         return {"borrada": False,
                 "motivo": (f"el remoto está en `{remoto[:7]}` y lo integrado era "
                            f"`{sha_local[:7]}`: alguien empujó ahí por fuera. NO la "
@@ -469,10 +528,12 @@ async def delete_remote_branch(repo: str, branch: str, sha_local: str = "") -> d
     rc, out, err = await run(["git", "push", "origin", "--delete", branch], repo, timeout=180)
     if rc != 0:
         salida = (err or out)
-        # `remote ref does not exist` no es un fallo: es que ya no estaba (un
-        # `gh pr merge --delete-branch`, o un borrado a mano). Decir "no pude"
-        # ahí sería alarmar por un trabajo que ya estaba hecho.
-        if "remote ref does not exist" in salida or "does not exist" in salida:
+        # Que ya no estuviera (un `gh pr merge --delete-branch`, o un borrado a
+        # mano) no es un fallo, y decir "no pude" alarmaria por trabajo ya hecho.
+        # Pero eso se comprueba mirando EL ESTADO, no el mensaje: `git` habla el
+        # idioma del sistema, y un `"does not exist"` suelto tambien casa con
+        # errores que no son este. Se vuelve a preguntar por la rama.
+        if not await remote_head(repo, branch):
             return {"borrada": True, "motivo": "ya no estaba en el remoto"}
         return {"borrada": False, "motivo": salida[:200]}
     return {"borrada": True, "motivo": f"borrada del remoto (estaba en {remoto[:7]})"}
@@ -683,7 +744,25 @@ async def merge_squash(repo: str, branch: str, base: str, message: str,
     Vía PR si existe (ocurre en el remoto: NO toca el árbol del usuario).
     Si no hay PR, merge local — y ahí sí hace falta el árbol del usuario, así
     que se exige limpio y en la rama base; si no, se rechaza sin tocar nada.
+
+    ⚠ LA GUARDA DE ENTRADA (2026-08-20) → [[bug-merge-rama-ya-squasheada]]. Un
+    `/merge` sobre una rama que YA se integró por squash no era un no-op: el
+    squash mete el CONTENIDO en la base pero no la ANCESTRÍA, así que la rama
+    sigue "sin mergear" para git y el segundo intento vuelve a mezclarla ENTERA
+    contra una base que ya la tiene. Medido desde el móvil el 2026-08-19 con
+    `tg/20260819-necesito-hacer-muy-sencillo-el-d`: conflicto de contenido en
+    `tg_daemon.py` y abortado. El usuario veía un conflicto y culpaba al
+    fichero; la causa era que nadie había preguntado si ya estaba dentro.
     """
+    dentro, motivo = await ya_integrada(repo, branch, base)
+    if dentro:
+        return {"merged": False, "ya_integrada": True, "via": "previo",
+                "reason": (f"`{branch}` YA está en `{base}` — {motivo}.\n\n"
+                           f"No la vuelvo a mezclar: tras un squash git no la ve "
+                           f"como integrada y el merge repetiría la rama entera "
+                           f"contra una base que ya la tiene, que es de donde "
+                           f"salen los conflictos raros.\n\nSi ya terminaste, "
+                           f"`/done` limpia worktree y rama.")}
     if pr_url:
         gh = shutil.which("gh")
         if gh:

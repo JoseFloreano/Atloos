@@ -158,6 +158,17 @@ def revisar(repo, base, incluir_remotas=False):
         for rama in ramas_remotas(repo):
             if rama == base:
                 continue
+            # ⚠ El mismo filtro que arriba, y hacia falta decirlo dos veces.
+            # Estando solo en el bucle local, una rama con worktree montado
+            # salia "EN USO — se queda" y su remota se borraba EN LA MISMA
+            # CORRIDA: el fichero se contradecia a si mismo y rompia el
+            # invariante de su cabecera ("si alguien la esta usando, se queda").
+            # Que la local sobreviva no lo arregla — la copia publicada es la
+            # que ve la otra maquina. Medido el 2026-08-20 en laboratorio.
+            if rama in en_uso:
+                filas.append(("remota", rama, "EN USO",
+                              "su rama local tiene un worktree montado: se queda"))
+                continue
             estado, motivo = veredicto(repo, base, f"origin/{rama}")
             filas.append(("remota", rama, estado, motivo))
     return filas
@@ -169,8 +180,14 @@ def borrar(repo, ambito, rama):
         rc, out = git(["branch", "-D", rama], repo)
     else:
         rc, out = git(["push", "origin", "--delete", rama], repo, timeout=180)
-        if rc != 0 and "does not exist" in out:
-            return True, "ya no estaba"
+        if rc != 0:
+            # Que ya no estuviera no es un fallo. Pero se comprueba PREGUNTANDO
+            # por la rama, no leyendo el mensaje: `git` habla el idioma del
+            # sistema y un `"does not exist"` suelto casa tambien con errores
+            # que no son este (y diria "borrada" de algo que sigue ahi).
+            rc2, sigue = git(["ls-remote", "--heads", "origin", rama], repo, timeout=180)
+            if rc2 == 0 and not sigue.strip():
+                return True, "ya no estaba"
     return (rc == 0), (out.splitlines() or [""])[-1][:150]
 
 

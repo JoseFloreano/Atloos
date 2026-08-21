@@ -3,6 +3,26 @@
 La ley de la skill dice que **el código de salida no es el estado**. La duración
 es la segunda señal que lo demuestra, y es gratis: ya la tienes medida.
 
+## Un suelo sin máquina no es un suelo (2026-08-19)
+
+El gate sobre la SER8 (floreano-server) dio **13 s** contra el suelo escrito de
+**46-49 s**: muy por debajo de ⅔, o sea la señal de verde falso. **No lo era.**
+Los 41 arneses salieron nombrados y el veredicto fue `41/41`. Dos causas, y las
+dos invisibles en el número:
+
+1. Los 46-49 s se midieron en **la Legion**, y el `_PROJECT.md` guardaba la cifra
+   **sin decir de qué máquina era**.
+2. En la SER8 **6 arneses corren parciales** — sin PowerShell, sin tokenizador,
+   sin Python 3.10 (con exención declarada) y sin el SDK de Telegram: hacen menos
+   trabajo. En la Legion esos 6 corren enteros.
+
+Un suelo es «el mínimo de una corrida completa y sana **en esa máquina**». Sin
+el nombre de la máquina no es comparable con nada, y comparar igualmente es
+peor que no mirar el reloj: convierte la herramienta que caza verdes falsos en
+una que tumba verdes buenos. Si el suelo que tienes no dice de dónde salió,
+**remídelo aquí antes de usarlo** — no lo ajustes a ojo.
+→ [[bug-suelo-del-reloj-sin-maquina]]
+
 ## El suelo, y por qué funciona
 
 **Una corrida sospechosamente rápida no es un verde.** Si la suite tarda mucho

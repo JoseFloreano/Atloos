@@ -125,12 +125,21 @@ def main():
         check("3b. y el motivo nombra los dos shas para poder mirarlo",
               sha_integrado[:7] in r["motivo"], f"motivo={r['motivo']!r}")
 
-    # --- Caso 4: sin sha que comparar, se borra igual (el /done sin worktree) ---
+    # --- Caso 4: sin sha que comparar, NO se borra ---
+    # ⚠ CAMBIO DE CONTRATO (2026-08-20, auditoría). Este caso afirmaba lo
+    # contrario —"sin sha, borra igual"— y contradecía la cabecera de la propia
+    # función, que manda fallar CERRADO porque al llegar ahí el remoto puede ser
+    # la única copia. Sin sha no se compara nada: es exactamente la duda que la
+    # regla cubre, no una excepción a ella. Fallar cerrado cuesta una rama de
+    # más y `limpia-ramas.py --remotas` la recoge; fallar abierto cuesta trabajo
+    # de otra máquina, que no se recoge de ningún sitio.
     with tempfile.TemporaryDirectory(prefix="borraremota-") as tmp:
         bare, clon = laboratorio(tmp)
         r = asyncio.run(gitops.delete_remote_branch(str(clon), "tg/x", ""))
-        check("4. sin sha local, borra (no hay nada contra qué contrastar)",
-              r["borrada"] and "tg/x" not in remotas(bare), f"{r!r}")
+        check("4. sin sha local NO borra, y el remoto sigue ahí",
+              (not r["borrada"]) and "tg/x" in remotas(bare), f"{r!r}")
+        check("4b. y el motivo dice qué hacer con la rama que queda",
+              "limpia-ramas" in r["motivo"], f"motivo={r['motivo']!r}")
 
     # --- Caso 5: repo sin remoto -> motivo, no excepción ---
     with tempfile.TemporaryDirectory(prefix="borraremota-") as tmp:

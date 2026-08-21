@@ -298,6 +298,54 @@ def aplica():
         print("  la description no se toca». Corre el script sin --aplicar primero.")
         return 1
 
+def escribe_atomico(destino: Path, contenido: str) -> None:
+    """Escribe `destino` entero o no lo toca. Nunca a medias.
+
+    POR QUE (2026-08-20, auditoria) → [[bug-medir-disparo-sin-arnes]]. Esto
+    reescribe una `SKILL.md` VERSIONADA. Un `write_text` directo trunca el
+    fichero antes de escribirlo: si el proceso muere ahi —Ctrl-C, disco lleno,
+    OOM— la skill queda partida en el arbol de trabajo, y lo que se pierde es
+    el fichero que decide si esa skill dispara. Con temporal + `os.replace` el
+    cambio es una operacion sola del sistema de ficheros: o esta la version
+    vieja o esta la nueva.
+
+    El temporal va en el MISMO directorio a proposito: `os.replace` solo es
+    atomico dentro del mismo sistema de ficheros, y `/tmp` puede no serlo.
+    """
+    destino = Path(destino)
+    tmp = None
+    try:
+        fd, tmp = tempfile.mkstemp(dir=str(destino.parent),
+                                   prefix=f".{destino.name}.", suffix=".tmp")
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as fh:
+            fh.write(contenido)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp, destino)
+        tmp = None
+    finally:
+        if tmp and os.path.exists(tmp):
+            os.unlink(tmp)                 # el fallo no deja basura al lado
+
+
+def reescribe_description(texto: str, description: str) -> tuple:
+    """(texto_nuevo, n) con el bloque `description: >` sustituido. n debe ser 1.
+
+    Funcion aparte de `aplicar` para que se pueda EJERCER sin lanzar mediciones
+    de pago: era el otro motivo por el que esto no tenia arnes.
+    """
+    cuerpo = textwrap.fill(
+        description, width=78, initial_indent="  ", subsequent_indent="  ")
+    # El reemplazo va por lambda y no por cadena: `re.sub` interpreta `\1` y
+    # `\g<...>` en el texto de sustitucion, y aqui lo que entra es prosa del
+    # usuario. Un backslash en la description no puede convertirse en un grupo.
+    return re.subn(
+        r"^description:\s*>\s*\n(?:[ \t]+.*\n)+",
+        lambda _: "description: >\n" + cuerpo + "\n",
+        texto, count=1, flags=re.M,
+    )
+
+
     if len(DESCRIPTION_NUEVA) > TOPE_DESCRIPTION:
         print("  [ERROR] La description nueva mide %d caracteres, tope %d."
               % (len(DESCRIPTION_NUEVA), TOPE_DESCRIPTION))
@@ -307,23 +355,11 @@ def aplica():
         return 1
 
     texto = FUENTE.read_text(encoding="utf-8")
-    cuerpo = textwrap.fill(
-        DESCRIPTION_NUEVA, width=78, initial_indent="  ", subsequent_indent="  "
-    )
-    # El reemplazo va por lambda y no por cadena: `re.sub` interpreta `\1` y
-    # `\g<...>` en el texto de sustitución, y aquí lo que entra es prosa del
-    # usuario. Un backslash en la description no puede convertirse en un grupo.
-    nuevo, n = re.subn(
-        r"^description:\s*>\s*\n(?:[ \t]+.*\n)+",
-        lambda _: "description: >\n" + cuerpo + "\n",
-        texto,
-        count=1,
-        flags=re.M,
-    )
+    nuevo, n = reescribe_description(texto, DESCRIPTION_NUEVA)
     if n != 1:
         print("  [ERROR] No reconocí el bloque `description: >` de %s" % FUENTE)
         return 1
-    FUENTE.write_text(nuevo, encoding="utf-8")
+    escribe_atomico(FUENTE, nuevo)
     print("  [OK] %s reescrita (%d caracteres, aviso a %d)."
           % (FUENTE.name, len(DESCRIPTION_NUEVA), AVISO_DESCRIPTION))
     print("  Evidencia usada: %s" % previas[-1].name)
@@ -420,7 +456,7 @@ def main():
         # revisar el hallazgo y tener que fiarte de quien lo cuenta.
         if veredicto in ("DISCREPA", "INESTABLE") and ultimo_bruto:
             crudo = MEDICIONES / ("crudo-%s-%s-frase%d.jsonl" % (SKILL, fase.lower(), f["n"]))
-            crudo.write_text(ultimo_bruto, encoding="utf-8")
+            escribe_atomico(crudo, ultimo_bruto)
 
         print("  [%d·%-13s] %d/%d  %-9s  %s"
               % (f["n"], f["papel"], cargas, args.n, veredicto, f["texto"][:44]))
@@ -436,12 +472,12 @@ def main():
 
     MEDICIONES.mkdir(parents=True, exist_ok=True)
     destino = MEDICIONES / ("disparo-%s-%s-%s.json" % (SKILL, fase.lower(), sello(desc)))
-    destino.write_text(json.dumps({
+    escribe_atomico(destino, json.dumps({
         "skill": SKILL, "fase": fase, "canario": canario,
         "description_instalada": desc, "sha256_12": sello(desc),
         "n": args.n, "coste_usd": round(coste_total, 4),
         "resultados": resultados,
-    }, ensure_ascii=False, indent=2), encoding="utf-8")
+    }, ensure_ascii=False, indent=2))
 
     print()
     print("  | # | Frase | Espera | %s |" % fase)
